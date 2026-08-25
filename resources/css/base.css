@@ -1,0 +1,148 @@
+/*
+ * Shared base layer for both bundles (admin and public booking), so the two
+ * can never drift.
+ */
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: var(--text-14);
+        line-height: var(--leading-body);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+    }
+
+    /* Times, prices, durations, counts and IDs. Never prose. */
+    .font-mono,
+    code,
+    kbd,
+    samp,
+    pre {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        font-weight: 500;
+        color: var(--ink);
+    }
+
+    /*
+     * Focus is visible on everything focusable, not only for keyboard users.
+     * The ring is the one place the accent is allowed to repeat, and the only
+     * shadow in the product.
+     */
+    :focus {
+        outline: none;
+    }
+
+    :focus-visible,
+    [data-focus-always]:focus {
+        box-shadow: var(--focus-ring);
+        border-radius: var(--radius);
+        outline: none;
+    }
+
+    ::selection {
+        background-color: var(--accent-tint);
+        color: var(--ink);
+    }
+
+    hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),
+    select,
+    textarea {
+        background-color: var(--white);
+        color: var(--ink);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: var(--text-14);
+        transition: border-color var(--duration-fast) var(--ease);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):hover,
+    select:hover,
+    textarea:hover {
+        border-color: var(--rule-hover);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--ink-3);
+        opacity: 1;
+    }
+
+    input[type='checkbox'],
+    input[type='radio'] {
+        accent-color: var(--ink);
+        border-color: var(--rule-strong);
+        border-radius: 0;
+    }
+
+    input[type='date'],
+    input[type='time'],
+    input[type='datetime-local'],
+    input[type='number'] {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
+
+    [disabled],
+    [aria-disabled='true'] {
+        cursor: not-allowed;
+    }
+}
+
+@layer components {
+    /*
+     * A field or section caption. Sentence case, 13px, secondary ink —
+     * deliberately NOT uppercase and not letterspaced.
+     */
+    .caption {
+        font-size: var(--text-13);
+        line-height: 1.4;
+        color: var(--ink-2);
+    }
+
+    /* A full-bleed hairline. Screens are composed with rules, not with cards. */
+    .rule-line {
+        border-top: 1px solid var(--rule);
+    }
+
+    /* Entrances fade. Nothing scales, nothing slides more than 4px. */
+    .appear {
+        animation: appear var(--duration) var(--ease);
+    }
+
+    /* Numbers set for reading: mono, tabular. */
+    .numeral {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

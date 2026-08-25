@@ -1,0 +1,7 @@
+@import './tokens.css';
+@import './base.css';
+@config "../../tailwind.public.config.js";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

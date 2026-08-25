@@ -1,0 +1,197 @@
+/*
+ * Kestrel design tokens.
+ *
+ * Warm light surface, ink-black actions, one accent per tenant on the public
+ * booking page only. The register is Mercury, Ramp, Linear, Stripe: quiet,
+ * precise, expensive without being flashy.
+ *
+ * Dark mode is deliberately not implemented. See DESIGN.md.
+ *
+ * Every colour, size, radius and duration in the product comes from this file.
+ * `npm run check:design` fails the build on anything that does not.
+ */
+
+:root {
+    color-scheme: light;
+
+    /* ---- Surfaces -------------------------------------------------------
+     * Depth is a tonal step plus a hairline. There are no shadows in this
+     * product except the focus ring, and no gradients or blur at all.
+     */
+    --paper: #fcfbf9;      /* page */
+    --paper-sunk: #f4f2ee; /* summary bars, nav rail, inset regions */
+    --white: #ffffff;      /* inputs, unselected slots */
+
+    /* ---- Ink ------------------------------------------------------------
+     * Ink is the primary action colour. Buttons, selected states and the
+     * current selection are all ink with white text. A black button on warm
+     * paper is what makes this read expensive; nothing else does that job.
+     *
+     * Ratios are against --paper, measured by `npm run check:contrast`.
+     * ink    17.3:1   primary text, primary fill
+     * ink-2   5.0:1   secondary text — this is the caption colour
+     * ink-3   2.5:1   NEVER text. Disabled controls only, which WCAG exempts.
+     * ink-4   1.6:1   NEVER text. Struck-through slots, disabled fills, rules.
+     *
+     * The brief listed ink-3 as "tertiary text, captions". Measured, it is
+     * 2.5:1 on paper — unusable as text at any size. Captions use ink-2, which
+     * clears 4.5:1 on all three surfaces. See DESIGN.md.
+     */
+    --ink: #181714;
+    --ink-2: #6f6d66;
+    --ink-3: #a3a099;
+    --ink-4: #cfccc4;
+
+    /* ---- Rules ----------------------------------------------------------
+     * Hairlines carry the structure. Never a solid grey line.
+     */
+    --rule: rgb(24 23 20 / 0.08);
+    --rule-strong: rgb(24 23 20 / 0.16);
+    --rule-hover: rgb(24 23 20 / 0.34);
+
+    /* ---- Semantic -------------------------------------------------------
+     * --danger is the only colour that reports a problem. 6.6:1 on paper.
+     */
+    --danger: #a8342c;
+
+    /* ---- Accent ---------------------------------------------------------
+     * Kestrel's own accent. At most ONE per screen, and only where it carries
+     * meaning: a cancelled slot needing action, a "first available" marker, a
+     * waitlist count. If a screen has two, one is wrong.
+     *
+     * The brief specified #B5612F, which measures 4.31:1 on paper, 3.98:1 on
+     * paper-sunk and 4.45:1 on white — under 4.5 on all three. Darkened to the
+     * nearest value that clears it on every surface it can land on:
+     * 5.00:1 on paper, 4.63:1 on paper-sunk, 5.17:1 on white.
+     *
+     * Also the focus ring, which is the one place it is allowed to repeat.
+     */
+    --accent: #a85729;
+    --accent-tint: rgb(168 87 41 / 0.08);
+
+    /* ---- Status ---------------------------------------------------------
+     * The admin app stays monochrome: status reads from ink weight, not hue.
+     * Only a cancellation earns colour. Status is never conveyed by colour
+     * alone — every badge carries its label.
+     */
+    --status-confirmed: var(--ink);
+    --status-pending: var(--ink-3);
+    --status-cancelled: var(--danger);
+
+    /* An ink tint for the active nav item and other selected-but-not-filled
+     * states. 5.5% keeps it a whisper. */
+    --ink-tint: rgb(24 23 20 / 0.055);
+    --overlay: rgb(24 23 20 / 0.32);
+
+    /* ---- Type -----------------------------------------------------------
+     * Weights 400 and 500 only. Never 600, never 700.
+     * Numbers are mono and tabular: times, prices, durations, counts and IDs.
+     * Never mono for prose.
+     */
+    --font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+    /* Eight sizes. Nothing else. */
+    --text-12: 0.75rem;
+    --text-13: 0.8125rem;
+    --text-14: 0.875rem;
+    --text-15: 0.9375rem;
+    --text-17: 1.0625rem;
+    --text-20: 1.25rem;
+    --text-24: 1.5rem;
+    --text-34: 2.125rem;
+
+    /* Tracking tightens with size; normal below 17. */
+    --tracking-34: -0.035em;
+    --tracking-24: -0.03em;
+    --tracking-20: -0.02em;
+    --tracking-17: -0.015em;
+    --tracking-body: 0;
+
+    --leading-display: 1.1;
+    --leading-heading: 1.3;
+    --leading-body: 1.5;
+
+    --measure: 68ch;
+
+    /* ---- Space ----------------------------------------------------------
+     * 4px base. Off-scale values (5, 7, 9, 10) are not available.
+     */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* ---- Radius ---------------------------------------------------------
+     * 6px on everything. No exceptions, no pills, no 12px cards.
+     */
+    --radius: 6px;
+
+    /* ---- Motion ---------------------------------------------------------
+     * Two durations, one curve. Opacity and border-colour only: no scale, no
+     * translate beyond 4px, no bounce, nothing animating on page load.
+     */
+    --duration-fast: 120ms; /* state changes */
+    --duration: 180ms;      /* entrances */
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+
+    /* The only shadow in the product. */
+    --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+
+    --tap: 44px;
+
+    /* ---- Chrome ---------------------------------------------------------
+     * Named so a layout dimension never looks like a spacing value.
+     */
+    --rail: 148px;
+    --rail-collapsed: 56px;
+
+    /* ---- Density --------------------------------------------------------
+     * The surfaces share one component library and differ in density. A
+     * surface sets `data-density` once on its root; no component takes a size
+     * prop for this. Default is the operator app.
+     */
+    --control-h: 36px;
+    --row-h: 34px;
+    --rhythm: 8px;
+    --field-text: var(--text-14);
+    --pad-x: 10px;
+}
+
+/* The public booking page. A stranger on a phone, once, on bad signal. */
+[data-density='roomy'] {
+    --control-h: 48px;
+    --row-h: 44px;
+    --rhythm: 12px;
+    --field-text: var(--text-15);
+    --pad-x: 14px;
+}
+
+/* The super admin console. Two people at 2am. */
+[data-density='console'] {
+    --control-h: 32px;
+    --row-h: 28px;
+    --rhythm: 8px;
+    --field-text: var(--text-13);
+    --pad-x: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration: 0ms;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0ms !important;
+        scroll-behavior: auto !important;
+    }
+}

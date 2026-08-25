@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+  <!--
+    Kestrel mark.
+
+    A square severed along the stoop angle - the 1:2 diagonal a kestrel holds
+    when it drops on prey. One primitive, one cut, nothing else. No curves, no
+    detail, one colour, and it still reads as a marked square at 16px.
+  -->
+  <path fill="#181714" d="M0 0h16.66L4.66 24H0Z"/>
+  <path fill="#181714" d="M19.34 0H24v24H7.34Z"/>
+</svg>
