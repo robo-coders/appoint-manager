@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Support\Surface;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
@@ -40,6 +41,11 @@ class SecurityHeaders
     {
         $self = Surface::routingBySubdomain() ? $surface->url() : "'self'";
 
+        // Empty in every environment but local-with-`npm run dev`. See viteDevOrigin().
+        $vite = $this->viteDevOrigin();
+        $dev = $vite === null ? '' : ' '.$vite;
+        $devSocket = $vite === null ? '' : ' '.$vite.' '.preg_replace('/^http/', 'ws', $vite);
+
         $directives = [
             "default-src 'self'",
             "base-uri 'self'",
@@ -47,26 +53,61 @@ class SecurityHeaders
             "frame-ancestors 'none'",
             "form-action 'self' {$self}",
             "img-src 'self' data: https:",
-            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net{$dev}",
             "font-src 'self' https://fonts.bunny.net",
         ];
 
         if ($surface === Surface::Book) {
-            $directives[] = "script-src 'self' 'unsafe-inline' https://js.stripe.com";
-            $directives[] = "connect-src 'self' https://api.stripe.com";
+            $directives[] = "script-src 'self' 'unsafe-inline' https://js.stripe.com{$dev}";
+            $directives[] = "connect-src 'self' https://api.stripe.com{$devSocket}";
             $directives[] = 'frame-src https://js.stripe.com https://hooks.stripe.com';
         } elseif ($surface === Surface::Marketing) {
-            $directives[] = "script-src 'self' 'unsafe-inline' https://plausible.io";
-            $directives[] = "connect-src 'self' https://plausible.io";
+            $directives[] = "script-src 'self' 'unsafe-inline' https://plausible.io{$dev}";
+            $directives[] = "connect-src 'self' https://plausible.io{$devSocket}";
             $directives[] = "frame-src 'none'";
         } else {
             // The operator app and the console never frame anything and never
             // load a third-party script.
-            $directives[] = "script-src 'self' 'unsafe-inline'";
-            $directives[] = "connect-src 'self'";
+            $directives[] = "script-src 'self' 'unsafe-inline'{$dev}";
+            $directives[] = "connect-src 'self'{$devSocket}";
             $directives[] = "frame-src 'none'";
         }
 
         return implode('; ', $directives);
+    }
+
+    /**
+     * The Vite dev server's origin, or null when it is not serving.
+     *
+     * `npm run dev` serves assets from its own origin, so `'self'` excludes
+     * every one of them and the page loads nothing. The origin is read from
+     * the hot file Vite writes on boot and deletes on exit, so there is no
+     * port duplicated here to drift, and the carve-out is gone the moment the
+     * dev server is. It is additionally gated on the local environment: a
+     * stale hot file deployed anywhere else must never widen the policy.
+     */
+    private function viteDevOrigin(): ?string
+    {
+        if (! app()->environment('local') || ! Vite::isRunningHot()) {
+            return null;
+        }
+
+        $contents = @file_get_contents(Vite::hotFile());
+
+        if ($contents === false) {
+            return null;
+        }
+
+        $parts = parse_url(rtrim($contents));
+
+        if (! is_array($parts) || ! in_array($parts['scheme'] ?? '', ['http', 'https'], true)) {
+            return null;
+        }
+
+        if (($parts['host'] ?? '') === '') {
+            return null;
+        }
+
+        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 }

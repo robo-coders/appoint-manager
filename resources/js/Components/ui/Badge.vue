@@ -5,6 +5,13 @@
  * The admin app is monochrome: status reads from ink weight, not hue. Only a
  * cancellation earns colour. Meaning is never carried by colour alone — the
  * label is always present, and the dot is decoration on top of it.
+ *
+ * Height is `--badge-h` (20px) rather than vertical padding, so a badge is the
+ * same height whatever is inside it and a row of them sits on one baseline.
+ *
+ * The `accent` tone puts accent *type* on white, not on `--accent-tint`. Accent
+ * on accent-tint measures 4.50:1 — exactly on the threshold, which is not a
+ * margin, it is a coin toss.
  */
 withDefaults(
     defineProps<{ tone?: 'confirmed' | 'pending' | 'cancelled' | 'neutral' | 'accent' }>(),
@@ -14,12 +21,12 @@ withDefaults(
 
 <template>
     <span
-        class="inline-flex items-center gap-1.5 whitespace-nowrap rounded border px-1.5 py-0.5 text-12"
+        class="inline-flex h-badge items-center gap-1 whitespace-nowrap rounded border px-2 text-12"
         :class="{
             'border-rule bg-white text-ink': tone === 'confirmed',
             'border-rule bg-paper-sunk text-ink-2': tone === 'pending' || tone === 'neutral',
-            'border-rule bg-white text-danger': tone === 'cancelled',
-            'border-rule bg-accent-tint text-accent': tone === 'accent',
+            'border-danger bg-white text-danger': tone === 'cancelled',
+            'border-accent bg-white text-accent': tone === 'accent',
         }"
     >
         <span

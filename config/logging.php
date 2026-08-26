@@ -1,5 +1,7 @@
 <?php
 
+use App\Logging\TenantLogProcessor;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -78,8 +80,8 @@ return [
             'path' => storage_path('logs/laravel.json.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'processors' => [App\Logging\TenantLogProcessor::class, PsrLogMessageProcessor::class],
+            'formatter' => JsonFormatter::class,
+            'processors' => [TenantLogProcessor::class, PsrLogMessageProcessor::class],
             'replace_placeholders' => true,
         ],
 

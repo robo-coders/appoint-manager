@@ -63,10 +63,11 @@ if (! function_exists('safe_json')) {
 | Cross-surface URLs
 |--------------------------------------------------------------------------
 |
-| Kestrel is served from four hostnames. Any link that crosses a surface
-| boundary must be absolute and must name the right host, so these helpers
-| exist rather than hand-written paths. `route()` already does the right thing
-| for a named route bound to a domain; use these when building a URL by hand.
+| Appoint Manager is served from four hostnames. Any link that crosses a
+| surface boundary must be absolute and must name the right host, so these
+| helpers exist rather than hand-written paths. `route()` already does the
+| right thing for a named route bound to a domain; use these when building a
+| URL by hand.
 |
 */
 

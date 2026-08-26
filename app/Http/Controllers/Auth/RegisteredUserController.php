@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,7 +36,7 @@ class RegisteredUserController extends Controller
                 'trial_ends_at' => now()->addDays((int) config('billing.trial_days')),
                 'subscription_status' => 'trial',
                 'booking_page_live' => false,
-                'preview_token' => (string) \Illuminate\Support\Str::uuid(),
+                'preview_token' => (string) Str::uuid(),
             ]);
 
             $owner = new User;

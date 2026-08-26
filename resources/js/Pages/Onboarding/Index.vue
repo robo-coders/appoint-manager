@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OnboardingLayout from '@/Layouts/OnboardingLayout.vue';
 import Button from '@/Components/ui/Button.vue';
+import FieldError from '@/Components/ui/FieldError.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Select from '@/Components/ui/Select.vue';
 import WeeklyHoursGrid from '@/Components/WeeklyHoursGrid.vue';
@@ -162,15 +163,21 @@ const owner = computed(() => props.staff.filter((person) => person.is_owner));
                 <div class="md:col-span-2">
                     <TextInput v-model="row.deposit_input" label="Deposit" />
                 </div>
-                <button type="button" class="self-end text-13 text-danger md:col-span-2" @click="serviceRows.splice(index, 1)">
-                    Remove
-                </button>
+                <div class="self-end md:col-span-2">
+                    <Button
+                        variant="ghost"
+                        :aria-label="`Remove ${row.name || 'this service'}`"
+                        @click="serviceRows.splice(index, 1)"
+                    >
+                        Remove
+                    </Button>
+                </div>
             </div>
             <div class="flex gap-2">
                 <Button variant="secondary" @click="addService">Add a service</Button>
                 <Button :disabled="serviceForm.processing" @click="saveServices">Save and continue</Button>
             </div>
-            <p v-if="serviceForm.errors.services" class="text-13 text-danger">{{ serviceForm.errors.services }}</p>
+            <FieldError :message="serviceForm.errors.services" />
         </div>
 
         <div v-else-if="step === 'staff'" class="space-y-4 rounded border border-rule bg-white p-6">

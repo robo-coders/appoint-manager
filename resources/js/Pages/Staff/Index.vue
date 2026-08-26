@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { DEFAULT_STAFF_COLOUR } from '@/lib/staffColour';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import StaffColourField from '@/Components/ui/StaffColourField.vue';
 import Button from '@/Components/ui/Button.vue';
+import Checkbox from '@/Components/ui/Checkbox.vue';
+import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
+import Table, { type Column } from '@/Components/ui/Table.vue';
+import TextInput from '@/Components/ui/TextInput.vue';
 import type { StaffRecord } from '@/types/models';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     staff: StaffRecord[];
@@ -58,6 +64,20 @@ const submit = () => {
 const deactivate = (person: StaffRecord) => {
     router.patch(route('staff.update', person.id), { is_active: false });
 };
+
+const columns: Column[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'email', label: 'Email', secondary: true },
+    { key: 'bookable', label: 'Takes bookings', width: 'status' },
+    { key: 'status', label: 'Status', width: 'status' },
+];
+
+/*
+ * `colour` is per-user data, not a token — the one legitimate colour outside
+ * the system, and the only place the admin app is not monochrome. It is a 6px
+ * square beside the name and nothing else; it never fills a row or a block.
+ */
+const rows = computed(() => props.staff.map((person) => ({ ...person })));
 </script>
 
 <template>
@@ -67,72 +87,79 @@ const deactivate = (person: StaffRecord) => {
             <Button @click="openCreate">Add staff</Button>
         </PageHeader>
 
-        <div class="overflow-hidden rounded border border-rule bg-white">
-            <table class="w-full text-left text-14">
-                <thead class="border-b border-rule text-ink-2">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Bookable</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="person in staff" :key="person.id" class="border-b border-rule last:border-0">
-                        <td class="px-4 py-3">
-                            <span
-                                class="mr-2 inline-block h-2 w-2 rounded"
-                                :style="{ backgroundColor: person.colour ?? DEFAULT_STAFF_COLOUR }"
-                            />
-                            {{ person.name }}
-                        </td>
-                        <td class="px-4 py-3">{{ person.email }}</td>
-                        <td class="px-4 py-3">{{ person.is_bookable ? 'Yes' : 'No' }}</td>
-                        <td class="px-4 py-3">{{ person.is_active ? 'Active' : 'Inactive' }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <button type="button" class="mr-3" @click="openEdit(person)">Edit</button>
-                            <button
-                                v-if="person.is_active && person.id !== page.props.auth.user?.id"
-                                type="button"
-                                class="text-danger"
-                                @click="deactivate(person)"
-                            >
-                                Deactivate
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <Table
+            :columns="columns"
+            :rows="rows"
+            label="Staff"
+            :row-label="(row) => `Actions for ${row.name}`"
+            empty-title="Nobody here yet"
+            empty-description="Add the people who take appointments and they become columns in the diary."
+        >
+            <template #cell:name="{ row }">
+                <span class="flex items-center gap-2">
+                    <span
+                        class="inline-block h-2 w-2 shrink-0 rounded"
+                        :style="{ backgroundColor: (row.colour as string) ?? DEFAULT_STAFF_COLOUR }"
+                        aria-hidden="true"
+                    />
+                    {{ row.name }}
+                </span>
+            </template>
+
+            <template #cell:bookable="{ row }">
+                <Badge :tone="row.is_bookable ? 'confirmed' : 'neutral'">
+                    {{ row.is_bookable ? 'Bookable' : 'Not bookable' }}
+                </Badge>
+            </template>
+
+            <template #cell:status="{ row }">
+                <Badge :tone="row.is_active ? 'confirmed' : 'neutral'">
+                    {{ row.is_active ? 'Active' : 'Inactive' }}
+                </Badge>
+            </template>
+
+            <template #actions="{ row }">
+                <MenuItem @click="openEdit(row as unknown as StaffRecord)">Edit</MenuItem>
+                <MenuItem @click="router.get(route('availability.index'), { staff: Number(row.id) })">Hours</MenuItem>
+                <MenuItem
+                    v-if="row.is_active && row.id !== page.props.auth.user?.id"
+                    danger
+                    @click="deactivate(row as unknown as StaffRecord)"
+                >
+                    Deactivate
+                </MenuItem>
+            </template>
+
+            <template #footer>
+                <span class="numeral">{{ rows.length }}</span> on the team
+            </template>
+
+            <template #empty-action>
+                <Button variant="ghost" @click="openCreate">Add someone</Button>
+            </template>
+        </Table>
 
         <SlideOver :show="sheetOpen" :title="editingId ? 'Edit staff' : 'Add staff'" @close="sheetOpen = false">
             <form class="space-y-4" @submit.prevent="submit">
-                <div>
-                    <label class="mb-1 block text-14">Name</label>
-                    <input v-model="form.name" class="w-full rounded border border-rule px-3 py-2 text-14" />
-                    <p v-if="form.errors.name" class="mt-1 text-14 text-danger">{{ form.errors.name }}</p>
-                </div>
-                <div>
-                    <label class="mb-1 block text-14">Email</label>
-                    <input v-model="form.email" type="email" class="w-full rounded border border-rule px-3 py-2 text-14" />
-                    <p v-if="form.errors.email" class="mt-1 text-14 text-danger">{{ form.errors.email }}</p>
-                </div>
-                <div>
-                    <label class="mb-1 block text-14">Colour</label>
-                    <input v-model="form.colour" type="color" class="h-10 w-16 rounded border border-rule" />
-                </div>
-                <label class="flex items-center gap-2 text-14">
-                    <input v-model="form.is_bookable" type="checkbox" />
-                    Bookable
-                </label>
-                <label v-if="editingId" class="flex items-center gap-2 text-14">
-                    <input v-model="form.is_active" type="checkbox" />
-                    Active
-                </label>
+                <TextInput v-model="form.name" label="Name" :error="form.errors.name" required />
+                <TextInput v-model="form.email" type="email" label="Email" :error="form.errors.email" required />
+                <!--
+                    The one colour the operator app lets anybody choose. It is
+                    per-user *data*, not a token, and it is spent on a 6px square
+                    beside a name — never on a diary block, which is what made
+                    the old diary read as a spreadsheet.
+                -->
+                <StaffColourField v-model="form.colour" :error="form.errors.colour" />
+                <Checkbox v-model="form.is_bookable" label="Takes bookings" hint="Appears as a column in the diary." />
+                <Checkbox
+                    v-if="editingId"
+                    v-model="form.is_active"
+                    label="Active"
+                    hint="Inactive people keep their history but stop appearing anywhere new."
+                />
             </form>
             <template #footer>
-                <Button :disabled="form.processing" @click="submit">Save</Button>
+                <Button :loading="form.processing" @click="submit">Save</Button>
             </template>
         </SlideOver>
     </AppLayout>

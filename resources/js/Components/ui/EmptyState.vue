@@ -13,7 +13,7 @@ const emit = defineEmits<{ action: [] }>();
             <slot>
                 <button
                     type="button"
-                    class="min-h-tap text-13 text-accent underline decoration-rule underline-offset-4 transition duration-fast ease-product hover:decoration-ink"
+                    class="min-h-tap text-13 text-ink underline decoration-rule underline-offset-4 transition duration-fast ease-product hover:decoration-ink"
                     @click="emit('action')"
                 >
                     {{ actionLabel }}

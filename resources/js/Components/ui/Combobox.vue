@@ -8,6 +8,16 @@ import Field from './Field.vue';
  */
 const model = defineModel<string>({ default: '' });
 
+/*
+ * Fields are white — DESIGN.md gives `--white` to "inputs, unselected slots".
+ *
+ * Every field in the library carried `bg-paper-sunk` and only this one showed
+ * it: `base.css` styles `input`, `select` and `textarea` at a higher
+ * specificity than a utility class, so on real form elements the class had
+ * never done anything. The trigger here is a `<button>`, so it obeyed, and it
+ * was the one field on Settings that looked like a different control. All four
+ * say white now, which is what all four have always rendered.
+ */
 const props = defineProps<{
     id?: string;
     label: string;
@@ -74,7 +84,7 @@ const onKey = (event: KeyboardEvent) => {
                 type="button"
                 :disabled="disabled"
                 :aria-describedby="error ? `${inputId}-error` : undefined"
-                class="h-control w-full truncate rounded border bg-paper-sunk px-pad-x text-left text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
+                class="h-control w-full truncate rounded border bg-white px-pad-x text-left text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
                 :class="error ? 'border-danger' : 'border-rule hover:border-rule-strong'"
                 @click="openList"
             >
@@ -90,7 +100,7 @@ const onKey = (event: KeyboardEvent) => {
                     aria-expanded="true"
                     :aria-controls="`${inputId}-list`"
                     :placeholder="placeholder ?? 'Type to filter…'"
-                    class="h-control w-full rounded border border-ink bg-paper-sunk px-pad-x text-field text-ink"
+                    class="h-control w-full rounded border border-ink bg-white px-pad-x text-field text-ink"
                     @keydown="onKey"
                     @blur="open = false"
                 />

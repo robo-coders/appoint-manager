@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BrandPalette;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ class Tenant extends Model
         'type',
         'timezone',
         'currency',
+        'brand_colour',
         'email',
         'phone',
         'address_line_1',
@@ -73,6 +75,20 @@ class Tenant extends Model
             'dunning_emails_sent' => 'integer',
             'feature_flags' => 'array',
         ];
+    }
+
+    /**
+     * The CSS custom property this tenant's booking page paints with, or null
+     * when it has not chosen one and should inherit ink.
+     *
+     * Goes through BrandPalette so a value that is somehow no longer one of the
+     * six — a preset renamed in tokens.css, a row edited by hand — degrades to
+     * ink rather than emitting a `var(--brand-whatever)` that resolves to
+     * nothing and paints an invisible button.
+     */
+    public function brandVariable(): ?string
+    {
+        return BrandPalette::variable($this->brand_colour);
     }
 
     public function hasCompletedOnboarding(): bool

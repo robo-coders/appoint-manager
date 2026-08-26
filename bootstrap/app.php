@@ -1,5 +1,7 @@
 <?php
 
+use App\Exceptions\OfferUnavailableException;
+use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\SlotUnavailableException;
 use App\Http\Middleware\ConfigureSurfaceSession;
 use App\Http\Middleware\EnsureAdminIpAllowed;
@@ -10,11 +12,14 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolvePublicTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
+use App\Support\Surface;
+use App\Support\SurfaceRoutes;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Sentry\State\Scope;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             // One app, four hostnames. See app/Support/SurfaceRoutes.php.
-            App\Support\SurfaceRoutes::register();
+            SurfaceRoutes::register();
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -58,13 +63,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Where an unauthenticated request is sent, per surface.
-        $middleware->redirectGuestsTo(fn (Request $request) => App\Support\Surface::fromHost($request->getHost()) === App\Support\Surface::Admin
-            ? App\Support\Surface::Admin->to('login')
-            : App\Support\Surface::App->to('login'));
+        $middleware->redirectGuestsTo(fn (Request $request) => Surface::fromHost($request->getHost()) === Surface::Admin
+            ? Surface::Admin->to('login')
+            : Surface::App->to('login'));
 
         // Where an already-authenticated request is sent away from a guest page.
-        $middleware->redirectUsersTo(fn (Request $request) => App\Support\Surface::fromHost($request->getHost()) === App\Support\Surface::Admin
-            ? App\Support\Surface::Admin->to()
+        $middleware->redirectUsersTo(fn (Request $request) => Surface::fromHost($request->getHost()) === Surface::Admin
+            ? Surface::Admin->to()
             : home_route());
 
         $middleware->validateCsrfTokens(except: [
@@ -82,7 +87,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return back()->withErrors(['starts_at' => $exception->getMessage()]);
         });
 
-        $exceptions->render(function (\App\Exceptions\PaymentSetupFailedException $exception, Request $request) {
+        $exceptions->render(function (PaymentSetupFailedException $exception, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => $exception->getMessage()], 503);
             }
@@ -90,7 +95,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return back()->withErrors(['starts_at' => $exception->getMessage()]);
         });
 
-        $exceptions->render(function (\App\Exceptions\OfferUnavailableException $exception, Request $request) {
+        $exceptions->render(function (OfferUnavailableException $exception, Request $request) {
             $status = str_contains($exception->getMessage(), 'expired') ? 410 : 409;
 
             if ($request->expectsJson()) {
@@ -99,9 +104,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return response()->view('offer-taken', ['message' => $exception->getMessage()], $status);
         });
-        $exceptions->reportable(function (\Throwable $e): void {
+        $exceptions->reportable(function (Throwable $e): void {
             if (function_exists('\\Sentry\\configureScope') && current_tenant_id()) {
-                \Sentry\configureScope(function (\Sentry\State\Scope $scope): void {
+                \Sentry\configureScope(function (Scope $scope): void {
                     $scope->setTag('tenant_id', (string) current_tenant_id());
                 });
             }

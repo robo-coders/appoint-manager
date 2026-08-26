@@ -1,4 +1,4 @@
-# Kestrel — pre-launch audit
+# Appoint Manager — pre-launch audit
 
 Read of the whole tree on 2026-08-22 against `DECISIONS.md`, `DESIGN.md`, `LAUNCH.md`.
 Test suite confirmed green: **97 passed, 457 assertions, 4.6s** (sqlite `:memory:`, `QUEUE_CONNECTION=sync`).

@@ -1,5 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "appoint-manager",
     "private": true,
     "type": "module",
     "scripts": {
@@ -7,23 +8,32 @@
         "dev": "vite",
         "check:design": "node scripts/check-design-tokens.mjs",
         "check:contrast": "node scripts/check-contrast.mjs",
-        "check": "npm run check:design && npm run check:contrast && npm run check:components",
-        "check:components": "node scripts/check-components.mjs"
+        "check": "npm run check:design && npm run check:contrast && npm run check:components && npm run check:name && npm run check:php",
+        "check:components": "node scripts/check-components.mjs",
+        "check:php": "vendor/bin/pint --test",
+        "check:name": "node scripts/check-name.mjs"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
+        "@playwright/test": "^1.62.1",
         "@tailwindcss/forms": "^0.5.3",
         "@tailwindcss/vite": "^4.0.0",
-        "@vitejs/plugin-vue": "^6.0.0",
+        "@vitejs/plugin-vue": "^6.0.8",
+        "@vue/test-utils": "^2.4.11",
         "autoprefixer": "^10.4.12",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "jsdom": "^29.1.1",
         "laravel-vite-plugin": "^2.0.0",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.2.1",
         "typescript": "^5.6.3",
         "vite": "^7.0.7",
+        "vitest": "^4.1.11",
         "vue": "^3.4.0",
         "vue-tsc": "^2.0.24"
+    },
+    "dependencies": {
+        "lucide-vue-next": "^1.0.0"
     }
 }

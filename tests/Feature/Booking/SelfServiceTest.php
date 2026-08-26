@@ -127,9 +127,18 @@ it('cancels with a refund outside the window and without one inside it', functio
         'source' => BookingSource::Online,
     ]);
 
+    /*
+     * The manage page states the *consequence* before the confirm, not a policy
+     * afterwards: the row that opens the cancel dialog is labelled with what
+     * will happen to the money. See ManageBookingController::cancelConsequence.
+     */
     $this->get(route('booking.manage.show', $far->public_token))
         ->assertOk()
-        ->assertSee('Your deposit will be refunded', false);
+        ->assertSee('Cancel and refund \u00a310.00', false);
+
+    $this->get(route('booking.manage.show', $near->public_token))
+        ->assertOk()
+        ->assertSee('deposit is not refunded this close to the appointment', false);
 
     $this->postJson(route('booking.manage.cancel', $far->public_token))->assertOk();
     $this->postJson(route('booking.manage.cancel', $near->public_token))->assertOk();

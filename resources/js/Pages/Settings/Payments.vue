@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
+import SettingsNav from '@/Components/Settings/SettingsNav.vue';
 import Button from '@/Components/ui/Button.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -18,6 +19,8 @@ const connect = () => form.post(route('settings.payments.connect'));
     <AppLayout>
         <Head title="Payments" />
         <PageHeader title="Payments" description="Connect Stripe so deposits go to your account." />
+
+        <SettingsNav current="payments" />
 
         <div class="max-w-xl space-y-4 rounded border border-rule bg-white p-6">
             <p v-if="status === 'not_started'" class="text-14">Not started. You can take bookings without deposits until you connect.</p>

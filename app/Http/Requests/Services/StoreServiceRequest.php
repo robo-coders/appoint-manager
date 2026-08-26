@@ -25,6 +25,10 @@ class StoreServiceRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480', 'multiple_of:5'],
             'buffer_minutes' => ['nullable', 'integer', 'min:0', 'max:120', 'multiple_of:5'],
+            // Nullable on purpose: "the salon has not said" is a different fact
+            // from "the salon said six weeks", and `AppointmentSuggester` falls
+            // back to the product default only for the first of those.
+            'suggested_interval_days' => ['nullable', 'integer', 'min:1', 'max:730'],
             'price' => ['required', 'integer', 'min:0'],
             'deposit_amount' => ['required', 'integer', 'min:0', 'lte:price'],
             'is_active' => ['sometimes', 'boolean'],

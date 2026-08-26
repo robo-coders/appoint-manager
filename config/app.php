@@ -1,5 +1,21 @@
 <?php
 
+/*
+ * `env()` returns '' for a key that is present but blank, and only falls back
+ * to its default for a key that is absent entirely. Every surface variable in
+ * `.env.example` ships present-and-blank — the file's own comment tells you to
+ * leave APP_DOMAIN empty — so `env('APP_URL_APP', env('APP_URL'))` returned ''
+ * rather than APP_URL, and every cross-surface link rendered as href="".
+ *
+ * This treats blank as absent, which is what "leave it empty" has always meant
+ * here. It is a local closure, so the cached config array stays serialisable.
+ */
+$blankIsUnset = static function (string $key, $default = null) {
+    $value = env($key);
+
+    return $value === null || $value === '' ? $default : $value;
+};
+
 return [
 
     /*
@@ -59,7 +75,7 @@ return [
     | Surfaces
     |--------------------------------------------------------------------------
     |
-    | Kestrel is one app, one database and one deployment, split across four
+    | Appoint Manager is one app, one database and one deployment, split across four
     | hostnames so that a session on one surface can never be presented to
     | another and so each can be cached, rate limited and firewalled apart.
     |
@@ -69,15 +85,15 @@ return [
     |
     */
 
-    'domain' => env('APP_DOMAIN'),
+    'domain' => $blankIsUnset('APP_DOMAIN'),
 
-    'subdomain_routing' => (bool) env('SUBDOMAIN_ROUTING', env('APP_DOMAIN') !== null),
+    'subdomain_routing' => (bool) $blankIsUnset('SUBDOMAIN_ROUTING', $blankIsUnset('APP_DOMAIN') !== null),
 
     'surfaces' => [
-        'marketing' => env('APP_URL_MARKETING', env('APP_URL', 'http://localhost')),
-        'app' => env('APP_URL_APP', env('APP_URL', 'http://localhost')),
-        'book' => env('APP_URL_BOOK', env('APP_URL', 'http://localhost')),
-        'admin' => env('APP_URL_ADMIN', env('APP_URL', 'http://localhost')),
+        'marketing' => $blankIsUnset('APP_URL_MARKETING', $blankIsUnset('APP_URL', 'http://localhost')),
+        'app' => $blankIsUnset('APP_URL_APP', $blankIsUnset('APP_URL', 'http://localhost')),
+        'book' => $blankIsUnset('APP_URL_BOOK', $blankIsUnset('APP_URL', 'http://localhost')),
+        'admin' => $blankIsUnset('APP_URL_ADMIN', $blankIsUnset('APP_URL', 'http://localhost')),
     ],
 
     /*

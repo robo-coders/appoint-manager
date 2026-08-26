@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\Tenant;
-
 /**
  * The rest of the suite runs withoutVite(), which stubs @vite out entirely. That is
  * why a Blade page could reference an asset that was never registered as a Vite

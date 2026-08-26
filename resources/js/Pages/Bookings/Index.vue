@@ -1,20 +1,43 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import Select from '@/Components/ui/Select.vue';
+import Table, { type Column } from '@/Components/ui/Table.vue';
+import TextInput from '@/Components/ui/TextInput.vue';
 import type { Money } from '@/types/models';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { reactive } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, reactive } from 'vue';
 
-interface BookingRow {
+/**
+ * Bookings. `public/mockups/bookings-table.html` is the binding target, and the
+ * whole screen is `ui/Table` — sortable, sticky header, hairline rows, no
+ * zebra, money right-aligned in mono, and one actions menu per row rather than
+ * five inline links, which is what keeps a 34px row at 34px.
+ *
+ * The filters were three hand-rolled form controls with no error binding; they
+ * are `ui/Select` and `ui/TextInput` now, which is the whole reason the
+ * component library exists.
+ *
+ * (Written that way on purpose: `check:components` reads raw text, so a comment
+ * naming the tags it forbids trips it. Bluntness is the point of that check —
+ * a rule with an exception for comments is a rule with an exception.)
+ */
+
+type BookingRow = {
     id: number;
     customer_name: string;
+    subject_name: string | null;
     service_name: string;
     staff_name: string;
     starts_at_local: string;
     status: string;
     source: string;
     price_at_booking: Money;
-}
+    [key: string]: unknown;
+};
 
 const props = defineProps<{
     filters: { status: string; from: string; to: string };
@@ -23,65 +46,135 @@ const props = defineProps<{
 
 const filters = reactive({ ...props.filters });
 
-const apply = () => {
-    router.get(route('bookings.index'), { ...filters }, { preserveState: true, replace: true });
+const apply = () => router.get(route('bookings.index'), { ...filters }, { preserveState: true, replace: true });
+
+const columns: Column[] = [
+    { key: 'when', label: 'When', width: 'when', sortable: true },
+    { key: 'customer', label: 'Customer', sortable: true },
+    { key: 'service', label: 'Service', secondary: true },
+    { key: 'staff', label: 'Staff', width: 'staff', secondary: true },
+    { key: 'status', label: 'Status', width: 'status' },
+    { key: 'amount', label: 'Amount', width: 'amount', align: 'right', numeric: true, sortable: true },
+];
+
+/*
+ * Sorting is the table's own, over rows the server has already narrowed to the
+ * filtered range — so the shape the rows are sorted into is `sortable`, and
+ * `when` sorts on the raw local timestamp rather than on "10 Mar 09:00", which
+ * would sort alphabetically and put March before February.
+ */
+const rows = computed(() =>
+    props.bookings.map((booking) => ({
+        ...booking,
+        when: booking.starts_at_local,
+        customer: booking.customer_name,
+        service: booking.service_name,
+        staff: booking.staff_name,
+        status: booking.status,
+        amount: booking.price_at_booking.amount,
+    })),
+);
+
+const STATUS_LABELS: Record<string, string> = {
+    pending: 'Awaiting deposit',
+    confirmed: 'Confirmed',
+    cancelled: 'Cancelled',
+    completed: 'Completed',
+    no_show: 'No show',
 };
+
+const toneFor = (status: string) =>
+    status === 'cancelled' ? 'cancelled' : status === 'confirmed' || status === 'completed' ? 'confirmed' : 'pending';
+
+/** "10 Mar 09:00" from "2026-03-10 09:00". */
+const whenLabel = (value: string) => {
+    const date = new Date(`${value.replace(' ', 'T')}:00`);
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : `${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ${value.slice(11)}`;
+};
+
+const rowLabel = (row: Record<string, unknown>) =>
+    `Actions for ${row.customer_name}, ${whenLabel(String(row.starts_at_local))}`;
 </script>
 
 <template>
     <AppLayout>
         <Head title="Bookings" />
-        <PageHeader title="Bookings" description="Filter by status and date." />
+        <PageHeader title="Bookings" description="Everything booked, filtered by status and date.">
+            <Button @click="router.get(route('diary.index'), { new: 1 })">New booking</Button>
+        </PageHeader>
 
-        <form class="mb-6 grid gap-3 md:grid-cols-4" @submit.prevent="apply">
-            <label class="text-13">
-                Status
-                <select v-model="filters.status" class="mt-1 min-h-tap w-full rounded border border-rule bg-white px-3 text-14">
-                    <option value="">All statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="completed">Completed</option>
-                    <option value="no_show">No show</option>
-                </select>
-            </label>
-            <label class="text-13">
-                From
-                <input v-model="filters.from" type="date" class="mt-1 min-h-tap w-full rounded border border-rule bg-white px-3 text-14" />
-            </label>
-            <label class="text-13">
-                To
-                <input v-model="filters.to" type="date" class="mt-1 min-h-tap w-full rounded border border-rule bg-white px-3 text-14" />
-            </label>
-            <button type="submit" class="min-h-tap self-end rounded border border-rule bg-white px-3 text-14">Apply filters</button>
+        <form class="mb-6 grid items-end gap-3 md:grid-cols-4" @submit.prevent="apply">
+            <Select
+                v-model="filters.status"
+                label="Status"
+                :options="[
+                    { value: '', label: 'All statuses' },
+                    { value: 'pending', label: 'Awaiting deposit' },
+                    { value: 'confirmed', label: 'Confirmed' },
+                    { value: 'cancelled', label: 'Cancelled' },
+                    { value: 'completed', label: 'Completed' },
+                    { value: 'no_show', label: 'No show' },
+                ]"
+            />
+            <TextInput v-model="filters.from" type="date" label="From" />
+            <TextInput v-model="filters.to" type="date" label="To" />
+            <Button variant="secondary" type="submit">Apply filters</Button>
         </form>
 
-        <div class="overflow-x-auto rounded border border-rule bg-white">
-            <table class="w-full min-w-[380px] text-left text-14">
-                <thead class="border-b border-rule text-ink-2">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">When</th>
-                        <th class="px-4 py-3 font-medium">Client</th>
-                        <th class="px-4 py-3 font-medium">Service</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="booking in bookings" :key="booking.id" class="border-b border-rule">
-                        <td class="px-4 py-3">
-                            <Link :href="route('bookings.show', booking.id)" class="underline">
-                                {{ booking.starts_at_local }}
-                            </Link>
-                        </td>
-                        <td class="px-4 py-3">{{ booking.customer_name }}</td>
-                        <td class="px-4 py-3">{{ booking.service_name }}</td>
-                        <td class="px-4 py-3">{{ booking.status }}</td>
-                    </tr>
-                    <tr v-if="bookings.length === 0">
-                        <td colspan="4" class="px-4 py-6 text-ink-2">No bookings in this range. Open the diary to add one.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <Table
+            :columns="columns"
+            :rows="rows"
+            label="Bookings"
+            :row-label="rowLabel"
+            empty-title="No bookings in this range"
+            empty-description="Widen the dates, clear the status filter, or open the diary and add one."
+        >
+            <template #cell:when="{ row }">
+                <span class="numeral">{{ whenLabel(String(row.starts_at_local)) }}</span>
+            </template>
+
+            <template #cell:customer="{ row }">
+                {{ row.customer_name }}
+                <span v-if="row.subject_name" class="text-ink-2">· {{ row.subject_name }}</span>
+            </template>
+
+            <!-- First names. `--col-staff` is 96px and "Marek Kowalski" wraps
+                 to two lines in it, which turns a 34px row into a 48px one;
+                 the mockup shows "Ana" and "Marek" for the same reason. -->
+            <template #cell:staff="{ row }">
+                <span class="block truncate text-13 text-ink-2">{{ String(row.staff_name ?? '').split(' ')[0] }}</span>
+            </template>
+
+            <!-- Status is text first: the dot is decorative, the label is the
+                 meaning, so it survives greyscale and a screen reader alike. -->
+            <template #cell:status="{ row }">
+                <Badge :tone="toneFor(String(row.status))">{{ STATUS_LABELS[String(row.status)] ?? row.status }}</Badge>
+            </template>
+
+            <template #cell:amount="{ row }">
+                <span :class="row.status === 'cancelled' ? 'text-ink-2' : ''">
+                    {{ (row.price_at_booking as Money).formatted }}
+                </span>
+            </template>
+
+            <template #actions="{ row }">
+                <MenuItem @click="router.get(route('bookings.show', Number(row.id)))">Open</MenuItem>
+                <MenuItem @click="router.get(route('diary.index'), { date: String(row.starts_at_local).slice(0, 10) })">
+                    Show in the diary
+                </MenuItem>
+            </template>
+
+            <template #footer>
+                Showing <span class="numeral">{{ rows.length }}</span>
+                booking{{ rows.length === 1 ? '' : 's' }}
+            </template>
+
+            <template #empty-action>
+                <Button variant="ghost" @click="router.get(route('bookings.index'))">Clear the filters</Button>
+            </template>
+        </Table>
     </AppLayout>
 </template>

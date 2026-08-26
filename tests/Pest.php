@@ -5,7 +5,9 @@ use App\Models\AvailabilityRule;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Stripe\StripeGateway;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -42,7 +44,7 @@ function aSalon(array $overrides = []): array
     ], $overrides['tenant'] ?? []));
 
     if ($tenant->stripe_account_id) {
-        app(App\Services\Stripe\StripeGateway::class)->completeAccount($tenant->stripe_account_id);
+        app(StripeGateway::class)->completeAccount($tenant->stripe_account_id);
     }
 
     $staff = User::factory()->create(array_merge([
@@ -83,7 +85,7 @@ function aConnectedSalon(int $deposit = 1000, string $account = 'acct_test'): ar
 }
 
 /** @return array<string, mixed> */
-function aBookingPayload(Service $service, User $staff, Carbon\CarbonImmutable $startsAt, string $email = 'alex@example.com'): array
+function aBookingPayload(Service $service, User $staff, CarbonImmutable $startsAt, string $email = 'alex@example.com'): array
 {
     return [
         'service_id' => $service->id,

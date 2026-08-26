@@ -7,13 +7,18 @@ use App\Models\Booking;
 class BookingPayload
 {
     /**
+     * @param  array<string, mixed>  $extra  Screen-specific keys merged over the base
+     *                                       payload — the diary's freed-slot
+     *                                       annotation, for one. Kept out of the base
+     *                                       so every caller does not pay for a
+     *                                       waitlist query it will not read.
      * @return array<string, mixed>
      */
-    public static function toArray(Booking $booking, string $timezone): array
+    public static function toArray(Booking $booking, string $timezone, array $extra = []): array
     {
         $booking->loadMissing(['staff', 'service', 'customer', 'subject']);
 
-        return [
+        return array_merge([
             'id' => $booking->id,
             'staff_id' => $booking->staff_id,
             'staff_name' => $booking->staff?->name,
@@ -34,6 +39,8 @@ class BookingPayload
             'deposit_at_booking' => $booking->deposit_at_booking->toArray(),
             'source' => $booking->source->value,
             'public_token' => $booking->public_token,
-        ];
+            'cancellation_reason' => $booking->cancellation_reason,
+            'duration_minutes' => $booking->service?->duration_minutes,
+        ], $extra);
     }
 }

@@ -28,12 +28,12 @@ const width = computed(() => ({ sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' }
                 class="appear relative w-full rounded border border-rule bg-white"
                 :class="width"
             >
-                <header class="border-b border-rule px-4 py-3">
+                <header class="border-b border-b-rule px-4 py-3">
                     <h2 class="text-17">{{ title }}</h2>
                     <p v-if="description" class="mt-1 text-13 text-ink-2">{{ description }}</p>
                 </header>
                 <div class="px-4 py-4"><slot /></div>
-                <footer v-if="$slots.footer" class="flex justify-end gap-2 border-t border-rule px-4 py-3">
+                <footer v-if="$slots.footer" class="flex justify-end gap-2 border-t border-t-rule px-4 py-3">
                     <slot name="footer" />
                 </footer>
             </div>

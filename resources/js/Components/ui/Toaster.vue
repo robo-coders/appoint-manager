@@ -25,7 +25,7 @@ const state = useToasts();
             <button
                 v-if="item.action"
                 type="button"
-                class="shrink-0 text-13 text-accent underline decoration-rule underline-offset-4 hover:decoration-ink"
+                class="shrink-0 text-13 text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
                 @click="item.action.run(); dismissToast(item.id)"
             >
                 {{ item.action.label }}

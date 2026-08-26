@@ -16,8 +16,6 @@ use App\Services\Stripe\FakeStripeGateway;
 use App\Services\Stripe\StripeConnectGateway;
 use App\Services\Stripe\StripeGateway;
 use App\Support\TenantContext;
-use RuntimeException;
-use Stripe\StripeClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +23,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
+use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
 {

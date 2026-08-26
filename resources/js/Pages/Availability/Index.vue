@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
+import EmptyState from '@/Components/ui/EmptyState.vue';
+import FieldError from '@/Components/ui/FieldError.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import SaveState from '@/Components/ui/SaveState.vue';
 import WeeklyHoursGrid from '@/Components/WeeklyHoursGrid.vue';
 import type { AvailabilityRange } from '@/types/models';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -37,13 +40,27 @@ const form = useForm({
 
 const selectedStaff = computed(() => props.staff.filter((person) => person.id === selectedId.value));
 
+/*
+ * Whether there is anything to save. Compared as a stable string rather than by
+ * identity, because `WeeklyHoursGrid` replaces the array on every keystroke and
+ * an identity check would always say "dirty".
+ */
+const shape = (ranges: AvailabilityRange[]) =>
+    JSON.stringify(ranges.map((range) => [range.weekday, range.start_time, range.end_time]).sort());
+
+const dirty = computed(() => shape(localRanges.value) !== shape(rangesForSelected.value));
+const savedAt = ref<number | null>(null);
+
 const save = () => {
     form.ranges = localRanges.value.map((range) => ({
         weekday: range.weekday,
         start_time: range.start_time,
         end_time: range.end_time,
     }));
-    form.put(route('availability.sync', selectedId.value));
+    form.put(route('availability.sync', selectedId.value), {
+        preserveScroll: true,
+        onSuccess: () => (savedAt.value = Date.now()),
+    });
 };
 </script>
 
@@ -52,25 +69,38 @@ const save = () => {
         <Head title="Availability" />
         <PageHeader title="Availability" description="Weekly hours for each person." />
 
-        <div class="mb-6 flex flex-wrap gap-2">
-            <button
+        <!-- One person at a time. Seven days times four groomers is
+             twenty-eight cards, which is a wall rather than a form. -->
+        <div class="mb-6 flex flex-wrap gap-2" role="group" aria-label="Whose hours">
+            <Button
                 v-for="person in staff"
                 :key="person.id"
-                type="button"
-                class="rounded border px-3 py-1 text-14"
-                :class="selectedId === person.id ? 'border-ink' : 'border-rule'"
+                :variant="selectedId === person.id ? 'primary' : 'secondary'"
                 @click="selectedId = person.id"
             >
                 {{ person.name }}
-            </button>
+            </Button>
         </div>
 
-        <div v-if="selectedStaff.length" class="rounded border border-rule bg-white p-6">
+        <EmptyState
+            v-if="staff.length === 0"
+            title="Nobody to set hours for"
+            description="Add someone who takes appointments first — hours belong to a person, not to the salon."
+            action-label="Add staff"
+            @action="router.visit(route('staff.index'))"
+        />
+
+        <div v-else-if="selectedStaff.length" class="rounded border border-rule bg-white p-6">
             <WeeklyHoursGrid v-model="localRanges" :staff="selectedStaff" />
-            <div class="mt-6">
-                <Button :disabled="form.processing" @click="save">Save hours</Button>
+
+            <div class="mt-6 flex items-center gap-4">
+                <Button :loading="form.processing" @click="save">Save hours</Button>
+                <!-- The same save-state indicator as Settings: a form that
+                     silently succeeds is a form you save twice. -->
+                <SaveState :dirty="dirty" :processing="form.processing" :saved-at="savedAt" />
             </div>
-            <p v-if="form.errors.ranges" class="mt-2 text-14 text-danger">{{ form.errors.ranges }}</p>
+
+            <FieldError :message="form.errors.ranges" class="mt-2" />
         </div>
     </AppLayout>
 </template>

@@ -1,17 +1,20 @@
 <?php
 
 use App\Models\Tenant;
+use App\Models\User;
+use App\Support\Surface;
+use Illuminate\Support\Facades\Route;
 
 /**
  * With APP_DOMAIN unset, every surface is served from APP_URL on the path
  * prefix it used before the split. This is the mode the test suite and a fresh
- * checkout run in, so nobody has to touch /etc/hosts to work on Kestrel.
+ * checkout run in, so nobody has to touch /etc/hosts to work on Appoint Manager.
  *
  * The suite's default config already has subdomain routing off, so these tests
  * assert the default rather than reconfiguring anything.
  */
 it('has subdomain routing off by default', function () {
-    expect(App\Support\Surface::routingBySubdomain())->toBeFalse();
+    expect(Surface::routingBySubdomain())->toBeFalse();
 });
 
 it('serves every surface from one host', function (string $path, int $status) {
@@ -30,14 +33,14 @@ it('keeps the booking page on its path prefix', function () {
 });
 
 it('keeps the console on its path prefix', function () {
-    $admin = App\Models\User::factory()->create(['tenant_id' => null, 'is_super_admin' => true]);
+    $admin = User::factory()->create(['tenant_id' => null, 'is_super_admin' => true]);
 
     $this->actingAs($admin)->get('/admin')->assertOk();
 });
 
 it('keeps the app on the root, unprefixed', function () {
     $tenant = Tenant::factory()->create();
-    $owner = App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
+    $owner = User::factory()->create(['tenant_id' => $tenant->id]);
 
     actingAsTenant($owner)->get('/diary')->assertOk();
 });
@@ -66,7 +69,7 @@ it('resolves every named route', function () {
         'public.booking.show', 'booking.manage.show', 'offer.show', 'booking.preview',
         'super-admin.index', 'admin.login', 'impersonation.start', 'impersonation.stop',
         'stripe.webhook', 'health',
-    ])->reject(fn (string $name) => Illuminate\Support\Facades\Route::has($name));
+    ])->reject(fn (string $name) => Route::has($name));
 
     expect($missing->all())->toBe([]);
 });

@@ -24,8 +24,10 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        // Read from the stylesheet so the bar can never drift from the accent.
-        color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#D9A441', // design-tokens-ignore: last-resort literal if the var is unresolved
+        // The bar is injected into the document, so it can resolve the variable
+        // itself. The literal fallback that used to sit here was an amber from
+        // the retired dark system — a colour that is no longer in the product.
+        color: 'var(--accent)',
         delay: 250,
     },
 });

@@ -1,18 +1,21 @@
 # Design
 
-Kestrel is appointment software for small businesses that lose money when
-people do not turn up. It has two audiences and three surfaces, and it should
-read as quiet, precise and expensive — the register of Mercury, Ramp, Linear
-and Stripe. Not a dashboard, not a template, not dark.
+Appoint Manager is appointment software for small businesses that lose money
+when people do not turn up. It has two audiences and three surfaces, and it
+should read as quiet, precise and expensive — the register of Mercury, Ramp,
+Linear and Stripe. Not a dashboard, not a template, not dark.
 
 Every value in the product comes from `resources/css/tokens.css`. If a value is
 not in that file it does not belong in a template.
 
 `npm run check` runs three gates, all of which fail the build:
 
-- `check:design` — no off-token class or raw colour anywhere in `resources/`
-- `check:contrast` — every text colour against every surface it lands on,
-  plus all six tenant brand presets, computed from `tokens.css`
+- `check:design` — no off-token class or raw colour anywhere under
+  `resources/`, stylesheets and SVG included, plus the handful of values that
+  must restate a token (the `theme-color` meta, the manifests) checked against
+  `tokens.css` so they cannot drift from it
+- `check:contrast` — every text colour against every surface it lands on, the
+  `brand` default, and all six tenant brand presets, all read from `tokens.css`
 - `check:components` — no screen hand-rolls a control the library owns
 
 ---
@@ -67,8 +70,8 @@ Hairlines carry the structure. Never a solid grey line.
 
 ### The accent
 
-`accent` `#A85729` — Kestrel's own terracotta. **At most one per screen**, and
-only where it carries meaning: a cancelled slot needing action, a "first
+`accent` `#A85729` — the product's own terracotta. **At most one per screen**,
+and only where it carries meaning: a cancelled slot needing action, a "first
 available" marker, a waitlist count. If a screen has two, one is wrong.
 
 The brief specified `#B5612F`, which measures 4.31:1 on paper, 3.98:1 on
@@ -76,6 +79,12 @@ paper-sunk and 4.45:1 on white — under 4.5 on all three. It is used as *type*,
 so it was darkened to the nearest value clearing 4.5:1 on every surface.
 
 The accent is also the focus ring, which is the one place it may repeat.
+
+**Selection is ink on white, not accent.** `::selection` fires on every screen
+at once, which is the exact opposite of at most one per screen, and "you
+dragged over some words" is not one of the three meanings the accent is
+rationed for. It was `accent-tint` in `base.css` and ink in the mockups; ink
+won.
 
 ### Status
 
@@ -95,16 +104,23 @@ colour outside this system.
 colour picker** — a hex field guarantees someone ships neon yellow on white and
 it is *our* product that looks broken.
 
-| | Value | White on it | On paper |
+| Token | Value | `brand-fg` on it | On paper |
 |---|---|---|---|
-| forest | `#2F5D4A` | 7.5:1 | 7.3:1 |
-| plum | `#7B3448` | 8.7:1 | 8.4:1 |
-| navy | `#24415F` | 10.5:1 | 10.2:1 |
-| ochre | `#8A5A1E` | 5.9:1 | 5.7:1 |
-| slate | `#414A52` | 9.0:1 | 8.7:1 |
-| clay | `#8C4A32` | 6.7:1 | 6.5:1 |
+| `brand-forest` | `#2F5D4A` | 7.5:1 | 7.3:1 |
+| `brand-plum` | `#7B3448` | 8.7:1 | 8.4:1 |
+| `brand-navy` | `#24415F` | 10.5:1 | 10.2:1 |
+| `brand-ochre` | `#8A5A1E` | 5.9:1 | 5.7:1 |
+| `brand-slate` | `#414A52` | 9.0:1 | 8.7:1 |
+| `brand-clay` | `#8C4A32` | 6.7:1 | 6.5:1 |
 
-All six are verified by `check:contrast`, not asserted.
+All six live in `tokens.css` and are verified by `check:contrast`, which reads
+them from there. They used to be a private copy inside the checker, which meant
+the values that shipped were never the values that were checked.
+
+`--brand` and `--brand-fg` are the pair a surface actually consumes;
+`--brand` defaults to `ink` and `--brand-fg` to `white`. `bg-brand`,
+`text-brand-fg` and `AppLogo tone="brand"` all resolve through them, and all
+three were dead until the tokens existed.
 
 **It appears in exactly two places on the public booking page:** the salon's
 initial mark, and the primary button. Nowhere else — not links, not borders,
@@ -117,13 +133,17 @@ chosen for her customers becomes noise as chrome.
 
 ## Type
 
-- **Text:** Geist (Inter as fallback). Weights **400 and 500 only**. Never 600,
-  never 700.
+- **Text:** Geist, with Inter as the fallback. **Both are loaded**, at 400 and
+  500 only, from `fonts.bunny.net` — the one font host the CSP allows. Naming a
+  fallback face without requesting it means a failed fetch drops all the way to
+  the system face, which is what the mockups were rendering in.
+- **Weights: 400 and 500 only.** Never 600, never 700.
 - **Numbers:** Geist Mono with `font-variant-numeric: tabular-nums` — times,
   prices, durations, counts and IDs. **Never mono for prose.**
 - **Scale: 12, 13, 14, 15, 17, 20, 24, 34.** Nothing else.
-- **Tracking:** `-0.035em` at 34, `-0.03em` at 24, `-0.02em` at 20,
-  `-0.015em` at 17, normal below. Baked into each size.
+- **Tracking:** `-0.03em` at 34, `-0.025em` at 24, `-0.02em` at 20,
+  `-0.015em` at 17, normal below. Baked into each size. The two larger values
+  were loosened once Geist was actually loading — see `DECISIONS.md`.
 - **Sentence case everywhere.** No Title Case, no ALL CAPS labels, no
   exclamation marks. `check:design` fails on `uppercase`.
 
@@ -144,8 +164,44 @@ distinctive move, and it is now explicitly forbidden. Captions are `.caption`:
 ## Space
 
 4px base: 4, 8, 12, 16, 24, 32, 48, 64. Off-scale values (5, 7, 9, 10) are not
-available. Chrome dimensions (`rail`, `control`, `row`) are named tokens so a
-layout width never looks like a spacing value.
+available. Chrome dimensions are named tokens so a layout width never looks
+like a spacing value, and every one of them is a multiple of 4:
+
+| Token | Value | Use |
+|---|---|---|
+| `rail` / `rail-collapsed` | 148 / 56 | the nav rail |
+| `control-h` / `row-h` | per density | control and row height |
+| `badge-h` | 20 | status badge |
+| `skeleton-h` | 8 | one loading bar |
+| `col-when` | 152 | bookings table, date and time |
+| `col-time` | 56 | an agenda's bare `HH:MM` |
+| `col-staff` | 96 | bookings table, who |
+| `col-status` | 132 | bookings table, status badge |
+| `col-amount` | 112 | bookings table, money |
+| `col-actions` | 56 | bookings table, row menu |
+| `sub-indent` | `col-time + space-4` | a sub-line hanging under the text |
+| `booking-w` | 440 | the public booking column |
+| `topbar` | 56 | the operator app's top bar |
+
+The column tokens exist so a table's loading skeleton can be shaped to the real
+table — one bar per column at that column's width — instead of three generic
+bars.
+
+`pad-x` is on the grid too — 12 compact, 16 roomy, 8 console. It was 10/14/8
+until the components phase, which is when every control that inherits it was
+being built anyway.
+
+**Colouring one border side.** `border-rule` and `border-accent` set all four
+border colours, so a row that carries a 2px accent left border *and* a hairline
+bottom must scope both: `border-l-2 border-l-accent border-b border-b-rule`.
+Writing `border-l-2 border-accent border-b border-rule` gives the bottom
+hairline whichever colour was declared last, on all four sides. The component
+library uses the scoped form throughout, even where only one side has width.
+
+**A chrome utility that names a token nobody defined compiles to nothing.**
+`w-sidebar` against a config that defines `rail` is not an error, it is silence,
+and the element simply has no width. `check:design` reads the valid names out of
+`tailwind.config.js` and fails on any that are not there.
 
 ## Motion
 
@@ -190,8 +246,16 @@ may contain a hand-rolled input, button, table, modal or menu.**
 `check:components` enforces that, with an explicit list of screens still queued
 for a later phase; that list only ever shrinks.
 
-The gallery at **`/dev/components`** renders every component in every state,
-with a density switch. It is registered only outside production.
+The gallery at **`/dev/components`** renders every component in every state —
+default, hover, focus, disabled, error, loading, empty — with a density switch
+that sets `data-density` on the page root. It is registered only outside
+production, and it is not exempt from `check:components`: it passes the same
+rule as every other screen.
+
+**The gallery is where components are checked, not the type checker.** Both of
+the bugs in the rebuilt `Skeleton` — bars in a colour 1.06:1 from their
+background, and a bar sized as a percentage of a zero-width parent — passed
+`vue-tsc` and all three gates, and were obvious the moment a browser drew them.
 
 **Every screen exposes four states:** loading (a skeleton shaped like the real
 content, never a spinner, appearing only after 200ms so fast actions never
@@ -203,9 +267,10 @@ populated.
 
 ## Identity
 
-The mark is a square severed along the stoop angle — the 1:2 diagonal a kestrel
-holds when it drops. One primitive, one cut. It reads as a marked square at
-16px and as a confident geometric form at 200px.
+The mark is a square severed along the 1:2 diagonal — the cut falls twice as
+far as it runs, so the two halves are the same shape at different weights. One
+primitive, one cut. It reads as a marked square at 16px and as a confident
+geometric form at 200px.
 
 `resources/svg/mark.svg` (inherits `currentColor`), `mark-mono.svg`,
 `public/icons/`, and `Components/AppLogo.vue` with `size`, `variant`

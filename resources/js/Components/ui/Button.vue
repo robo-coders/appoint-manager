@@ -5,7 +5,7 @@ import Spinner from './Spinner.vue';
 const props = withDefaults(
     defineProps<{
         type?: 'button' | 'submit';
-        variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+        variant?: 'primary' | 'secondary' | 'ghost' | 'brand' | 'accent' | 'danger';
         disabled?: boolean;
         loading?: boolean;
         href?: string;
@@ -22,6 +22,26 @@ const classes = computed(() => {
     const variants = {
         // The accent lives here. At most one primary button per screen.
         primary: 'bg-ink text-white hover:opacity-90',
+        /*
+         * `primary`, repainted in the tenant's colour. The public booking page
+         * only — the operator app stays monochrome whatever a salon chooses.
+         *
+         * --brand defaults to ink in tokens.css, so a salon that has picked no
+         * colour gets a button identical to `primary` rather than an invisible
+         * one. That default is why this is a separate variant instead of a
+         * prop on `primary`: the two are the same button until a tenant says
+         * otherwise, and only one page is allowed to ask.
+         */
+        brand: 'bg-brand text-brand-fg hover:opacity-90',
+        /*
+         * The one action on a screen that has earned the accent: a cancelled
+         * slot that can still be sold. Outlined, not filled — a filled accent
+         * button would outrank the primary, and the row it sits in is already
+         * carrying a 2px accent border. DESIGN.md rations the accent to one
+         * *meaning* per screen; a border, a label and this button on the same
+         * row are one use of it, not three.
+         */
+        accent: 'border border-accent text-accent hover:bg-accent-tint',
         secondary: 'border border-rule bg-paper-sunk text-ink hover:border-rule-strong',
         ghost: 'text-ink-2 hover:bg-paper-sunk hover:text-ink',
         danger: 'border border-rule bg-paper-sunk text-danger hover:border-danger',

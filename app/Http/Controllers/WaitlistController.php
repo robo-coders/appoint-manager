@@ -24,6 +24,7 @@ class WaitlistController extends Controller
             ->get()
             ->map(fn (WaitlistEntry $entry) => [
                 'id' => $entry->id,
+                'customer_id' => $entry->customer_id,
                 'customer_name' => $entry->customer?->name,
                 'phone' => $entry->customer?->phone,
                 'service_name' => $entry->service?->name,

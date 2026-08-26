@@ -19,9 +19,9 @@ useFocusTrap(panel, toRef(props, 'show'), () => emit('close'));
                 aria-modal="true"
                 :aria-label="title"
                 tabindex="-1"
-                class="appear relative flex h-full w-full max-w-md flex-col border-l border-rule bg-white"
+                class="appear relative flex h-full w-full max-w-md flex-col border-l border-l-rule bg-white"
             >
-                <header class="flex items-start justify-between gap-4 border-b border-rule px-4 py-3">
+                <header class="flex items-start justify-between gap-4 border-b border-b-rule px-4 py-3">
                     <div>
                         <h2 class="text-17">{{ title }}</h2>
                         <p v-if="description" class="mt-1 text-13 text-ink-2">{{ description }}</p>
@@ -38,7 +38,7 @@ useFocusTrap(panel, toRef(props, 'show'), () => emit('close'));
                     </button>
                 </header>
                 <div class="flex-1 overflow-y-auto px-4 py-4"><slot /></div>
-                <footer v-if="$slots.footer" class="flex justify-end gap-2 border-t border-rule px-4 py-3">
+                <footer v-if="$slots.footer" class="flex justify-end gap-2 border-t border-t-rule px-4 py-3">
                     <slot name="footer" />
                 </footer>
             </div>

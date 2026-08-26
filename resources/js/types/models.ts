@@ -12,6 +12,8 @@ export interface ServiceRecord {
     description: string | null;
     duration_minutes: number;
     buffer_minutes: number;
+    /** How long before this service is due again. Null means the product default. */
+    suggested_interval_days: number | null;
     price: Money;
     deposit_amount: Money;
     is_active: boolean;

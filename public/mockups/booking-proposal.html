@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appoint Manager mockup — public booking, proposal model</title>
+<link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=geist:400,500|geist-mono:400,500|inter:400,500&display=swap">
+<style>
+/* ==========================================================================
+   1. TOKENS — copied verbatim from resources/css/tokens.css
+   Nothing below this block invents a value. Every declaration in the
+   utility layer resolves to one of these custom properties.
+   ========================================================================== */
+:root{
+    color-scheme: light;
+
+    /* Surfaces */
+    --paper:#fcfbf9; --paper-sunk:#f4f2ee; --white:#ffffff;
+
+    /* Ink. ink-3 and ink-4 are NEVER text — disabled and struck-through only. */
+    --ink:#181714; --ink-2:#6f6d66; --ink-3:#a3a099; --ink-4:#cfccc4;
+
+    /* Rules — hairlines carry the structure. Never a solid grey line. */
+    --rule:rgb(24 23 20 / .08); --rule-strong:rgb(24 23 20 / .16); --rule-hover:rgb(24 23 20 / .34);
+
+    --danger:#a8342c;
+    --accent:#a85729; --accent-tint:rgb(168 87 41 / .08);
+    --status-confirmed:var(--ink); --status-pending:var(--ink-3); --status-cancelled:var(--danger);
+    --ink-tint:rgb(24 23 20 / .055); --overlay:rgb(24 23 20 / .32);
+
+    --font-sans:'Geist','Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+    --text-12:.75rem; --text-13:.8125rem; --text-14:.875rem; --text-15:.9375rem;
+    --text-17:1.0625rem; --text-20:1.25rem; --text-24:1.5rem; --text-34:2.125rem;
+    --tracking-34:-.03em; --tracking-24:-.025em; --tracking-20:-.02em; --tracking-17:-.015em; --tracking-body:0;
+    --leading-display:1.1; --leading-heading:1.3; --leading-body:1.5;
+    --measure:68ch;
+
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+
+    --radius:6px;
+
+    --duration-fast:120ms; --duration:180ms; --ease:cubic-bezier(.2,0,0,1);
+    --focus-ring:0 0 0 2px var(--paper),0 0 0 4px var(--accent);
+    --tap:44px;
+    --rail:148px; --rail-collapsed:56px; --topbar:56px;
+    --brand:var(--ink); --brand-fg:var(--white);
+    --brand-forest:#2f5d4a; --brand-plum:#7b3448; --brand-navy:#24415f;
+    --brand-ochre:#8a5a1e; --brand-slate:#414a52; --brand-clay:#8c4a32;
+    --badge-h:20px; --skeleton-h:8px;
+    --col-when:152px; --col-time:56px; --col-staff:96px; --col-status:132px;
+    --col-amount:112px; --col-actions:56px;
+    --sub-indent:calc(var(--col-time) + var(--space-4));
+    --booking-w:440px;
+
+    /* Density — default is the operator app (compact). */
+    --control-h:36px; --row-h:34px; --rhythm:8px; --field-text:var(--text-14); --pad-x:12px;
+}
+[data-density='roomy']{--control-h:48px;--row-h:44px;--rhythm:12px;--field-text:var(--text-15);--pad-x:16px;}
+[data-density='console']{--control-h:32px;--row-h:28px;--rhythm:8px;--field-text:var(--text-13);--pad-x:8px;}
+
+/* MOCKUP-ONLY. In the product this comes from tenants.brand_colour, which does
+   not exist yet — see DECISIONS.md. `plum` preset: white on it 8.7:1. */
+[data-brand]{--brand:#7b3448; --brand-fg:#ffffff;}
+
+@media (prefers-reduced-motion: reduce){
+    :root{--duration-fast:0ms;--duration:0ms;}
+    *,*::before,*::after{animation-duration:0ms!important;animation-iteration-count:1!important;
+        transition-duration:0ms!important;scroll-behavior:auto!important;}
+}
+
+/* ==========================================================================
+   2. BASE — mirrors resources/css/base.css
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+    font-size:var(--text-14);font-weight:400;line-height:var(--leading-body);
+    -webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{margin:0;font-weight:500;line-height:var(--leading-heading);}
+p{margin:0;}
+ul,ol{margin:0;padding:0;list-style:none;}
+button{font:inherit;color:inherit;background:none;border:0;margin:0;padding:0;cursor:pointer;}
+button[aria-disabled='true']{cursor:default;}
+:focus{outline:none;}
+:focus-visible,.is-focused{box-shadow:var(--focus-ring);border-radius:var(--radius);}
+::selection{background:var(--ink);color:var(--white);}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+/* ==========================================================================
+   3. UTILITY LAYER
+   Class names match tailwind.config.js exactly, so this markup transfers to
+   the Vue rebuild by copy-paste. No new names, no off-token values.
+   ========================================================================== */
+/* colour */
+.bg-paper{background-color:var(--paper);} .bg-paper-sunk{background-color:var(--paper-sunk);}
+.bg-white{background-color:var(--white);} .bg-ink{background-color:var(--ink);}
+.bg-ink-tint{background-color:var(--ink-tint);} .bg-ink-4{background-color:var(--ink-4);}
+.bg-accent{background-color:var(--accent);} .bg-accent-tint{background-color:var(--accent-tint);}
+.bg-brand{background-color:var(--brand,var(--ink));}
+.text-ink{color:var(--ink);} .text-ink-2{color:var(--ink-2);}
+.text-ink-3{color:var(--ink-3);} .text-ink-4{color:var(--ink-4);}
+.text-white{color:var(--white);} .text-accent{color:var(--accent);} .text-danger{color:var(--danger);}
+.text-brand{color:var(--brand,var(--ink));} .text-brand-fg{color:var(--brand-fg,var(--white));}
+.border-rule{border-color:var(--rule);} .border-rule-strong{border-color:var(--rule-strong);}
+.border-ink{border-color:var(--ink);} .border-accent{border-color:var(--accent);}
+
+/* type — line-height and tracking baked into each size, as in the config */
+.text-12{font-size:var(--text-12);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-13{font-size:var(--text-13);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-14{font-size:var(--text-14);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-15{font-size:var(--text-15);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-17{font-size:var(--text-17);line-height:var(--leading-heading);letter-spacing:var(--tracking-17);}
+.text-20{font-size:var(--text-20);line-height:var(--leading-heading);letter-spacing:var(--tracking-20);}
+.text-24{font-size:var(--text-24);line-height:var(--leading-heading);letter-spacing:var(--tracking-24);}
+.text-34{font-size:var(--text-34);line-height:var(--leading-display);letter-spacing:var(--tracking-34);}
+.text-field{font-size:var(--field-text);line-height:var(--leading-body);}
+.font-normal{font-weight:400;} .font-medium{font-weight:500;}
+.font-sans{font-family:var(--font-sans);}
+.font-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.line-through{text-decoration-line:line-through;}
+.underline{text-decoration-line:underline;text-underline-offset:4px;
+    text-decoration-color:var(--rule-strong);}
+.text-left{text-align:left;} .text-right{text-align:right;} .text-center{text-align:center;}
+.caption{font-size:var(--text-13);color:var(--ink-2);line-height:var(--leading-body);}
+
+/* geometry — 6px everywhere, or nothing */
+.rounded{border-radius:var(--radius);} .rounded-none{border-radius:0;}
+.border{border-width:1px;border-style:solid;} .border-0{border-width:0;}
+.border-t{border-top-width:1px;border-top-style:solid;}
+.border-b{border-bottom-width:1px;border-bottom-style:solid;}
+.border-l-2{border-left-width:2px;border-left-style:solid;}
+.shadow-ring{box-shadow:var(--focus-ring);} .shadow-none{box-shadow:none;}
+
+/* space */
+.p-2{padding:var(--space-2);} .p-3{padding:var(--space-3);} .p-4{padding:var(--space-4);}
+.p-6{padding:var(--space-6);}
+.px-3{padding-left:var(--space-3);padding-right:var(--space-3);}
+.px-4{padding-left:var(--space-4);padding-right:var(--space-4);}
+.px-6{padding-left:var(--space-6);padding-right:var(--space-6);}
+.py-1{padding-top:var(--space-1);padding-bottom:var(--space-1);}
+.py-2{padding-top:var(--space-2);padding-bottom:var(--space-2);}
+.py-3{padding-top:var(--space-3);padding-bottom:var(--space-3);}
+.py-4{padding-top:var(--space-4);padding-bottom:var(--space-4);}
+.py-6{padding-top:var(--space-6);padding-bottom:var(--space-6);}
+.px-pad-x{padding-left:var(--pad-x);padding-right:var(--pad-x);}
+.pt-2{padding-top:var(--space-2);} .pt-6{padding-top:var(--space-6);}
+.pb-2{padding-bottom:var(--space-2);} .pb-4{padding-bottom:var(--space-4);}
+.mt-1{margin-top:var(--space-1);} .mt-2{margin-top:var(--space-2);}
+.mt-3{margin-top:var(--space-3);} .mt-4{margin-top:var(--space-4);}
+.mt-6{margin-top:var(--space-6);} .mt-8{margin-top:var(--space-8);}
+.mb-1{margin-bottom:var(--space-1);} .mb-2{margin-bottom:var(--space-2);}
+.mb-3{margin-bottom:var(--space-3);} .mb-4{margin-bottom:var(--space-4);}
+.mb-6{margin-bottom:var(--space-6);}
+.gap-1{gap:var(--space-1);} .gap-2{gap:var(--space-2);} .gap-3{gap:var(--space-3);}
+.gap-4{gap:var(--space-4);} .gap-6{gap:var(--space-6);} .gap-8{gap:var(--space-8);}
+.gap-rhythm{gap:var(--rhythm);}
+.space-y-1>*+*{margin-top:var(--space-1);} .space-y-2>*+*{margin-top:var(--space-2);}
+.space-y-3>*+*{margin-top:var(--space-3);} .space-y-4>*+*{margin-top:var(--space-4);}
+.space-y-6>*+*{margin-top:var(--space-6);}
+.space-y-rhythm>*+*{margin-top:var(--rhythm);}
+
+/* chrome + layout */
+.h-control{height:var(--control-h);} .min-h-control{min-height:var(--control-h);}
+.h-row{height:var(--row-h);} .min-h-row{min-height:var(--row-h);}
+.min-h-tap{min-height:var(--tap);}
+.w-full{width:100%;} .w-rail{width:var(--rail);}
+.block{display:block;} .flex{display:flex;} .inline-flex{display:inline-flex;}
+.grid{display:grid;} .hidden{display:none;}
+.flex-col{flex-direction:column;} .flex-1{flex:1 1 0%;} .shrink-0{flex-shrink:0;}
+.items-center{align-items:center;} .items-start{align-items:flex-start;}
+.items-baseline{align-items:baseline;}
+.justify-between{justify-content:space-between;} .justify-center{justify-content:center;}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+.grid-cols-7{grid-template-columns:repeat(7,minmax(0,1fr));}
+.relative{position:relative;} .whitespace-nowrap{white-space:nowrap;}
+
+/* motion — opacity and border-colour only */
+.transition{transition-property:opacity,border-color,background-color,color;
+    transition-duration:var(--duration-fast);transition-timing-function:var(--ease);}
+.duration-fast{transition-duration:var(--duration-fast);}
+.ease-product{transition-timing-function:var(--ease);}
+
+/* ==========================================================================
+   4. MOCKUP SCAFFOLD — not part of the design system
+   ========================================================================== */
+.stage{display:flex;gap:var(--space-16);align-items:flex-start;
+    padding:var(--space-16) var(--space-12);flex-wrap:wrap;}
+.frame{width:375px;flex-shrink:0;background:var(--paper);
+    border:1px solid var(--rule-strong);border-radius:var(--radius);overflow:hidden;}
+.frame-label{font-family:var(--font-mono);font-size:var(--text-12);color:var(--ink-2);
+    margin-bottom:var(--space-2);font-variant-numeric:tabular-nums;}
+.note{max-width:var(--measure);font-size:var(--text-13);color:var(--ink-2);
+    line-height:var(--leading-body);}
+</style>
+</head>
+<body>
+
+<div style="padding:var(--space-12) var(--space-12) 0">
+    <h1 class="text-24">Public booking — the proposal model</h1>
+    <p class="note mt-2">
+        No calendar. The page leads with one time it already believes in, gives three
+        ways out, and demotes date-picking to the quietest control present. Both frames
+        are <code class="font-mono text-13">data-density="roomy"</code> — 48px controls,
+        44px rows, 15px field text. Brand colour appears in exactly two places: the mark
+        and the primary button.
+    </p>
+</div>
+
+<div class="stage">
+
+    <!-- ============================================================
+         FRAME A — the proposal. Nine visible elements.
+         ============================================================ -->
+    <div>
+        <p class="frame-label">A — proposal · 375px · roomy</p>
+        <div class="frame" data-density="roomy" data-brand>
+
+            <!-- 1. mark + salon name, quiet at 13px -->
+            <header class="flex items-center gap-2 px-4 py-4 border-b border-rule bg-white">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" class="text-brand shrink-0">
+                    <path d="M0 0h16v8L0 16Z" fill="currentColor"/>
+                    <path d="M0 16 16 8v8H0Z" fill="currentColor" opacity=".3"/>
+                </svg>
+                <p class="text-13 font-medium">Willow Street Grooming</p>
+            </header>
+
+            <main class="px-4 py-6">
+
+                <!-- 2. context line -->
+                <p class="caption">Full groom for Bramble · 90 min · with Ana</p>
+
+                <!-- 3. the proposal — 34px/500, time in 34px mono -->
+                <h2 class="text-34 font-medium mt-3">
+                    Tuesday 10 March at<br>
+                    <span class="font-mono">09:45</span>
+                </h2>
+
+                <!-- 4. the cost line — six words -->
+                <p class="text-15 text-ink-2 mt-3">
+                    <span class="font-mono">£45.00</span> total,
+                    <span class="font-mono">£15.00</span> deposit due today
+                </p>
+
+                <!-- 5. primary button, brand, outcome-labelled -->
+                <button type="button"
+                        class="w-full min-h-control rounded bg-brand text-brand-fg text-field font-medium mt-6 transition">
+                    Book Tuesday at <span class="font-mono">09:45</span>
+                </button>
+
+                <!-- 6. refund line as an actionable date -->
+                <p class="text-13 text-ink-2 mt-3 text-center">
+                    Free to cancel or move until Sunday 8 March
+                </p>
+
+                <!-- 7. the "Or" hairline -->
+                <div class="flex items-center gap-3 mt-8" aria-hidden="true">
+                    <span class="flex-1 block" style="height:1px;background:var(--rule)"></span>
+                    <span class="text-13 text-ink-2">Or</span>
+                    <span class="flex-1 block" style="height:1px;background:var(--rule)"></span>
+                </div>
+
+                <!-- 8. three spread alternatives, hairline rows -->
+                <h3 class="sr-only">Other times</h3>
+                <ul class="mt-2">
+                    <li>
+                        <button type="button"
+                                class="w-full min-h-row flex items-baseline justify-between gap-3 py-3 border-b border-rule text-left transition">
+                            <span class="text-field">Tuesday, later</span>
+                            <span class="font-mono text-field text-ink-2 whitespace-nowrap">11:30 · Ana</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button"
+                                class="w-full min-h-row flex items-baseline justify-between gap-3 py-3 border-b border-rule text-left transition">
+                            <span class="text-field">Wednesday morning</span>
+                            <span class="font-mono text-field text-ink-2 whitespace-nowrap">09:15 · Marek</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button"
+                                class="w-full min-h-row flex items-baseline justify-between gap-3 py-3 border-b border-rule text-left transition">
+                            <span class="text-field">Thursday afternoon</span>
+                            <span class="font-mono text-field text-ink-2 whitespace-nowrap">14:00 · Ana</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- 9. the quietest thing on the page -->
+                <p class="mt-6 text-center">
+                    <button type="button" class="text-13 text-ink-2 underline min-h-tap px-3 transition">
+                        Pick another day
+                    </button>
+                </p>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         FRAME B — the fallback picker
+         ============================================================ -->
+    <div>
+        <p class="frame-label">B — fallback picker · 375px · roomy</p>
+        <div class="frame" data-density="roomy" data-brand>
+
+            <header class="flex items-center gap-2 px-4 py-4 border-b border-rule bg-white">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" class="text-brand shrink-0">
+                    <path d="M0 0h16v8L0 16Z" fill="currentColor"/>
+                    <path d="M0 16 16 8v8H0Z" fill="currentColor" opacity=".3"/>
+                </svg>
+                <p class="text-13 font-medium">Willow Street Grooming</p>
+            </header>
+
+            <main class="px-4 py-6">
+                <p class="caption">Full groom for Bramble · 90 min</p>
+                <h2 class="text-20 font-medium mt-1">Pick a day</h2>
+
+                <!-- week rail -->
+                <div class="grid grid-cols-7 gap-1 mt-4" role="group" aria-label="Week of 9 March">
+                    <button type="button" aria-pressed="false"
+                            class="min-h-row rounded border border-rule bg-white flex flex-col items-center justify-center transition">
+                        <span class="text-12 text-ink-2">Mon</span>
+                        <span class="font-mono text-13">9</span>
+                    </button>
+                    <!-- selected: ink, not brand. Containment spent once. -->
+                    <button type="button" aria-pressed="true"
+                            class="min-h-row rounded bg-ink text-white flex flex-col items-center justify-center transition is-focused">
+                        <span class="text-12">Tue</span>
+                        <span class="font-mono text-13">10</span>
+                    </button>
+                    <button type="button" aria-pressed="false"
+                            class="min-h-row rounded border border-rule bg-white flex flex-col items-center justify-center transition">
+                        <span class="text-12 text-ink-2">Wed</span>
+                        <span class="font-mono text-13">11</span>
+                    </button>
+                    <button type="button" aria-pressed="false"
+                            class="min-h-row rounded border border-rule bg-white flex flex-col items-center justify-center transition">
+                        <span class="text-12 text-ink-2">Thu</span>
+                        <span class="font-mono text-13">12</span>
+                    </button>
+                    <button type="button" aria-pressed="false"
+                            class="min-h-row rounded border border-rule bg-white flex flex-col items-center justify-center transition">
+                        <span class="text-12 text-ink-2">Fri</span>
+                        <span class="font-mono text-13">13</span>
+                    </button>
+                    <!-- no availability: kept, dimmed, aria-disabled — never removed -->
+                    <button type="button" aria-disabled="true" aria-label="Saturday 14 March, no times"
+                            class="min-h-row rounded border border-rule flex flex-col items-center justify-center">
+                        <span class="text-12 text-ink-4">Sat</span>
+                        <span class="font-mono text-13 text-ink-4 line-through">14</span>
+                    </button>
+                    <button type="button" aria-disabled="true" aria-label="Sunday 15 March, closed"
+                            class="min-h-row rounded border border-rule flex flex-col items-center justify-center">
+                        <span class="text-12 text-ink-4">Sun</span>
+                        <span class="font-mono text-13 text-ink-4 line-through">15</span>
+                    </button>
+                </div>
+
+                <!-- Morning -->
+                <h3 class="caption mt-6 pb-2 border-b border-rule">Morning</h3>
+                <div class="grid grid-cols-3 gap-2 mt-3" role="group" aria-label="Morning times, Tuesday 10 March">
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">09:00</button>
+                    <button type="button" aria-disabled="true" aria-label="09:15, taken"
+                            class="min-h-control rounded border border-rule font-mono text-field text-ink-4 line-through">09:15</button>
+                    <button type="button" class="min-h-control rounded bg-ink text-white font-mono text-field transition">09:45</button>
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">10:30</button>
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">11:15</button>
+                    <button type="button" aria-disabled="true" aria-label="11:30, taken"
+                            class="min-h-control rounded border border-rule font-mono text-field text-ink-4 line-through">11:30</button>
+                </div>
+
+                <!-- Afternoon -->
+                <h3 class="caption mt-6 pb-2 border-b border-rule">Afternoon</h3>
+                <div class="grid grid-cols-3 gap-2 mt-3" role="group" aria-label="Afternoon times, Tuesday 10 March">
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">13:00</button>
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">13:45</button>
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">14:00</button>
+                    <button type="button" aria-disabled="true" aria-label="15:30, taken"
+                            class="min-h-control rounded border border-rule font-mono text-field text-ink-4 line-through">15:30</button>
+                    <button type="button" class="min-h-control rounded border border-rule bg-white font-mono text-field transition">16:15</button>
+                    <button type="button" aria-disabled="true" aria-label="16:45, taken"
+                            class="min-h-control rounded border border-rule font-mono text-field text-ink-4 line-through">16:45</button>
+                </div>
+
+                <p class="mt-6 text-center">
+                    <button type="button" class="text-13 text-ink-2 underline min-h-tap px-3 transition">
+                        Back to Tuesday <span class="font-mono">09:45</span>
+                    </button>
+                </p>
+            </main>
+        </div>
+    </div>
+
+</div>
+
+<div style="padding:0 var(--space-12) var(--space-16)">
+    <p class="note">
+        The selected day and the selected time are <strong class="font-medium">ink</strong>,
+        not brand — containment is spent once, and brand is reserved for the mark and the
+        primary button. Unavailable times keep their place, carry
+        <code class="font-mono text-13">aria-disabled="true"</code> rather than
+        <code class="font-mono text-13">disabled</code> so they stay focusable and readable,
+        and carry their meaning in the accessible name
+        (<em>"09:15, taken"</em>) rather than in the strike-through alone. The focus ring
+        shown on Tuesday 10 is the real <code class="font-mono text-13">--focus-ring</code>,
+        forced on with <code class="font-mono text-13">.is-focused</code> so it is visible
+        without tabbing.
+    </p>
+</div>
+
+</body>
+</html>

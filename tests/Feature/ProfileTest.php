@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
 
 test('profile page is displayed', function () {
@@ -53,7 +54,7 @@ test('email verification status is unchanged when the email address is unchanged
 test('user can close their account', function () {
     $user = User::factory()->create();
     // Every tenant must keep one owner, so give this one a colleague to hand over to.
-    User::factory()->create(['tenant_id' => $user->tenant_id, 'role' => App\Enums\UserRole::Owner]);
+    User::factory()->create(['tenant_id' => $user->tenant_id, 'role' => UserRole::Owner]);
 
     $response = $this
         ->actingAs($user)

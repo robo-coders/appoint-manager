@@ -2,6 +2,7 @@
 
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Enums\UserRole;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\User;
@@ -39,7 +40,7 @@ it('will not let the database cascade a staff delete over their bookings', funct
 });
 
 it('refuses to delete your own account while you have future bookings', function () {
-    $salon = aSalon(['staff' => ['role' => App\Enums\UserRole::Owner, 'password' => bcrypt('password')]]);
+    $salon = aSalon(['staff' => ['role' => UserRole::Owner, 'password' => bcrypt('password')]]);
     $booking = bookingFor($salon, CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc());
 
     actingAsTenant($salon['staff'])
@@ -51,7 +52,7 @@ it('refuses to delete your own account while you have future bookings', function
 });
 
 it('explains why the account cannot be deleted', function () {
-    $salon = aSalon(['staff' => ['role' => App\Enums\UserRole::Owner, 'password' => bcrypt('password')]]);
+    $salon = aSalon(['staff' => ['role' => UserRole::Owner, 'password' => bcrypt('password')]]);
     bookingFor($salon, CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc());
 
     $response = actingAsTenant($salon['staff'])
@@ -62,10 +63,10 @@ it('explains why the account cannot be deleted', function () {
 });
 
 it('erases the person but keeps past bookings readable when the account is closed', function () {
-    $salon = aSalon(['staff' => ['role' => App\Enums\UserRole::Owner, 'password' => bcrypt('password')]]);
+    $salon = aSalon(['staff' => ['role' => UserRole::Owner, 'password' => bcrypt('password')]]);
     User::factory()->create([
         'tenant_id' => $salon['tenant']->id,
-        'role' => App\Enums\UserRole::Owner,
+        'role' => UserRole::Owner,
         'is_active' => true,
     ]);
     $past = bookingFor($salon, CarbonImmutable::parse('2026-02-10 09:00:00', 'Europe/London')->utc(), BookingStatus::Completed);
@@ -84,7 +85,7 @@ it('erases the person but keeps past bookings readable when the account is close
 });
 
 it('refuses to close the last owner account', function () {
-    $salon = aSalon(['staff' => ['role' => App\Enums\UserRole::Owner, 'password' => bcrypt('password')]]);
+    $salon = aSalon(['staff' => ['role' => UserRole::Owner, 'password' => bcrypt('password')]]);
 
     actingAsTenant($salon['staff'])
         ->delete(route('profile.destroy'), ['password' => 'password'])
@@ -94,8 +95,8 @@ it('refuses to close the last owner account', function () {
 });
 
 it('will not let a closed account log back in', function () {
-    $salon = aSalon(['staff' => ['role' => App\Enums\UserRole::Owner, 'password' => bcrypt('password')]]);
-    User::factory()->create(['tenant_id' => $salon['tenant']->id, 'role' => App\Enums\UserRole::Owner]);
+    $salon = aSalon(['staff' => ['role' => UserRole::Owner, 'password' => bcrypt('password')]]);
+    User::factory()->create(['tenant_id' => $salon['tenant']->id, 'role' => UserRole::Owner]);
     $email = $salon['staff']->email;
 
     actingAsTenant($salon['staff'])->delete(route('profile.destroy'), ['password' => 'password']);

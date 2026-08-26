@@ -6,6 +6,7 @@ use App\Enums\DepositStatus;
 use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\Tenant;
 use App\Services\Booking\BookingService;
 use App\Services\Sms\SmsGateway;
 use App\Services\Stripe\FakeStripeGateway;
@@ -54,7 +55,7 @@ class TransactionWatchingStripe implements StripeGateway
         $this->inner->completeAccount($accountId);
     }
 
-    public function createExpressAccount(App\Models\Tenant $tenant): string
+    public function createExpressAccount(Tenant $tenant): string
     {
         return $this->inner->createExpressAccount($tenant);
     }
@@ -69,7 +70,7 @@ class TransactionWatchingStripe implements StripeGateway
         return $this->inner->retrieveAccount($accountId);
     }
 
-    public function createPaymentIntent(App\Models\Tenant $tenant, Booking $booking): array
+    public function createPaymentIntent(Tenant $tenant, Booking $booking): array
     {
         $this->intentLevels[] = DB::transactionLevel();
         $this->inner->throwOnCreate = $this->throwOnCreate;

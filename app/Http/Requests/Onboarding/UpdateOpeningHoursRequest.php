@@ -3,9 +3,9 @@
 namespace App\Http\Requests\Onboarding;
 
 use App\Models\User;
+use App\Rules\ExistsForTenant;
 use App\Support\AvailabilityOverlap;
 use Illuminate\Contracts\Validation\ValidationRule;
-use App\Rules\ExistsForTenant;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateOpeningHoursRequest extends FormRequest

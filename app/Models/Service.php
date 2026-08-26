@@ -24,6 +24,7 @@ class Service extends Model
         'description',
         'duration_minutes',
         'buffer_minutes',
+        'suggested_interval_days',
         'price',
         'deposit_amount',
         'is_active',
@@ -38,11 +39,24 @@ class Service extends Model
         return [
             'duration_minutes' => 'integer',
             'buffer_minutes' => 'integer',
+            'suggested_interval_days' => 'integer',
             'price' => MoneyCast::class,
             'deposit_amount' => MoneyCast::class,
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * How long before this service is due again, in days.
+     *
+     * Falls back to a product-wide default when the salon has not said, so the
+     * suggester always has a number to work from. Customers with a history of
+     * their own override this entirely — see `AppointmentSuggester`.
+     */
+    public function suggestedIntervalDays(): int
+    {
+        return $this->suggested_interval_days ?? (int) config('booking.default_interval_days');
     }
 
     /**

@@ -33,7 +33,7 @@ const inputId = computed(() => props.id ?? uid);
             :required="required"
             :aria-invalid="error ? 'true' : undefined"
             :aria-describedby="error ? `${inputId}-error` : undefined"
-            class="block w-full rounded border bg-paper-sunk px-pad-x py-2 text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
+            class="block w-full rounded border bg-white px-pad-x py-2 text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
             :class="error ? 'border-danger' : 'border-rule hover:border-rule-strong'"
         />
     </Field>

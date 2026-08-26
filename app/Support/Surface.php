@@ -6,7 +6,7 @@ use App\Models\Tenant;
 use Illuminate\Support\Str;
 
 /**
- * The four hostnames Kestrel serves.
+ * The four hostnames Appoint Manager serves.
  *
  * One app, one database, one deployment. The split exists so a session on one
  * surface cannot be presented to another, so super admin can be firewalled
@@ -34,7 +34,7 @@ enum Surface: string
         return rtrim((string) config("app.surfaces.{$this->value}", config('app.url')), '/');
     }
 
-    /** The bare host, e.g. `app.kestrel.test`. Null when routing by path. */
+    /** The bare host, e.g. `app.appoint-manager.test`. Null when routing by path. */
     public function host(): ?string
     {
         if (! self::routingBySubdomain()) {
@@ -80,7 +80,7 @@ enum Surface: string
      */
     public function cookie(): string
     {
-        $base = Str::slug((string) config('app.name', 'kestrel'), '_');
+        $base = Str::slug((string) config('app.name', 'appoint manager'), '_');
 
         return match ($this) {
             self::Admin => "{$base}_admin_session",

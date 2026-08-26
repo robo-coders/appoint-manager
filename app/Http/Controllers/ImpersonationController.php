@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Impersonation across the surface boundary.
@@ -31,7 +32,7 @@ class ImpersonationController extends Controller
 
         Cache::put(self::cacheKey($nonce), $actor->id, self::HANDOFF_TTL_SECONDS);
 
-        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        return URL::temporarySignedRoute(
             'impersonation.start',
             now()->addSeconds(self::HANDOFF_TTL_SECONDS),
             ['user' => $target->id, 'nonce' => $nonce],

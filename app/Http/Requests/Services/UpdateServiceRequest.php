@@ -24,6 +24,7 @@ class UpdateServiceRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'duration_minutes' => ['sometimes', 'required', 'integer', 'min:5', 'max:480', 'multiple_of:5'],
             'buffer_minutes' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:120', 'multiple_of:5'],
+            'suggested_interval_days' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:730'],
             'price' => ['sometimes', 'required', 'integer', 'min:0'],
             'deposit_amount' => ['sometimes', 'required', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],

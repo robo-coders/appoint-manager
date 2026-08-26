@@ -54,9 +54,16 @@
         outline: none;
     }
 
+    /*
+     * Selection is ink, not accent. The accent is rationed to three meanings —
+     * a cancelled slot needing action, a "first available" marker, a waitlist
+     * count — and "you dragged over some words" is not one of them. Selection
+     * happens on every screen at once, which is the opposite of at most one
+     * per screen.
+     */
     ::selection {
-        background-color: var(--accent-tint);
-        color: var(--ink);
+        background-color: var(--ink);
+        color: var(--white);
     }
 
     hr {

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Http\Controllers\Dev\ComponentGalleryController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -63,7 +64,7 @@ final class SurfaceRoutes
             $route = $route->domain(Surface::App->host());
         }
 
-        $route->get('/dev/components', \App\Http\Controllers\Dev\ComponentGalleryController::class)
+        $route->get('/dev/components', ComponentGalleryController::class)
             ->name('dev.components');
     }
 }

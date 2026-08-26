@@ -17,9 +17,34 @@ use Illuminate\Support\Collection;
 final class AvailabilityEngine
 {
     /**
+     * Every start the salon could actually take, ignoring who is already booked.
+     *
+     * The public booking page's fallback picker shows unavailable times struck
+     * through rather than removing them — an empty grid reads as broken, and a
+     * grid with three times in it does not tell a customer whether the salon is
+     * busy or shut. That needs two answers: what the day *is*, and what is left
+     * of it. This is the first; `slotsFor` is the second, and the difference
+     * between them is what gets the strike-through.
+     *
+     * Minimum notice and the horizon still apply. A struck-through 09:00 at
+     * three in the afternoon is noise, not information.
+     */
+    public function gridFor(
+        Tenant $tenant,
+        Service $service,
+        CarbonImmutable $from,
+        CarbonImmutable $to,
+        ?User $staff = null,
+    ): SlotCollection {
+        return $this->slotsFor($tenant, $service, $from, $to, $staff, null, ignoreBookings: true);
+    }
+
+    /**
      * @param  int|null  $ignoreBookingId  A booking to treat as if it were not there.
      *                                     Used when rescheduling, so a booking does not
      *                                     block the slot it is being moved within.
+     * @param  bool  $ignoreBookings  Every existing booking treated as absent. Use
+     *                                `gridFor()` rather than passing this by hand.
      */
     public function slotsFor(
         Tenant $tenant,
@@ -28,6 +53,7 @@ final class AvailabilityEngine
         CarbonImmutable $to,
         ?User $staff = null,
         ?int $ignoreBookingId = null,
+        bool $ignoreBookings = false,
     ): SlotCollection {
         $from = $from->utc();
         $to = $to->utc();
@@ -65,15 +91,17 @@ final class AvailabilityEngine
             ->get()
             ->groupBy('user_id');
 
-        $bookings = Booking::withoutGlobalScopes()
-            ->where('tenant_id', $tenant->id)
-            ->whereIn('staff_id', $staffIds)
-            ->where('status', '!=', BookingStatus::Cancelled->value)
-            ->where('starts_at', '<', $loadTo)
-            ->where('ends_at', '>', $loadFrom)
-            ->when($ignoreBookingId !== null, fn ($query) => $query->whereKeyNot($ignoreBookingId))
-            ->get()
-            ->groupBy('staff_id');
+        $bookings = $ignoreBookings
+            ? collect()
+            : Booking::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->whereIn('staff_id', $staffIds)
+                ->where('status', '!=', BookingStatus::Cancelled->value)
+                ->where('starts_at', '<', $loadTo)
+                ->where('ends_at', '>', $loadFrom)
+                ->when($ignoreBookingId !== null, fn ($query) => $query->whereKeyNot($ignoreBookingId))
+                ->get()
+                ->groupBy('staff_id');
 
         $byStart = [];
 

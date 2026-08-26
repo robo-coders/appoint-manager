@@ -47,9 +47,10 @@ export default {
 
             overlay: 'var(--overlay)',
 
-            /* Set per tenant on the public booking page only. Falls back to ink. */
-            brand: 'var(--brand, var(--ink))',
-            'brand-fg': 'var(--brand-fg, var(--white))',
+            /* Set per tenant on the public booking page only. Defined in
+               tokens.css, where it defaults to ink. */
+            brand: 'var(--brand)',
+            'brand-fg': 'var(--brand-fg)',
         },
 
         fontSize: {
@@ -85,10 +86,46 @@ export default {
             transitionDuration: { DEFAULT: 'var(--duration)', fast: 'var(--duration-fast)' },
             transitionTimingFunction: { DEFAULT: 'var(--ease)', product: 'var(--ease)' },
             minHeight: { tap: 'var(--tap)', control: 'var(--control-h)', row: 'var(--row-h)' },
-            height: { control: 'var(--control-h)', row: 'var(--row-h)' },
-            width: { rail: 'var(--rail)', 'rail-collapsed': 'var(--rail-collapsed)' },
-            padding: { rail: 'var(--rail)', 'rail-collapsed': 'var(--rail-collapsed)' },
-            maxWidth: { measure: 'var(--measure)', booking: '440px' },
+            // A floor, so a wrapping row drops its action onto its own line
+            // rather than squeezing the text beside it into a column.
+            minWidth: { 'col-when': 'var(--col-when)' },
+            height: {
+                control: 'var(--control-h)',
+                row: 'var(--row-h)',
+                badge: 'var(--badge-h)',
+                skeleton: 'var(--skeleton-h)',
+                topbar: 'var(--topbar)',
+            },
+            width: {
+                rail: 'var(--rail)',
+                // Square marks and dots that must match a badge's height.
+                badge: 'var(--badge-h)',
+                'rail-collapsed': 'var(--rail-collapsed)',
+                // Bookings-table columns, so the loading skeleton can be shaped
+                // to the real table rather than to three generic bars.
+                'col-when': 'var(--col-when)',
+                'col-time': 'var(--col-time)',
+                'col-staff': 'var(--col-staff)',
+                'col-status': 'var(--col-status)',
+                'col-amount': 'var(--col-amount)',
+                'col-actions': 'var(--col-actions)',
+            },
+            padding: {
+                rail: 'var(--rail)',
+                'rail-collapsed': 'var(--rail-collapsed)',
+                'sub-indent': 'var(--sub-indent)',
+            },
+            maxWidth: {
+                measure: 'var(--measure)',
+                booking: 'var(--booking-w)',
+                // A name that truncates caps at its column rather than filling it.
+                'col-when': 'var(--col-when)',
+                'col-staff': 'var(--col-staff)',
+                'col-status': 'var(--col-status)',
+            },
+            // Long salon names and long dates in 34px want a balanced break
+            // rather than a one-word last line.
+            textWrap: { balance: 'balance' },
             spacing: {
                 1: 'var(--space-1)',
                 2: 'var(--space-2)',

@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import Button from '@/Components/ui/Button.vue';
+import QuietAction from '@/Components/ui/QuietAction.vue';
+import TextInput from '@/Components/ui/TextInput.vue';
 import { weekdays } from '@/lib/weekdays';
 import type { AvailabilityRange } from '@/types/models';
+
+/**
+ * A week of opening hours for one person.
+ *
+ * Seven cards, one per day, each holding zero or more ranges. A day with no
+ * ranges says `Closed` rather than showing an empty box, which is the same rule
+ * the booking page's picker follows: the absence of something has to be stated,
+ * not implied by a gap.
+ *
+ * Every control in here is a library one now. The time fields were bare inputs
+ * with a hand-written label above them and no error binding at all — so a
+ * rejected range came back with no explanation attached to anything.
+ */
 
 const props = defineProps<{
     staff: Array<{ id: number; name: string }>;
@@ -69,73 +85,44 @@ const updateRange = (
         <section v-for="person in staff" :key="person.id" class="space-y-3">
             <h3 class="text-14 font-medium text-ink">{{ person.name }}</h3>
             <div class="grid gap-3 md:grid-cols-2">
-                <div
-                    v-for="day in weekdays"
-                    :key="`${person.id}-${day.value}`"
-                    class="rounded border border-rule p-3"
-                >
-                    <div class="mb-2 flex items-center justify-between">
+                <div v-for="day in weekdays" :key="`${person.id}-${day.value}`" class="rounded border border-rule p-3">
+                    <div class="mb-2 flex items-center justify-between gap-2">
                         <p class="text-14 text-ink">{{ day.label }}</p>
-                        <button
-                            type="button"
-                            class="text-12 text-accent"
-                            @click="addRange(person.id, day.value)"
-                        >
-                            Add range
-                        </button>
+                        <QuietAction @click="addRange(person.id, day.value)">Add hours</QuietAction>
                     </div>
-                    <div
-                        v-if="rangesFor(person.id, day.value).length === 0"
-                        class="text-12 text-ink-2"
-                    >
-                        Closed
-                    </div>
+
+                    <p v-if="rangesFor(person.id, day.value).length === 0" class="text-12 text-ink-2">Closed</p>
+
                     <div
                         v-for="(range, index) in rangesFor(person.id, day.value)"
                         :key="`${person.id}-${day.value}-${index}`"
                         class="mb-2 flex items-end gap-2"
                     >
-                        <label class="flex-1 text-12 text-ink-2">
-                            Starts
-                            <input
+                        <div class="flex-1">
+                            <TextInput
+                                :model-value="range.start_time"
                                 type="time"
-                                class="mt-1 w-full rounded border border-rule bg-white px-2 py-1 text-14"
-                                :value="range.start_time"
-                                @input="
-                                    updateRange(
-                                        person.id,
-                                        day.value,
-                                        index,
-                                        'start_time',
-                                        ($event.target as HTMLInputElement).value,
-                                    )
+                                label="Opens"
+                                @update:model-value="
+                                    updateRange(person.id, day.value, index, 'start_time', String($event))
                                 "
                             />
-                        </label>
-                        <label class="flex-1 text-12 text-ink-2">
-                            Ends
-                            <input
+                        </div>
+                        <div class="flex-1">
+                            <TextInput
+                                :model-value="range.end_time"
                                 type="time"
-                                class="mt-1 w-full rounded border border-rule bg-white px-2 py-1 text-14"
-                                :value="range.end_time"
-                                @input="
-                                    updateRange(
-                                        person.id,
-                                        day.value,
-                                        index,
-                                        'end_time',
-                                        ($event.target as HTMLInputElement).value,
-                                    )
-                                "
+                                label="Closes"
+                                @update:model-value="updateRange(person.id, day.value, index, 'end_time', String($event))"
                             />
-                        </label>
-                        <button
-                            type="button"
-                            class="min-h-tap text-12 text-danger"
+                        </div>
+                        <Button
+                            variant="ghost"
+                            :aria-label="`Remove ${day.label} ${range.start_time} to ${range.end_time}`"
                             @click="removeRange(person.id, day.value, index)"
                         >
                             Remove
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

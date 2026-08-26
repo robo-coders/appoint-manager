@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appoint Manager mockup — operator dashboard</title>
+<link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=geist:400,500|geist-mono:400,500|inter:400,500&display=swap">
+<style>
+/* ==========================================================================
+   1. TOKENS — copied verbatim from resources/css/tokens.css
+   ========================================================================== */
+:root{
+    color-scheme: light;
+    --paper:#fcfbf9; --paper-sunk:#f4f2ee; --white:#ffffff;
+    --ink:#181714; --ink-2:#6f6d66; --ink-3:#a3a099; --ink-4:#cfccc4;
+    --rule:rgb(24 23 20 / .08); --rule-strong:rgb(24 23 20 / .16); --rule-hover:rgb(24 23 20 / .34);
+    --danger:#a8342c;
+    --accent:#a85729; --accent-tint:rgb(168 87 41 / .08);
+    --status-confirmed:var(--ink); --status-pending:var(--ink-3); --status-cancelled:var(--danger);
+    --ink-tint:rgb(24 23 20 / .055); --overlay:rgb(24 23 20 / .32);
+    --font-sans:'Geist','Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --text-12:.75rem; --text-13:.8125rem; --text-14:.875rem; --text-15:.9375rem;
+    --text-17:1.0625rem; --text-20:1.25rem; --text-24:1.5rem; --text-34:2.125rem;
+    --tracking-34:-.03em; --tracking-24:-.025em; --tracking-20:-.02em; --tracking-17:-.015em; --tracking-body:0;
+    --leading-display:1.1; --leading-heading:1.3; --leading-body:1.5;
+    --measure:68ch;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+    --radius:6px;
+    --duration-fast:120ms; --duration:180ms; --ease:cubic-bezier(.2,0,0,1);
+    --focus-ring:0 0 0 2px var(--paper),0 0 0 4px var(--accent);
+    --tap:44px;
+    --rail:148px; --rail-collapsed:56px; --topbar:56px;
+    --brand:var(--ink); --brand-fg:var(--white);
+    --brand-forest:#2f5d4a; --brand-plum:#7b3448; --brand-navy:#24415f;
+    --brand-ochre:#8a5a1e; --brand-slate:#414a52; --brand-clay:#8c4a32;
+    --badge-h:20px; --skeleton-h:8px;
+    --col-when:152px; --col-time:56px; --col-staff:96px; --col-status:132px;
+    --col-amount:112px; --col-actions:56px;
+    --sub-indent:calc(var(--col-time) + var(--space-4));
+    --booking-w:440px;
+    /* Density — the operator app is the default (compact). */
+    --control-h:36px; --row-h:34px; --rhythm:8px; --field-text:var(--text-14); --pad-x:12px;
+}
+[data-density='roomy']{--control-h:48px;--row-h:44px;--rhythm:12px;--field-text:var(--text-15);--pad-x:16px;}
+[data-density='console']{--control-h:32px;--row-h:28px;--rhythm:8px;--field-text:var(--text-13);--pad-x:8px;}
+@media (prefers-reduced-motion: reduce){
+    :root{--duration-fast:0ms;--duration:0ms;}
+    *,*::before,*::after{animation-duration:0ms!important;animation-iteration-count:1!important;
+        transition-duration:0ms!important;scroll-behavior:auto!important;}
+}
+
+/* ==========================================================================
+   2. BASE — mirrors resources/css/base.css
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+    font-size:var(--text-14);font-weight:400;line-height:var(--leading-body);
+    -webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{margin:0;font-weight:500;line-height:var(--leading-heading);}
+p{margin:0;} ul,ol{margin:0;padding:0;list-style:none;}
+button{font:inherit;color:inherit;background:none;border:0;margin:0;padding:0;cursor:pointer;}
+button[aria-disabled='true']{cursor:default;}
+:focus{outline:none;}
+:focus-visible,.is-focused{box-shadow:var(--focus-ring);border-radius:var(--radius);}
+::selection{background:var(--ink);color:var(--white);}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+/* ==========================================================================
+   3. UTILITY LAYER — names match tailwind.config.js
+   ========================================================================== */
+.bg-paper{background-color:var(--paper);} .bg-paper-sunk{background-color:var(--paper-sunk);}
+.bg-white{background-color:var(--white);} .bg-ink{background-color:var(--ink);}
+.bg-ink-tint{background-color:var(--ink-tint);} .bg-accent-tint{background-color:var(--accent-tint);}
+.text-ink{color:var(--ink);} .text-ink-2{color:var(--ink-2);}
+.text-ink-3{color:var(--ink-3);} .text-ink-4{color:var(--ink-4);}
+.text-white{color:var(--white);} .text-accent{color:var(--accent);} .text-danger{color:var(--danger);}
+.border-rule{border-color:var(--rule);} .border-rule-strong{border-color:var(--rule-strong);}
+.border-ink{border-color:var(--ink);} .border-accent{border-color:var(--accent);}
+/* Side-specific border colours. Needed because `border-accent` and `border-rule`
+   both set all four sides, so combining them silently gives the whole element
+   whichever class is defined last. Tailwind 3 generates these per-side colour
+   utilities from the same palette, so the names carry over unchanged. */
+.border-l-ink{border-left-color:var(--ink);}
+.border-l-accent{border-left-color:var(--accent);}
+.border-b-rule{border-bottom-color:var(--rule);}
+
+.text-12{font-size:var(--text-12);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-13{font-size:var(--text-13);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-14{font-size:var(--text-14);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-15{font-size:var(--text-15);line-height:var(--leading-body);letter-spacing:var(--tracking-body);}
+.text-17{font-size:var(--text-17);line-height:var(--leading-heading);letter-spacing:var(--tracking-17);}
+.text-20{font-size:var(--text-20);line-height:var(--leading-heading);letter-spacing:var(--tracking-20);}
+.text-24{font-size:var(--text-24);line-height:var(--leading-heading);letter-spacing:var(--tracking-24);}
+.text-34{font-size:var(--text-34);line-height:var(--leading-display);letter-spacing:var(--tracking-34);}
+.text-field{font-size:var(--field-text);line-height:var(--leading-body);}
+.font-normal{font-weight:400;} .font-medium{font-weight:500;}
+.font-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.line-through{text-decoration-line:line-through;}
+.underline{text-decoration-line:underline;text-underline-offset:4px;text-decoration-color:var(--rule-strong);}
+.text-left{text-align:left;} .text-right{text-align:right;}
+.caption{font-size:var(--text-13);color:var(--ink-2);line-height:var(--leading-body);}
+
+.rounded{border-radius:var(--radius);} .rounded-none{border-radius:0;}
+.border{border-width:1px;border-style:solid;}
+.border-t{border-top-width:1px;border-top-style:solid;}
+.border-b{border-bottom-width:1px;border-bottom-style:solid;}
+.border-r{border-right-width:1px;border-right-style:solid;}
+.border-l-2{border-left-width:2px;border-left-style:solid;}
+.shadow-ring{box-shadow:var(--focus-ring);} .shadow-none{box-shadow:none;}
+
+.p-2{padding:var(--space-2);} .p-3{padding:var(--space-3);} .p-4{padding:var(--space-4);}
+.p-6{padding:var(--space-6);} .p-8{padding:var(--space-8);}
+.px-2{padding-left:var(--space-2);padding-right:var(--space-2);}
+.px-3{padding-left:var(--space-3);padding-right:var(--space-3);}
+.px-4{padding-left:var(--space-4);padding-right:var(--space-4);}
+.px-6{padding-left:var(--space-6);padding-right:var(--space-6);}
+.px-8{padding-left:var(--space-8);padding-right:var(--space-8);}
+.py-1{padding-top:var(--space-1);padding-bottom:var(--space-1);}
+.py-2{padding-top:var(--space-2);padding-bottom:var(--space-2);}
+.py-3{padding-top:var(--space-3);padding-bottom:var(--space-3);}
+.py-4{padding-top:var(--space-4);padding-bottom:var(--space-4);}
+.py-6{padding-top:var(--space-6);padding-bottom:var(--space-6);}
+.px-pad-x{padding-left:var(--pad-x);padding-right:var(--pad-x);}
+.pt-4{padding-top:var(--space-4);} .pb-2{padding-bottom:var(--space-2);}
+.pb-3{padding-bottom:var(--space-3);} .pb-4{padding-bottom:var(--space-4);}
+.mt-1{margin-top:var(--space-1);} .mt-2{margin-top:var(--space-2);}
+.mt-3{margin-top:var(--space-3);} .mt-4{margin-top:var(--space-4);}
+.mt-6{margin-top:var(--space-6);} .mt-8{margin-top:var(--space-8);}
+.mb-1{margin-bottom:var(--space-1);} .mb-2{margin-bottom:var(--space-2);}
+.mb-3{margin-bottom:var(--space-3);} .mb-4{margin-bottom:var(--space-4);}
+.mb-6{margin-bottom:var(--space-6);} .mb-8{margin-bottom:var(--space-8);}
+.ml-auto{margin-left:auto;}
+.gap-1{gap:var(--space-1);} .gap-2{gap:var(--space-2);} .gap-3{gap:var(--space-3);}
+.gap-4{gap:var(--space-4);} .gap-6{gap:var(--space-6);} .gap-8{gap:var(--space-8);}
+.gap-rhythm{gap:var(--rhythm);}
+.space-y-1>*+*{margin-top:var(--space-1);} .space-y-2>*+*{margin-top:var(--space-2);}
+.space-y-3>*+*{margin-top:var(--space-3);} .space-y-4>*+*{margin-top:var(--space-4);}
+.space-y-rhythm>*+*{margin-top:var(--rhythm);}
+
+.h-control{height:var(--control-h);} .min-h-control{min-height:var(--control-h);}
+.h-row{height:var(--row-h);} .min-h-row{min-height:var(--row-h);}
+.min-h-tap{min-height:var(--tap);}
+.w-full{width:100%;} .w-rail{width:var(--rail);}
+.block{display:block;} .flex{display:flex;} .inline-flex{display:inline-flex;}
+.grid{display:grid;} .hidden{display:none;}
+.flex-col{flex-direction:column;} .flex-1{flex:1 1 0%;} .shrink-0{flex-shrink:0;}
+.items-center{align-items:center;} .items-start{align-items:flex-start;}
+.items-baseline{align-items:baseline;}
+.justify-between{justify-content:space-between;} .justify-center{justify-content:center;}
+.relative{position:relative;} .absolute{position:absolute;}
+.whitespace-nowrap{white-space:nowrap;} .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.transition{transition-property:opacity,border-color,background-color,color;
+    transition-duration:var(--duration-fast);transition-timing-function:var(--ease);}
+
+/* ==========================================================================
+   4. LAYOUT CLASSES SPECIFIC TO THIS SCREEN
+   The weighted band. Deliberately NOT four equal columns — the first figure
+   is the one she opens the app for, so it gets ~45% and the 34px size.
+   ========================================================================== */
+.band{display:grid;grid-template-columns:45fr 27fr 28fr;gap:var(--space-6);}
+.initial-square{width:24px;height:24px;border-radius:var(--radius);
+    background:var(--ink);color:var(--white);display:flex;align-items:center;
+    justify-content:center;font-size:var(--text-12);font-weight:500;flex-shrink:0;}
+.hairline{height:1px;background:var(--rule);border:0;margin:var(--space-2) 0;}
+
+/* ==========================================================================
+   5. MOCKUP SCAFFOLD — not part of the design system
+   ========================================================================== */
+.stage{padding:var(--space-12);}
+.frame{width:1280px;border:1px solid var(--rule-strong);border-radius:var(--radius);
+    overflow:hidden;background:var(--paper);display:flex;min-height:720px;}
+.frame-sm{width:var(--rail);border:1px solid var(--rule-strong);border-radius:var(--radius);
+    overflow:visible;background:var(--paper-sunk);}
+.frame-label{font-family:var(--font-mono);font-size:var(--text-12);color:var(--ink-2);
+    margin-bottom:var(--space-2);font-variant-numeric:tabular-nums;}
+.note{max-width:var(--measure);font-size:var(--text-13);color:var(--ink-2);
+    line-height:var(--leading-body);}
+</style>
+</head>
+<body>
+
+<div class="stage">
+    <h1 class="text-24">Operator app — dashboard</h1>
+    <p class="note mt-2 mb-8">
+        1280px, compact density (36px controls, 34px rows, 14px field text). Monochrome
+        throughout: status reads from ink weight, not hue. Exactly one row on this screen
+        carries colour, and it is the one that needs an action.
+    </p>
+
+    <p class="frame-label">1280px · compact</p>
+    <div class="frame">
+
+        <!-- ============================================================
+             RAIL — 148px, paper-sunk, hairline right border
+             ============================================================ -->
+        <div class="w-rail bg-paper-sunk border-r border-rule flex flex-col shrink-0">
+
+            <!-- mark + wordmark -->
+            <div class="flex items-center gap-2 px-4 py-4">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" class="text-ink shrink-0">
+                    <path d="M0 0h16v8L0 16Z" fill="currentColor"/>
+                    <path d="M0 16 16 8v8H0Z" fill="currentColor" opacity=".3"/>
+                </svg>
+                <span class="text-13 font-medium">Appoint Manager</span>
+            </div>
+
+            <!-- 13px nav, counts right-aligned in mono -->
+            <nav class="px-2 mt-2 flex-1" aria-label="Main">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#" aria-current="page"
+                           class="flex items-center justify-between gap-2 min-h-row px-2 rounded bg-ink-tint text-13 font-medium transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Diary</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Bookings</span>
+                            <span class="font-mono text-12 text-ink-2">12</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Customers</span>
+                            <span class="font-mono text-12 text-ink-2">348</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Waitlist</span>
+                            <span class="font-mono text-12 text-ink-2">3</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Services</span>
+                            <span class="font-mono text-12 text-ink-2">9</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Staff</span>
+                            <span class="font-mono text-12 text-ink-2">4</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center justify-between gap-2 min-h-row px-2 rounded text-13 transition"
+                           style="text-decoration:none;color:var(--ink)">
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- pinned user control — CLOSED -->
+            <div class="p-2 border-t border-rule">
+                <button type="button" aria-expanded="false" aria-haspopup="menu"
+                        class="w-full flex items-center gap-2 min-h-row px-2 rounded text-13 transition">
+                    <span class="initial-square" aria-hidden="true">R</span>
+                    <span class="truncate text-left flex-1">Rosa Adeyemi</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" class="text-ink-2 shrink-0">
+                        <path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             MAIN
+             ============================================================ -->
+        <main class="flex-1 px-8 py-6">
+
+            <div class="flex items-baseline justify-between gap-4">
+                <div>
+                    <h2 class="text-20">Tuesday 10 March</h2>
+                    <p class="caption mt-1">Willow Street Grooming · Ana and Marek in today</p>
+                </div>
+                <button type="button" class="h-control px-4 rounded bg-ink text-white text-14 font-medium transition">
+                    New booking
+                </button>
+            </div>
+
+            <!-- ---- the weighted band ---------------------------------
+                 Not four equal cards. One figure earns the 34px.
+                 --------------------------------------------------- -->
+            <div class="band mt-8">
+
+                <section class="bg-paper-sunk border border-rule rounded p-6">
+                    <h3 class="caption">Recovered from waitlist</h3>
+                    <p class="text-34 font-mono font-medium mt-2">£1,240.00</p>
+                    <p class="text-13 text-ink-2 mt-2">
+                        From <span class="font-mono">9</span> appointments refilled in August.
+                        Two are still unconfirmed.
+                    </p>
+                </section>
+
+                <section class="border border-rule rounded p-6">
+                    <h3 class="caption">Deposits held</h3>
+                    <p class="text-24 font-mono font-medium mt-2">£420.00</p>
+                    <p class="text-13 text-ink-2 mt-2">Across <span class="font-mono">14</span> bookings</p>
+                </section>
+
+                <section class="border border-rule rounded p-6">
+                    <h3 class="caption">No-show rate</h3>
+                    <p class="text-24 font-mono font-medium mt-2">2.4%</p>
+                    <p class="text-13 text-ink-2 mt-2">Down from <span class="font-mono">6.1%</span> in June</p>
+                </section>
+            </div>
+
+            <!-- ---- today's timeline ---------------------------------- -->
+            <h3 class="text-17 mt-8 pb-3 border-b border-rule">Today</h3>
+            <ul>
+
+                <!-- past — muted, but ink-2 not ink-3: ink-3 is never text -->
+                <li class="flex items-baseline gap-4 min-h-row py-3 border-b border-rule text-ink-2">
+                    <span class="font-mono text-14 shrink-0" style="width:var(--col-time)">09:00</span>
+                    <span class="text-14 flex-1">Bramble — full groom</span>
+                    <span class="text-13">Ana</span>
+                    <span class="text-13 font-mono ml-auto">£45.00</span>
+                </li>
+                <li class="flex items-baseline gap-4 min-h-row py-3 border-b border-rule text-ink-2">
+                    <span class="font-mono text-14 shrink-0" style="width:var(--col-time)">10:30</span>
+                    <span class="text-14 flex-1">Suki — nail trim</span>
+                    <span class="text-13">Marek</span>
+                    <span class="text-13 font-mono ml-auto">£18.00</span>
+                </li>
+
+                <!-- current — 2px ink left border, one extra line -->
+                <li class="border-l-2 border-l-ink border-b border-b-rule py-3 px-4 bg-paper-sunk">
+                    <div class="flex items-baseline gap-4">
+                        <span class="font-mono text-14 font-medium shrink-0" style="width:var(--col-time)">12:00</span>
+                        <span class="text-14 font-medium flex-1">Pepper — puppy trim</span>
+                        <span class="text-13">Ana</span>
+                        <span class="text-13 font-mono ml-auto">£38.00</span>
+                    </div>
+                    <p class="text-13 text-ink-2 mt-1" style="padding-left:var(--sub-indent)">
+                        In the chair <span class="font-mono">14</span> min · deposit paid ·
+                        first visit, nervous with clippers
+                    </p>
+                </li>
+
+                <!-- The freed slot — the ONLY coloured row on this screen.
+                     No tint fill: accent text on accent-tint measures 4.50:1, exactly on
+                     the threshold, and the current appointment above already spends a
+                     fill. On paper the same label is 5.00:1. The 2px accent border is a
+                     graphical object, not text, so it is not held to 4.5. -->
+                <li class="border-l-2 border-l-accent border-b border-b-rule py-3 px-4">
+                    <div class="flex items-baseline gap-4">
+                        <span class="font-mono text-14 font-medium shrink-0" style="width:var(--col-time)">15:30</span>
+                        <span class="text-14 flex-1">
+                            <span class="text-accent font-medium">Freed —</span>
+                            Marlow cancelled, 60 min open
+                        </span>
+                        <button type="button"
+                                class="h-control px-3 rounded border border-accent text-accent text-13 font-medium transition is-focused">
+                            Offer to <span class="font-mono">3</span> waiting
+                        </button>
+                    </div>
+                </li>
+
+                <li class="flex items-baseline gap-4 min-h-row py-3 border-b border-rule">
+                    <span class="font-mono text-14 shrink-0" style="width:var(--col-time)">16:15</span>
+                    <span class="text-14 flex-1">Hazel — bath and blow dry</span>
+                    <span class="text-13 text-ink-2">Marek</span>
+                    <span class="text-13 font-mono ml-auto">£28.00</span>
+                </li>
+                <li class="flex items-baseline gap-4 min-h-row py-3 border-b border-rule">
+                    <span class="font-mono text-14 shrink-0" style="width:var(--col-time)">17:00</span>
+                    <span class="text-14 flex-1">Otto — full groom, double coat</span>
+                    <span class="text-13 text-ink-2">Ana</span>
+                    <span class="text-13 font-mono ml-auto">£52.00</span>
+                </li>
+            </ul>
+        </main>
+    </div>
+
+    <!-- ============================================================
+         RAIL DETAIL — the user control, menu open upward
+         ============================================================ -->
+    <p class="frame-label mt-8">rail detail · user control open</p>
+    <div style="height:260px;position:relative">
+        <div class="frame-sm" style="position:absolute;bottom:0;left:0;padding-top:var(--space-16)">
+            <div class="p-2 border-t border-rule relative">
+
+                <!-- the menu, opening upward -->
+                <div role="menu" aria-label="Account"
+                     class="absolute bg-white border border-rule rounded p-1"
+                     style="bottom:calc(100% + var(--space-1));left:var(--space-2);right:var(--space-2)">
+                    <button type="button" role="menuitem"
+                            class="w-full text-left min-h-row px-2 rounded text-13 transition">Profile</button>
+                    <button type="button" role="menuitem"
+                            class="w-full text-left min-h-row px-2 rounded text-13 transition">Billing</button>
+                    <hr class="hairline" role="separator">
+                    <button type="button" role="menuitem"
+                            class="w-full text-left min-h-row px-2 rounded text-13 text-danger transition">Log out</button>
+                </div>
+
+                <button type="button" aria-expanded="true" aria-haspopup="menu"
+                        class="w-full flex items-center gap-2 min-h-row px-2 rounded bg-ink-tint text-13 transition">
+                    <span class="initial-square" aria-hidden="true">R</span>
+                    <span class="truncate text-left flex-1">Rosa Adeyemi</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" class="text-ink-2 shrink-0">
+                        <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <p class="note mt-8">
+        The chevron rotates to point down when the menu is open, so direction always
+        indicates where the menu will go rather than what state it is in. "Log out" is the
+        only <code class="font-mono text-13">--danger</code> text in the rail, and it sits
+        below a hairline so it is never the thing you hit by accident. The freed-slot row
+        is the screen's single accent — its border, its label and its button all draw on
+        the same <code class="font-mono text-13">--accent</code>, which counts as one use,
+        not three.
+    </p>
+</div>
+
+</body>
+</html>

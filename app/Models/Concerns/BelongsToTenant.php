@@ -6,6 +6,7 @@ use App\Exceptions\MissingTenantContextException;
 use App\Exceptions\TenantMismatchException;
 use App\Models\Scopes\TenantScope;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -21,7 +22,7 @@ trait BelongsToTenant
         static::addGlobalScope(new TenantScope(static::tenantScopeFailClosed()));
 
         static::creating(function (Model $model): void {
-            if ($model instanceof \App\Models\User && $model->is_super_admin) {
+            if ($model instanceof User && $model->is_super_admin) {
                 return;
             }
 

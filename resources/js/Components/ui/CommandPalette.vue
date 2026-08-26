@@ -142,7 +142,7 @@ const onKey = (event: KeyboardEvent) => {
                     id="command-input"
                     ref="input"
                     v-model="query"
-                    class="h-12 w-full border-0 border-b border-rule bg-transparent px-4 text-14 text-ink"
+                    class="h-12 w-full border-0 border-b border-b-rule bg-transparent px-4 text-14 text-ink"
                     placeholder="Jump to a page, customer, or date"
                     @keydown="onKey"
                 />

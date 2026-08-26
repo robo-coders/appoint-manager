@@ -4,6 +4,7 @@ use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Enums\Weekday;
+use App\Exceptions\PaymentSetupFailedException;
 use App\Mail\BookingConfirmedMail;
 use App\Models\AvailabilityRule;
 use App\Models\Booking;
@@ -227,7 +228,7 @@ it('releases the hold instead of leaving an unpayable pending booking', function
     // left behind pretending to be a live hold.
     expect(fn () => app(BookingService::class)->create(
         $tenant, $service, $staff, $customer, $startsAt, BookingSource::Online,
-    ))->toThrow(App\Exceptions\PaymentSetupFailedException::class);
+    ))->toThrow(PaymentSetupFailedException::class);
 
     $booking = Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->sole();
 

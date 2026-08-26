@@ -6,6 +6,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Tenancy\TenantScopedValidationTest;
 
 /**
  * "This id exists, and it belongs to the tenant making the request."
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  * ids from other tenants, which was enough to attach a competitor's staff member to
  * your service or book time off against their diary. Use this instead — always.
  *
- * @see \Tests\Feature\Tenancy\TenantScopedValidationTest
+ * @see TenantScopedValidationTest
  */
 class ExistsForTenant implements ValidationRule
 {

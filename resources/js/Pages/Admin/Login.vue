@@ -16,7 +16,7 @@ const submit = () => form.post(route('admin.login.store'), { onFinish: () => for
         <div class="w-full max-w-sm">
             <AppLogo :size="20" />
             <h1 class="mt-6 text-20">Console</h1>
-            <p class="mt-1 text-13 text-ink-2">Kestrel staff only.</p>
+            <p class="mt-1 text-13 text-ink-2">Appoint Manager staff only.</p>
 
             <form class="mt-6 space-y-4" @submit.prevent="submit">
                 <TextInput

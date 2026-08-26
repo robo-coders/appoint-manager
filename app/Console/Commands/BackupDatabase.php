@@ -14,7 +14,7 @@ class BackupDatabase extends Command
 
     public function handle(): int
     {
-        $name = 'kestrel-'.now()->format('Y-m-d').'-'.Str::random(6).'.sql';
+        $name = 'appoint-manager-'.now()->format('Y-m-d').'-'.Str::random(6).'.sql';
         $local = storage_path('app/backups/'.$name);
         @mkdir(dirname($local), 0755, true);
 

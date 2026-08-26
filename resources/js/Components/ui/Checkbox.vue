@@ -15,7 +15,7 @@ const inputId = computed(() => props.id ?? uid);
             v-model="model"
             type="checkbox"
             :disabled="disabled"
-            class="mt-0.5 size-4 shrink-0 rounded-none border-rule-strong bg-paper-sunk text-accent disabled:cursor-not-allowed"
+            class="mt-0.5 size-4 shrink-0 rounded-none border-rule-strong bg-paper-sunk text-ink disabled:cursor-not-allowed"
         />
         <label :for="inputId" class="select-none text-13 text-ink" :class="disabled ? 'text-ink-2' : ''">
             {{ label }}

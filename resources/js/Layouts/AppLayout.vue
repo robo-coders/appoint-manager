@@ -1,49 +1,92 @@
 <script setup lang="ts">
-import CommandPalette from '@/Components/CommandPalette.vue';
+import CommandPalette from '@/Components/ui/CommandPalette.vue';
+import Button from '@/Components/ui/Button.vue';
+import NavRail from '@/Components/ui/NavRail.vue';
 import Toaster from '@/Components/ui/Toaster.vue';
 import { toast } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
+/**
+ * The operator shell. `public/mockups/dashboard.html` is the target.
+ *
+ * What changed, and why the previous one was wrong:
+ *
+ *   - **148px, on `--paper-sunk`, with a hairline right border.** It was a
+ *     ~250px white rail, which read as a second page rather than as chrome.
+ *   - **The user control is pinned to the bottom of the rail**, not floating
+ *     top-right in a top bar. It opens *upward*.
+ *   - **Counts, right-aligned in mono.** They come from `navCounts` on the
+ *     shared props and they are the reason to look at the rail at all.
+ *   - **No top bar on desktop.** The mockup has none: the page owns its own
+ *     heading, and a 56px strip carrying one search button was 56px of chrome
+ *     that said nothing. Search moved into the rail.
+ *
+ * The rail itself is `ui/NavRail`, so the gallery can draw all three of its
+ * widths at once and so every control in it lives in the library. The wordmark
+ * decision is documented there, next to the markup that implements it.
+ */
+
 const page = usePage();
-const menuOpen = ref(false);
-const sidebarOpen = ref(false);
+
+/** `full` at desktop, `icons` at tablet, `drawer` on a phone. */
+const drawerOpen = ref(false);
 const collapsed = ref(false);
 const paletteOpen = ref(false);
 
-const links = computed(() => {
+type NavLink = { href: string; label: string; glyph: string; hint: string; count?: number | null };
+
+const counts = computed(() => (page.props.navCounts as Record<string, number> | null) ?? null);
+
+const links = computed<NavLink[]>(() => {
     if (!page.props.tenant) {
         return [
-            { href: route('super-admin.index'), label: 'Tenants', hint: '' },
-            { href: route('super-admin.messages'), label: 'Send log', hint: '' },
-            { href: route('super-admin.failures'), label: 'Failures', hint: '' },
+            { href: route('super-admin.index'), label: 'Tenants', glyph: 'Te', hint: '' },
+            { href: route('super-admin.messages'), label: 'Send log', glyph: 'Sl', hint: '' },
+            { href: route('super-admin.failures'), label: 'Failures', glyph: 'Fa', hint: '' },
         ];
     }
 
+    const n = counts.value;
+
     return [
-        { href: route('diary.index'), label: 'Diary', hint: 'D' },
-        { href: route('bookings.index'), label: 'Bookings', hint: 'B' },
-        { href: route('customers.index'), label: 'Customers', hint: 'C' },
-        { href: route('waitlist.index'), label: 'Waitlist', hint: 'W' },
-        { href: route('services.index'), label: 'Services', hint: 'S' },
-        { href: route('staff.index'), label: 'Staff', hint: 'P' },
-        { href: route('availability.index'), label: 'Hours', hint: 'H' },
-        { href: route('time-off.index'), label: 'Time off', hint: 'O' },
-        { href: route('dashboard'), label: 'Overview', hint: 'V' },
-        { href: route('settings.edit'), label: 'Settings', hint: ',' },
-        { href: route('billing.index'), label: 'Billing', hint: '' },
-        { href: route('imports.show'), label: 'Import', hint: '' },
+        // `glyph` is the 56px rail's label. Services / Staff / Settings all
+        // start with S, so these are chosen rather than derived.
+        { href: route('diary.index'), label: 'Diary', glyph: 'Di', hint: 'D' },
+        { href: route('bookings.index'), label: 'Bookings', glyph: 'Bk', hint: 'B', count: n?.bookings },
+        { href: route('customers.index'), label: 'Customers', glyph: 'Cu', hint: 'C', count: n?.customers },
+        { href: route('waitlist.index'), label: 'Waitlist', glyph: 'Wl', hint: 'W', count: n?.waitlist },
+        { href: route('services.index'), label: 'Services', glyph: 'Sv', hint: 'S', count: n?.services },
+        { href: route('staff.index'), label: 'Staff', glyph: 'St', hint: 'P', count: n?.staff },
+        { href: route('availability.index'), label: 'Hours', glyph: 'Hr', hint: 'H' },
+        { href: route('time-off.index'), label: 'Time off', glyph: 'To', hint: 'O' },
+        { href: route('dashboard'), label: 'Overview', glyph: 'Ov', hint: 'V' },
+        { href: route('imports.show'), label: 'Import', glyph: 'Im', hint: '' },
+        { href: route('settings.edit'), label: 'Settings', glyph: 'Se', hint: ',' },
     ];
 });
 
-const isCurrent = (href: string) => {
-    const path = href.split('?')[0];
-
-    return page.url === path || page.url.startsWith(`${path}?`) || page.url.startsWith(`${path}/`);
+/**
+ * Is the rail's link the page we are on?
+ *
+ * `route()` returns an **absolute** URL and `page.url` is a path, so the
+ * previous version compared "http://app.example/dashboard" with "/dashboard"
+ * and was false for every item on every screen — the active tint has never
+ * appeared. Both sides are reduced to a path first.
+ */
+const pathOf = (url: string) => {
+    try {
+        return new URL(url, window.location.origin).pathname;
+    } catch {
+        return url.split('?')[0];
+    }
 };
 
-const logout = () => {
-    router.post(route('logout'));
+const isCurrent = (href: string) => {
+    const path = pathOf(href);
+    const here = pathOf(page.url);
+
+    return here === path || here.startsWith(`${path}/`);
 };
 
 const onDiary = computed(() => page.url.startsWith('/diary'));
@@ -84,9 +127,7 @@ const createBooking = () => {
 const typingInField = (event: KeyboardEvent) => {
     const target = event.target as HTMLElement | null;
 
-    if (!target) {
-        return false;
-    }
+    if (!target) return false;
 
     return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
 };
@@ -95,152 +136,113 @@ const onKey = (event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         paletteOpen.value = true;
+
         return;
     }
 
-    if (typingInField(event)) {
-        return;
-    }
+    if (typingInField(event)) return;
 
     if (event.key === '/') {
         event.preventDefault();
         paletteOpen.value = true;
+
         return;
     }
 
     if (event.key === 'n') {
         event.preventDefault();
         createBooking();
+
         return;
     }
 
     if (event.key === 't') {
         event.preventDefault();
         goDiary(page.props.today ?? diaryQuery.value.date, diaryQuery.value.view);
+
         return;
     }
 
     if (event.key === 'ArrowLeft' && onDiary.value) {
         event.preventDefault();
-        const step = diaryQuery.value.view === 'week' ? -7 : -1;
-        goDiary(shiftDate(diaryQuery.value.date, step));
+        goDiary(shiftDate(diaryQuery.value.date, diaryQuery.value.view === 'week' ? -7 : -1));
+
         return;
     }
 
     if (event.key === 'ArrowRight' && onDiary.value) {
         event.preventDefault();
-        const step = diaryQuery.value.view === 'week' ? 7 : 1;
-        goDiary(shiftDate(diaryQuery.value.date, step));
+        goDiary(shiftDate(diaryQuery.value.date, diaryQuery.value.view === 'week' ? 7 : 1));
     }
 };
 
 watch(
     () => page.props.toast,
     (message) => {
-        if (typeof message === 'string' && message !== '') {
-            toast(message);
-        }
+        if (typeof message === 'string' && message !== '') toast(message);
     },
     { immediate: true },
 );
 
+/*
+ * Three widths, one media query each way. The rail collapses to 56px between
+ * 768 and 1023 — a tablet, where 148px of chrome is 15% of the viewport — and
+ * becomes a drawer below 768.
+ */
+let media: MediaQueryList | undefined;
+const onMediaChange = (event: MediaQueryListEvent | MediaQueryList) => (collapsed.value = event.matches);
+
 onMounted(() => {
-    collapsed.value = window.matchMedia('(max-width: 1024px)').matches;
+    media = window.matchMedia('(min-width: 768px) and (max-width: 1023px)');
+    onMediaChange(media);
+    media.addEventListener('change', onMediaChange);
     window.addEventListener('keydown', onKey);
 });
 
-onUnmounted(() => window.removeEventListener('keydown', onKey));
+onUnmounted(() => {
+    media?.removeEventListener('change', onMediaChange);
+    window.removeEventListener('keydown', onKey);
+});
 </script>
 
 <template>
     <div class="min-h-screen bg-paper text-ink">
-        <div
-            v-if="sidebarOpen"
-            class="fixed inset-0 z-30 bg-overlay lg:hidden"
-            @click="sidebarOpen = false"
+        <!-- Mobile drawer scrim. -->
+        <div v-if="drawerOpen" class="fixed inset-0 z-30 bg-overlay md:hidden" @click="drawerOpen = false" />
+
+        <NavRail
+            :links="links"
+            :is-current="isCurrent"
+            :home-href="page.props.tenant ? route('diary.index') : route('super-admin.index')"
+            :user-name="page.props.auth.user?.name ?? ''"
+            :profile-href="route('profile.edit')"
+            :billing-href="page.props.tenant ? route('billing.index') : undefined"
+            :logout-href="route('logout')"
+            :collapsed="collapsed"
+            :drawer-open="drawerOpen"
+            :impersonating="page.props.impersonating"
+            :impersonated-tenant="(page.props.impersonatedTenant as string | null) ?? null"
+            :stop-impersonating-href="route('impersonation.stop')"
+            @navigate="drawerOpen = false"
+            @search="
+                paletteOpen = true;
+                drawerOpen = false;
+            "
         />
 
-        <aside
-            class="fixed inset-y-0 left-0 z-40 border-r border-rule bg-white transition-[width,transform] duration ease-product"
-            :class="[
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-                collapsed ? 'md:w-sidebar-collapsed' : 'md:w-sidebar',
-                'w-sidebar',
-            ]"
+        <div
+            class="transition-[padding] duration ease-product"
+            :class="collapsed ? 'md:pl-rail-collapsed' : 'md:pl-rail'"
         >
-            <div class="flex h-topbar items-center justify-between border-b border-rule px-3">
-                <Link :href="route('diary.index')" class="truncate text-13 font-medium">
-                    <span :class="collapsed ? 'md:hidden' : ''">{{ page.props.tenant?.name ?? page.props.appName }}</span>
-                    <span class="hidden md:inline" :class="collapsed ? 'md:inline' : 'md:hidden'">{{ (page.props.tenant?.name ?? 'K').slice(0, 1) }}</span>
-                </Link>
-                <button
-                    type="button"
-                    class="hidden min-h-tap text-12 text-ink-2 hover:text-ink lg:inline"
-                    @click="collapsed = !collapsed"
-                >
-                    {{ collapsed ? '›' : '‹' }}
-                </button>
-            </div>
-            <nav class="space-y-0.5 p-2">
-                <Link
-                    v-for="link in links"
-                    :key="link.href"
-                    :href="link.href"
-                    class="flex min-h-tap items-center rounded px-2 text-13 transition duration-fast ease-product hover:bg-paper-sunk"
-                    :class="isCurrent(link.href) ? 'bg-paper-sunk text-ink' : 'text-ink-2 hover:text-ink'"
-                    :title="link.label"
-                    @click="sidebarOpen = false"
-                >
-                    <span :class="collapsed ? 'md:hidden' : ''">{{ link.label }}</span>
-                    <span class="hidden w-full justify-center" :class="collapsed ? 'md:flex' : 'md:hidden'">
-                        {{ link.label.slice(0, 1) }}
-                    </span>
-                </Link>
-            </nav>
-        </aside>
-
-        <div class="transition-[padding] duration ease-product" :class="collapsed ? 'md:pl-sidebar-collapsed' : 'md:pl-sidebar'">
-            <header class="sticky top-0 z-20 flex h-topbar items-center justify-between border-b border-rule bg-white px-4">
-                <button type="button" class="min-h-tap text-13 md:hidden" @click="sidebarOpen = true">
-                    Menu
-                </button>
-                <button
-                    type="button"
-                    class="hidden min-h-tap items-center gap-2 rounded border border-rule px-3 text-13 text-ink-2 hover:text-ink md:flex"
-                    @click="paletteOpen = true"
-                >
-                    Search
-                    <kbd class="text-12">⌘K</kbd>
-                </button>
-                <div class="relative">
-                    <button type="button" class="min-h-tap text-13" @click="menuOpen = !menuOpen">
-                        {{ page.props.auth.user?.name }}
-                    </button>
-                    <div
-                        v-if="menuOpen"
-                        class="appear absolute right-0 mt-1 w-48 rounded border border-rule bg-white py-1"
-                    >
-                        <Link
-                            :href="route('profile.edit')"
-                            class="block min-h-tap px-3 py-2 text-13 hover:bg-paper-sunk"
-                            @click="menuOpen = false"
-                        >
-                            Your profile
-                        </Link>
-                        <button
-                            type="button"
-                            class="block min-h-tap w-full px-3 py-2 text-left text-13 hover:bg-paper-sunk"
-                            @click="logout"
-                        >
-                            Log out
-                        </button>
-                    </div>
-                </div>
+            <!-- The only top bar left, and it exists only on a phone, where the
+                 rail is a drawer that has to be opened from somewhere. -->
+            <header class="flex h-topbar items-center border-b border-b-rule bg-white px-4 md:hidden">
+                <Button variant="ghost" @click="drawerOpen = true">Menu</Button>
             </header>
 
             <div
                 v-if="page.props.auth.user && !page.props.auth.user.email_verified_at"
-                class="border-b border-rule px-4 py-2 text-13"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
             >
                 Confirm your email so clients can reach you.
                 <Link
@@ -254,25 +256,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
             </div>
 
             <div
-                v-if="page.props.impersonating"
-                class="border-b border-rule bg-paper-sunk px-4 py-2 text-13"
-            >
-                You are impersonating this salon.
-                <button type="button" class="underline" @click="router.post(route('impersonation.stop'))">Stop</button>
-            </div>
-            <div
                 v-if="page.props.tenant?.show_trial_banner"
-                class="border-b border-rule px-4 py-2 text-13"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
             >
                 Trial ends in {{ page.props.tenant.trial_days_remaining }} days.
-                <Link :href="route('billing.index')" class="underline">Add a card</Link>
+                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Add a card</Link>
             </div>
-            <div
-                v-if="page.props.tenant?.read_only"
-                class="border-b border-rule px-4 py-2 text-13"
-            >
+
+            <div v-if="page.props.tenant?.read_only" class="border-b border-b-rule px-4 py-2 text-13 md:px-8">
                 Admin is read-only until billing is up to date. Clients can still book online.
-                <Link :href="route('billing.index')" class="underline">Billing</Link>
+                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
             </div>
 
             <main class="px-4 py-6 md:px-8">

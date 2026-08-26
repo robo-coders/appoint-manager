@@ -15,20 +15,32 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WaitlistEntry;
 use App\Services\Availability\AvailabilityEngine;
+use App\Services\Booking\AppointmentSuggester;
 use App\Services\Booking\BookingService;
 use App\Support\AvailabilityCache;
 use App\Support\PhoneNumber;
+use App\Support\ProposalPayload;
+use App\Support\ReturningCustomer;
 use App\Support\ServicePayload;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\View\View;
 use InvalidArgumentException;
 
 class PublicBookingController extends Controller
 {
-    public function show(Request $request): View
+    /**
+     * The proposal.
+     *
+     * There is no calendar on this page any more. `AppointmentSuggester` decides
+     * one finished appointment and three spread ways out of it, and every one of
+     * them carries the phrase that justifies it — see that class, and phase 4 in
+     * DECISIONS.md. The date picker still exists, reachable from the quietest
+     * control on the page, for the customer whose answer is none of the four.
+     */
+    public function show(Request $request, AppointmentSuggester $suggester): Response
     {
         $tenant = $this->tenant($request);
 
@@ -41,7 +53,20 @@ class PublicBookingController extends Controller
             ->map(fn (Service $service) => ServicePayload::toArray($service))
             ->values();
 
-        return view('booking', [
+        // Recognised by the manage-link cookie or a reminder link, never by a
+        // typed-in email address. See ReturningCustomer.
+        $customer = ReturningCustomer::forRequest($request, $tenant);
+
+        $requested = $request->filled('service')
+            ? Service::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('is_active', true)
+                ->find($request->integer('service'))
+            : null;
+
+        $suggestion = $suggester->suggest($tenant, $customer, $requested);
+
+        $response = response()->view('booking', [
             'tenant' => $tenant,
             'props' => [
                 'tenant' => [
@@ -57,15 +82,31 @@ class PublicBookingController extends Controller
                 ],
                 'stripePublishableKey' => config('services.stripe.key'),
                 'services' => $services,
+                'suggestion' => ProposalPayload::suggestion($suggestion, $tenant),
                 'vertical' => $tenant->vertical(),
                 'today' => CarbonImmutable::now($tenant->timezone)->toDateString(),
                 'urls' => [
+                    'page' => route('public.booking.show', $tenant->slug, absolute: false),
                     'availability' => route('public.booking.availability', $tenant->slug, absolute: false),
                     'store' => route('public.booking.store', $tenant->slug, absolute: false),
                     'waitlist' => route('public.booking.waitlist', $tenant->slug, absolute: false),
                 ],
             ],
         ]);
+
+        /*
+         * A reminder link carried the token in the URL. Remember it, so the next
+         * visit is recognised without one — and so the token stops travelling in
+         * a URL that ends up in a browser history and a referrer header.
+         */
+        if ($customer !== null && is_string($request->query('ref'))) {
+            $response->withCookie(ReturningCustomer::remember(
+                ReturningCustomer::token($request),
+                $request->secure(),
+            ));
+        }
+
+        return $response;
     }
 
     public function availability(Request $request, AvailabilityEngine $engine): JsonResponse
@@ -90,9 +131,23 @@ class PublicBookingController extends Controller
         $payload = Cache::remember($cacheKey, (int) config('booking.availability_cache_ttl'), function () use ($engine, $tenant, $service, $fromDate, $toDate, $staff) {
             $from = CarbonImmutable::parse($fromDate.' 00:00:00', $tenant->timezone)->utc();
             $to = CarbonImmutable::parse($toDate.' 00:00:00', $tenant->timezone)->addDay()->utc();
-            $slots = $engine->slotsFor($tenant, $service, $from, $to, $staff);
-            $days = [];
 
+            /*
+             * Two questions, two answers: what the day is, and what is left of
+             * it. The picker draws every candidate start and strikes through the
+             * ones that have gone, because a grid with three times in it cannot
+             * tell a customer whether the salon is busy or shut, and a grid with
+             * none in it reads as a broken page.
+             */
+            $free = $engine->slotsFor($tenant, $service, $from, $to, $staff);
+            $grid = $engine->gridFor($tenant, $service, $from, $to, $staff);
+
+            $freeIds = [];
+            foreach ($free as $slot) {
+                $freeIds[$slot->startsAt->utc()->getTimestamp()] = $slot->staffIds;
+            }
+
+            $days = [];
             $cursor = CarbonImmutable::parse($fromDate, $tenant->timezone)->startOfDay();
             $last = CarbonImmutable::parse($toDate, $tenant->timezone)->startOfDay();
 
@@ -101,13 +156,18 @@ class PublicBookingController extends Controller
                 $cursor = $cursor->addDay();
             }
 
-            foreach ($slots as $slot) {
+            foreach ($grid as $slot) {
                 $local = $slot->startsAt->timezone($tenant->timezone);
-                $date = $local->toDateString();
-                $days[$date][] = [
+                $stamp = $slot->startsAt->utc()->getTimestamp();
+                $available = array_key_exists($stamp, $freeIds);
+
+                $days[$local->toDateString()][] = [
                     'starts_at' => $slot->startsAt->utc()->toIso8601String(),
                     'starts_at_local' => $local->format('H:i'),
-                    'staff_ids' => $slot->staffIds,
+                    'staff_ids' => $available ? $freeIds[$stamp] : [],
+                    'available' => $available,
+                    // Morning and afternoon, which is how the picker groups.
+                    'half' => $local->hour < 12 ? 'am' : 'pm',
                 ];
             }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -25,10 +26,10 @@ it('previews then imports customers and bookings', function () {
     $bookings = "customer_email,service_name,staff_email,starts_at,subject_name\nada@example.com,Full groom — small dog,groomer@example.com,2026-09-01 10:00,Buster\n";
     $dry = app(BookingCsvImporter::class)->preview($tenant, $bookings);
     expect($dry[0]['ok'])->toBeTrue()
-        ->and(\App\Models\Booking::query()->count())->toBe(0);
+        ->and(Booking::query()->count())->toBe(0);
 
     app(BookingCsvImporter::class)->import($tenant, $bookings);
-    expect(\App\Models\Booking::query()->count())->toBe(1);
+    expect(Booking::query()->count())->toBe(1);
 });
 
 it('exports and hard-deletes a customer from admin', function () {

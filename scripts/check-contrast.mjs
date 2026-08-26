@@ -11,7 +11,17 @@
  */
 import { readFileSync } from 'node:fs';
 
-const css = readFileSync('resources/css/tokens.css', 'utf8');
+/*
+ * The tokens file, overridable by argument.
+ *
+ * The override exists so the gate itself can be tested: a suite can hand it a
+ * palette with a seventh preset that does not clear 4.5:1 and assert that this
+ * script fails, without editing the real stylesheet to do it. A checker nobody
+ * has ever seen fail is a checker nobody knows works.
+ */
+const TOKENS_PATH = process.argv[2] ?? 'resources/css/tokens.css';
+
+const css = readFileSync(TOKENS_PATH, 'utf8');
 
 const raw = (name) => (css.match(new RegExp(`--${name}:\\s*([^;]+);`)) || [, ''])[1].trim();
 
@@ -62,16 +72,34 @@ const NON_TEXT = [
     ['ink-4', 1.4, 'struck-through slots, disabled fills, rules'],
 ];
 
-// The six tenant brand presets must clear 4.5:1 against white button text and
-// remain legible on paper. A hex field would let someone ship neon on white.
-const BRAND_PRESETS = {
-    forest: '#2F5D4A',
-    plum: '#7B3448',
-    navy: '#24415F',
-    ochre: '#8A5A1E',
-    slate: '#414A52',
-    clay: '#8C4A32',
-};
+// The six tenant brand presets, read from tokens.css rather than restated here.
+// They used to be a copy in this file, which meant the values that shipped were
+// never the values that were checked. A hex field would let someone ship neon
+// on white, so the presets must clear 4.5:1 against white button text and
+// remain legible on paper.
+const BRAND_PRESETS = Object.fromEntries(
+    [...css.matchAll(/--brand-(?!fg\b)([a-z]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
+);
+
+/*
+ * The six the product offers. Named so a preset that gets renamed or deleted in
+ * tokens.css fails here rather than quietly shrinking the palette.
+ *
+ * This is a floor, not an exact count. It used to be `length !== 6`, which
+ * meant a SEVENTH preset failed this check for being a seventh preset — before
+ * a single contrast ratio was computed. That is the wrong failure: it says
+ * "there are too many colours" when the thing worth knowing is whether the new
+ * colour is legible. Every preset found below is measured, so adding one that
+ * cannot carry white text fails for that reason, in those words.
+ */
+const REQUIRED_PRESETS = ['forest', 'plum', 'navy', 'ochre', 'slate', 'clay'];
+
+const missing = REQUIRED_PRESETS.filter((name) => !(name in BRAND_PRESETS));
+
+if (missing.length) {
+    console.error(`contrast: tokens.css is missing brand preset(s): ${missing.join(', ')}.`);
+    process.exit(1);
+}
 
 let failed = 0;
 const check = (label, fg, bg, min) => {
@@ -94,9 +122,12 @@ for (const [name, min, note] of NON_TEXT) {
 console.log('\nink as a fill');
 check('white on ink (primary button)', toRgb(resolve('white')), toRgb(resolve('ink')), 4.5);
 
+console.log('\nthe brand default — dead until --brand existed, so never measured');
+check('brand-fg on brand (default)', toRgb(resolve('brand-fg')), toRgb(resolve('brand')), 4.5);
+
 console.log('\ntenant brand presets — white text on the fill, and the fill on paper');
 for (const [name, hex] of Object.entries(BRAND_PRESETS)) {
-    check(`white on ${name}`, toRgb(resolve('white')), toRgb(hex), 4.5);
+    check(`brand-fg on ${name}`, toRgb(resolve('brand-fg')), toRgb(hex), 4.5);
     check(`${name} on paper`, toRgb(hex), toRgb(resolve('paper')), 3.0);
 }
 

@@ -1,9 +1,29 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import Callout from '@/Components/ui/Callout.vue';
+import ConfirmDialog from '@/Components/ui/ConfirmDialog.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import QuietAction from '@/Components/ui/QuietAction.vue';
+import Table, { type Column } from '@/Components/ui/Table.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-defineProps<{
+/**
+ * Billing, on the component library.
+ *
+ * Invoices are a list, so they are the shared table with their money right and
+ * mono. The plan is a summary line and a badge rather than five labelled
+ * key-value pairs, because "what am I on and what happens next" is one
+ * sentence, not a database dump.
+ *
+ * Cancelling goes through `ui/ConfirmDialog` — it was a bare submit button
+ * beside a textarea, one press from ending a subscription with no confirmation
+ * at all.
+ */
+const props = defineProps<{
     billing: {
         plan: string | null;
         status: string;
@@ -22,56 +42,123 @@ defineProps<{
 
 const checkout = useForm({ interval: 'monthly' });
 const cancel = useForm({ reason: '' });
+const confirming = ref(false);
+
+const subscribe = (interval: 'monthly' | 'yearly') => {
+    checkout.interval = interval;
+    checkout.post(route('billing.checkout'));
+};
+
+const planLine = computed(() => {
+    const b = props.billing;
+
+    if (b.is_comped) return 'On the house. Nothing to pay, and nothing expires.';
+    if (b.on_trial) {
+        return `Trial — ${b.trial_days_remaining} day${b.trial_days_remaining === 1 ? '' : 's'} left, no card needed.`;
+    }
+    if (b.next_charge) return `${b.plan ?? 'Subscribed'} — next charge ${b.next_charge}.`;
+
+    return b.plan ?? 'No subscription.';
+});
+
+const tone = computed(() => (props.billing.read_only ? 'cancelled' : props.billing.on_trial ? 'pending' : 'confirmed'));
+
+const invoiceColumns: Column[] = [
+    { key: 'date', label: 'Date', width: 'when' },
+    { key: 'amount', label: 'Amount', width: 'amount', align: 'right', numeric: true },
+    { key: 'status', label: 'Status', width: 'status' },
+];
+
+const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...invoice })));
 </script>
 
 <template>
     <AppLayout>
         <Head title="Billing" />
-        <PageHeader title="Billing" description="Your subscription. Card details stay with Stripe." />
-        <div class="max-w-xl space-y-6">
-            <section class="rounded border border-rule p-4 text-14">
-                <p>Plan: {{ billing.is_comped ? 'Comped' : billing.plan || 'Trial' }}</p>
-                <p class="text-ink-2">Status: {{ billing.status }}</p>
-                <p v-if="billing.on_trial">Trial ends {{ billing.trial_ends_at }} ({{ billing.trial_days_remaining }} days left)</p>
-                <p v-if="billing.next_charge">Next charge {{ billing.next_charge }}</p>
-                <p v-if="billing.payment_method">{{ billing.payment_method }}</p>
-                <p v-else class="text-ink-2">No card on file. You do not need one during the trial.</p>
-            </section>
-            <section class="flex gap-3">
-                <button
-                    type="button"
-                    class="min-h-tap rounded bg-ink px-4 text-paper"
-                    @click="checkout.interval = 'monthly'; checkout.post(route('billing.checkout'))"
-                >
-                    {{ billing.monthly_price }} / month
-                </button>
-                <button
-                    type="button"
-                    class="min-h-tap rounded border border-rule px-4"
-                    @click="checkout.interval = 'yearly'; checkout.post(route('billing.checkout'))"
-                >
-                    {{ billing.yearly_price }} / year
-                </button>
-            </section>
+        <PageHeader title="Billing" description="Your subscription. Card details never touch this app — they stay with Stripe." />
+
+        <div class="max-w-measure space-y-8">
+            <!-- Read-only is the state that costs money to ignore, so it is the
+                 first thing on the screen and it says what still works. -->
+            <Callout v-if="billing.read_only" tone="danger" title="The diary is read-only">
+                Your booking page is still live and still taking bookings — nothing has been lost. Subscribing turns
+                writing back on immediately.
+            </Callout>
+
             <section>
-                <h2 class="font-display text-17">Invoices</h2>
-                <ul class="mt-2 text-14">
-                    <li v-for="invoice in billing.invoices" :key="invoice.id">
-                        {{ invoice.date }} · {{ invoice.amount }} · {{ invoice.status }}
-                    </li>
-                    <li v-if="billing.invoices.length === 0" class="text-ink-2">None yet.</li>
-                </ul>
+                <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-b-rule pb-3">
+                    <h2 class="text-17">Plan</h2>
+                    <Badge :tone="tone">{{ billing.status }}</Badge>
+                </div>
+                <p class="mt-3 text-14">{{ planLine }}</p>
+                <p class="mt-1 text-13 text-ink-2">
+                    {{ billing.payment_method ?? 'No card on file. You do not need one during the trial.' }}
+                </p>
+
+                <div class="mt-4 flex flex-wrap gap-3">
+                    <Button :loading="checkout.processing" @click="subscribe('monthly')">
+                        {{ billing.monthly_price }} a month
+                    </Button>
+                    <Button variant="secondary" :loading="checkout.processing" @click="subscribe('yearly')">
+                        {{ billing.yearly_price }} a year
+                    </Button>
+                </div>
             </section>
-            <section class="space-y-3">
-                <form @submit.prevent="cancel.post(route('billing.pause'))">
-                    <button type="submit" class="min-h-tap underline">Pause instead of cancelling</button>
-                </form>
-                <form class="space-y-2" @submit.prevent="cancel.post(route('billing.cancel'))">
-                    <label class="block text-13">Why are you leaving? (optional)</label>
-                    <textarea v-model="cancel.reason" class="w-full" rows="3" />
-                    <button type="submit" class="min-h-tap text-13 text-ink-2">Cancel subscription</button>
-                </form>
+
+            <section>
+                <h2 class="border-b border-b-rule pb-3 text-17">Invoices</h2>
+                <div class="mt-4">
+                    <Table
+                        :columns="invoiceColumns"
+                        :rows="invoices"
+                        label="Invoices"
+                        empty-title="No invoices yet"
+                        empty-description="The first one arrives when the trial ends and the first payment goes through."
+                    >
+                        <template #cell:date="{ row }"><span class="numeral">{{ row.date }}</span></template>
+                        <template #cell:status="{ row }">
+                            <Badge :tone="row.status === 'paid' ? 'confirmed' : 'pending'">{{ row.status }}</Badge>
+                        </template>
+                    </Table>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="border-b border-b-rule pb-3 text-17">Leaving</h2>
+                <p class="mt-3 text-14 text-ink-2">
+                    Pausing keeps your diary readable and stops the charges. Cancelling ends the subscription; your
+                    booking page stays up either way.
+                </p>
+
+                <div class="mt-4 space-y-3">
+                    <Textarea
+                        v-model="cancel.reason"
+                        label="Why are you leaving?"
+                        :rows="3"
+                        hint="Optional, and read by a person."
+                        :error="cancel.errors.reason"
+                    />
+                    <div class="flex flex-wrap items-center gap-4">
+                        <Button variant="secondary" :loading="cancel.processing" @click="cancel.post(route('billing.pause'))">
+                            Pause instead
+                        </Button>
+                        <QuietAction @click="confirming = true">Cancel the subscription</QuietAction>
+                    </div>
+                </div>
             </section>
         </div>
+
+        <ConfirmDialog
+            :show="confirming"
+            title="Cancel your subscription?"
+            confirm-label="Yes, cancel it"
+            cancel-label="Keep it"
+            :loading="cancel.processing"
+            @close="confirming = false"
+            @confirm="cancel.post(route('billing.cancel'), { onSuccess: () => (confirming = false) })"
+        >
+            Your diary becomes read-only at the end of the period you have paid for. Your booking page stays live and
+            keeps taking bookings, and nothing is deleted.
+        </ConfirmDialog>
     </AppLayout>
 </template>

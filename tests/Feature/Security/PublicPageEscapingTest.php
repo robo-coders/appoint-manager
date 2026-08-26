@@ -1,6 +1,11 @@
 <?php
 
+use App\Enums\BookingSource;
+use App\Enums\BookingStatus;
+use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\Tenant;
+use Carbon\CarbonImmutable;
 
 it('escapes a script tag injected through the business name into JSON-LD', function () {
     $payload = '</script><script>window.__pwned=1</script>';
@@ -29,18 +34,18 @@ it('escapes a script tag injected through the address fields', function () {
 
 it('escapes tenant-controlled data on the manage and offer shells too', function () {
     $salon = aSalon(['tenant' => ['name' => 'Bad </script><script>window.__manage=1</script>']]);
-    $customer = App\Models\Customer::factory()->create(['tenant_id' => $salon['tenant']->id]);
-    $startsAt = Carbon\CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
+    $customer = Customer::factory()->create(['tenant_id' => $salon['tenant']->id]);
+    $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
 
-    $booking = App\Models\Booking::factory()->create([
+    $booking = Booking::factory()->create([
         'tenant_id' => $salon['tenant']->id,
         'staff_id' => $salon['staff']->id,
         'service_id' => $salon['service']->id,
         'customer_id' => $customer->id,
         'starts_at' => $startsAt,
         'ends_at' => $startsAt->addHour(),
-        'status' => App\Enums\BookingStatus::Confirmed,
-        'source' => App\Enums\BookingSource::Online,
+        'status' => BookingStatus::Confirmed,
+        'source' => BookingSource::Online,
     ]);
 
     expect($this->get('/b/'.$booking->public_token)->getContent())

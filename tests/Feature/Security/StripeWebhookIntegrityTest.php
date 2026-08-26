@@ -6,9 +6,11 @@ use App\Enums\DepositStatus;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\StripeEvent;
+use App\Models\WebhookFailure;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
 
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
@@ -45,7 +47,7 @@ function paymentEvent(array $object, string $id = 'evt_1', ?string $account = 'a
     return $event;
 }
 
-function postWebhook(array $event): Illuminate\Testing\TestResponse
+function postWebhook(array $event): TestResponse
 {
     return test()->postJson('/stripe/webhook', $event, ['Stripe-Signature' => 't=1,v1=test']);
 }
@@ -135,7 +137,7 @@ it('records a webhook failure when an event cannot be attributed', function () {
         'metadata' => ['booking_id' => '999999'],
     ], 'evt_orphan', 'acct_orphan'));
 
-    expect(App\Models\WebhookFailure::query()->where('source', 'connect')->count())->toBeGreaterThan(0);
+    expect(WebhookFailure::query()->where('source', 'connect')->count())->toBeGreaterThan(0);
 });
 
 it('refuses to confirm a refund against a booking on a different connected account', function () {

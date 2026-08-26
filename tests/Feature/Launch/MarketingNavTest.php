@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Tenant;
+use App\Models\User;
+
 /**
  * A returning salon owner arrives at the front page. Until now there was no way
  * in from there at all — only "Start free trial", which is the wrong door.
@@ -27,8 +30,8 @@ it('does not vary the marketing header by who is logged in', function () {
     // hand one visitor's HTML to another. The header must not depend on session.
     $guest = $this->get('/')->getContent();
 
-    $tenant = App\Models\Tenant::factory()->create();
-    $user = App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
     $authed = $this->actingAs($user)->get('/')->getContent();
 
     expect($authed)->toBe($guest);

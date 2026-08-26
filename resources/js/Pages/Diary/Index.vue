@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import DayAgenda from '@/Components/Diary/DayAgenda.vue';
+import DayGrid from '@/Components/Diary/DayGrid.vue';
+import { annotate, gapsIn, minutesOf, timeOf, type DiaryBooking, type Gap } from '@/Components/Diary/diary';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
-import DateTime from '@/Components/ui/DateTime.vue';
 import EmptyState from '@/Components/ui/EmptyState.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Select from '@/Components/ui/Select.vue';
@@ -10,21 +12,29 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import { toast } from '@/lib/toast';
 import type { Money } from '@/types/models';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
-interface DiaryBooking {
-    id: number;
-    staff_id: number;
-    staff_name: string;
-    staff_colour: string | null;
-    service_name: string;
-    customer_name: string;
-    subject_name: string | null;
-    starts_at_local: string;
-    ends_at_local: string;
-    status: string;
-    source: string;
-}
+/**
+ * The diary.
+ *
+ * There is no approved mockup for this screen and the three that were built
+ * were rejected, so nothing here is invented: it is `dashboard.html`'s timeline
+ * language extended to a full day with staff as columns. The row component the
+ * dashboard uses — `ui/TimelineRow` — is the same one the 375px agenda is built
+ * from, and the grid's blocks (`ui/TimeBlock`) restate the same three rules:
+ * muted past with no detail, a 2px ink left border on the current appointment,
+ * and the freed slot as the only coloured thing on screen.
+ *
+ * The two questions the brief said must be answered here:
+ *
+ * **Gap-finding.** Open time is drawn as space, not counted as a statistic —
+ * `ui/GapButton` occupies the minutes it represents and books into itself. See
+ * that component for the argument.
+ *
+ * **375px.** Staff columns do not fit, so below `md` the grid is replaced by a
+ * single-column agenda built from the dashboard's own row, plus a staff filter.
+ * `DayAgenda` documents the two options that were rejected and why.
+ */
 
 const props = defineProps<{
     view: 'day' | 'week';
@@ -34,16 +44,27 @@ const props = defineProps<{
     staff: Array<{ id: number; name: string; colour: string | null; is_bookable: boolean }>;
     services: Array<{ id: number; name: string; duration_minutes: number; price: Money }>;
     bookings: DiaryBooking[];
+    /** Keyed by staff id. Day view only. */
+    working: Record<number, Array<{ start: string; end: string }>>;
+    now: string;
+    is_today: boolean;
 }>();
 
 const page = usePage();
-const startHour = 8;
-const hours = 12;
-const pixelsPerHour = 48;
 const selected = ref<DiaryBooking | null>(null);
 const createOpen = ref(false);
-const optimistic = ref<DiaryBooking[]>([]);
 const formError = ref('');
+const optimistic = ref<DiaryBooking[]>([]);
+const filterStaffId = ref<number | null>(null);
+const narrow = ref(false);
+
+/*
+ * The current-time hairline is live. A diary that draws "now" once, at page
+ * load, is a diary that is wrong for the rest of the shift — and this is a
+ * screen that stays open all day.
+ */
+const nowLocal = ref(props.now);
+let clock: ReturnType<typeof setInterval> | undefined;
 
 const form = useForm({
     service_id: props.services[0]?.id ?? 0,
@@ -55,43 +76,61 @@ const form = useForm({
     subject_name: '',
 });
 
-const shown = computed(() => [...props.bookings, ...optimistic.value]);
+const shown = computed(() => annotate([...props.bookings, ...optimistic.value], props.is_today ? nowLocal.value : null));
 
-const columns = computed(() => {
-    if (props.view === 'week') {
-        return Array.from({ length: 7 }, (_, index) => {
-            const date = addDays(props.range_start, index);
-            return { key: date, label: date, staffId: null as number | null };
-        });
-    }
+const gaps = computed<Gap[]>(() => {
+    if (props.view !== 'day') return [];
 
-    return props.staff.map((person) => ({
-        key: String(person.id),
-        label: person.name,
-        staffId: person.id,
-    }));
+    return props.staff.flatMap((member) => gapsIn(member.id, props.working[member.id] ?? [], shown.value));
 });
 
-const bookingsFor = (columnKey: string, staffId: number | null) =>
-    shown.value.filter((booking) => {
-        const localDate = booking.starts_at_local.slice(0, 10);
-        if (props.view === 'week') {
-            return localDate === columnKey;
+/**
+ * The drawn day: the earliest start and the latest end anybody has, whether
+ * that is a working window or an appointment that runs past one.
+ *
+ * Not a fixed 08:00–20:00. A salon that opens at 09:00 does not want an hour of
+ * empty grid above its first appointment, and a groomer who is still going at
+ * 19:30 must not have that appointment drawn off the bottom of the screen.
+ */
+const bounds = computed(() => {
+    const edges: number[] = [];
+
+    for (const windows of Object.values(props.working)) {
+        for (const window of windows) {
+            edges.push(minutesOf(window.start), minutesOf(window.end));
         }
+    }
 
-        return booking.staff_id === staffId;
-    });
+    for (const booking of shown.value) {
+        edges.push(minutesOf(booking.starts_at_local.slice(11)), minutesOf(booking.ends_at_local.slice(11)));
+    }
 
-const topFor = (booking: DiaryBooking) => {
-    const [hour, minute] = booking.starts_at_local.slice(11).split(':').map(Number);
-    return ((hour - startHour) * 60 + minute) * (pixelsPerHour / 60);
-};
+    if (edges.length === 0) return { start: '09:00', end: '17:00' };
 
-const heightFor = (booking: DiaryBooking) => {
-    const [sh, sm] = booking.starts_at_local.slice(11).split(':').map(Number);
-    const [eh, em] = booking.ends_at_local.slice(11).split(':').map(Number);
-    return Math.max((eh * 60 + em - (sh * 60 + sm)) * (pixelsPerHour / 60), 24);
-};
+    // Rounded out to the hour, so the gridlines land where the labels are.
+    const start = Math.floor(Math.min(...edges) / 60) * 60;
+    const end = Math.ceil(Math.max(...edges) / 60) * 60;
+
+    return { start: timeOf(start), end: timeOf(Math.max(end, start + 120)) };
+});
+
+/** Everything on today that is a gap somebody can still be offered. */
+const freed = computed(() => shown.value.filter((booking) => booking.is_freed));
+
+/**
+ * The one number, scoped to what is actually on screen.
+ *
+ * At 375px with `Everyone` selected the agenda draws no gaps at all — see
+ * `DayAgenda` — so an aggregate over gaps nobody can see is a claim the screen
+ * cannot back up. It follows the filter.
+ */
+const visibleGaps = computed(() =>
+    filterStaffId.value === null ? gaps.value : gaps.value.filter((gap) => gap.staff_id === filterStaffId.value),
+);
+
+const idleMinutes = computed(() => visibleGaps.value.reduce((total, gap) => total + gap.minutes, 0));
+
+const showIdle = computed(() => props.view === 'day' && idleMinutes.value > 0 && (!narrow.value || filterStaffId.value !== null));
 
 const addDays = (value: string, amount: number) => {
     const [year, month, day] = value.split('-').map(Number);
@@ -108,19 +147,23 @@ const go = (date: string, view = props.view) => {
     router.get(route('diary.index'), { date, view }, { preserveState: true, preserveScroll: true });
 };
 
-const openCreate = (staffId: number | null, event: MouseEvent) => {
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const minutes = Math.round((((event.clientY - rect.top) / (hours * pixelsPerHour)) * hours * 60) / 15) * 15;
-    const hour = startHour + Math.floor(minutes / 60);
-    const minute = minutes % 60;
-    const day = props.view === 'week' ? target.dataset.day ?? props.date : props.date;
+const heading = computed(() =>
+    new Date(`${props.date}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    }),
+);
 
-    form.staff_id = staffId ?? form.staff_id;
-    form.starts_at = `${day}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+/** Booking into a gap: the staff member and the minute are already decided. */
+const bookGap = (gap: Gap) => {
+    form.staff_id = gap.staff_id;
+    form.starts_at = `${props.date}T${gap.starts_at}`;
     formError.value = '';
     createOpen.value = true;
 };
+
+const offer = (booking: DiaryBooking) => router.get(route('waitlist.index'), { slot: booking.id });
 
 const submit = () => {
     const service = props.services.find((item) => item.id === form.service_id);
@@ -128,18 +171,22 @@ const submit = () => {
     const [day, time] = form.starts_at.split('T');
     const [hour, minute] = (time ?? '09:00').split(':').map(Number);
     const end = hour * 60 + minute + (service?.duration_minutes ?? 60);
+
+    // Optimistic, and local-only until `bookings.store` answers. See DECISIONS.md.
     const temp: DiaryBooking = {
         id: -Date.now(),
         staff_id: form.staff_id,
         staff_name: person?.name ?? '',
-        staff_colour: person?.colour ?? null,
         service_name: service?.name ?? '',
         customer_name: form.customer_name || 'New booking',
         subject_name: form.subject_name || null,
-        starts_at_local: `${day} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-        ends_at_local: `${day} ${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`,
+        starts_at_local: `${day} ${timeOf(hour * 60 + minute)}`,
+        ends_at_local: `${day} ${timeOf(end)}`,
         status: 'confirmed',
+        deposit_status: 'none',
         source: 'manual',
+        duration_minutes: service?.duration_minutes ?? null,
+        cancellation_reason: null,
     };
 
     optimistic.value.push(temp);
@@ -161,12 +208,26 @@ const submit = () => {
     });
 };
 
+const onResize = () => (narrow.value = window.matchMedia('(max-width: 767px)').matches);
+
+onMounted(() => {
+    onResize();
+    window.addEventListener('resize', onResize);
+    clock = setInterval(() => {
+        const local = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: props.timezone });
+        nowLocal.value = local;
+    }, 30_000);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', onResize);
+    if (clock) clearInterval(clock);
+});
+
 watch(
     () => page.url,
     (url) => {
-        if (url.includes('new=1')) {
-            createOpen.value = true;
-        }
+        if (url.includes('new=1')) createOpen.value = true;
     },
     { immediate: true },
 );
@@ -175,7 +236,8 @@ watch(
 <template>
     <AppLayout>
         <Head title="Diary" />
-        <PageHeader title="Diary" :description="`Times in ${timezone}.`">
+
+        <PageHeader :title="heading" :description="`${view === 'week' ? 'Week from ' + range_start : timezone}`">
             <Button @click="createOpen = true">New booking</Button>
         </PageHeader>
 
@@ -185,83 +247,135 @@ watch(
             <Button variant="secondary" @click="go(addDays(date, view === 'week' ? 7 : 1))">Later</Button>
             <Button :variant="view === 'day' ? 'primary' : 'secondary'" @click="go(date, 'day')">Day</Button>
             <Button :variant="view === 'week' ? 'primary' : 'secondary'" @click="go(date, 'week')">Week</Button>
-            <p class="text-13 text-ink-2">{{ view === 'week' ? range_start : date }}</p>
+
+            <!--
+                The one number, and it earns its place only because the space it
+                describes is right underneath it. On its own — which is how it
+                used to be shown — "3 h 45 min idle" is a fact nobody can act on.
+            -->
+            <p v-if="showIdle" class="caption ml-auto">
+                <span class="numeral">{{ Math.floor(idleMinutes / 60) }}h {{ idleMinutes % 60 }}m</span> open across
+                <span class="numeral">{{ visibleGaps.length }}</span> gaps
+            </p>
         </div>
 
         <EmptyState
             v-if="staff.length === 0"
-            title="Add someone bookable and they will show up here as a column."
+            title="Nobody is bookable yet"
+            description="Add someone who takes appointments and they will show up here as a column."
             action-label="Add staff"
             @action="router.visit(route('staff.index'))"
         />
 
-        <div v-else class="overflow-x-auto rounded border border-rule bg-white">
-            <div
-                class="min-w-[380px]"
-                :style="{ display: 'grid', gridTemplateColumns: `3rem repeat(${columns.length}, minmax(7rem, 1fr))` }"
-            >
-                <div class="border-b border-rule" />
-                <div
-                    v-for="column in columns"
-                    :key="column.key"
-                    class="border-b border-l border-rule px-2 py-2 text-13"
-                >
-                    {{ column.label }}
-                </div>
-                <div class="relative" :style="{ height: `${hours * pixelsPerHour}px` }">
-                    <div
-                        v-for="hour in hours"
-                        :key="hour"
-                        class="absolute left-0 right-0 border-t border-rule px-1 text-12 text-ink-2"
-                        :style="{ top: `${(hour - 1) * pixelsPerHour}px`, height: `${pixelsPerHour}px` }"
+        <template v-else-if="view === 'day'">
+            <DayAgenda
+                v-if="narrow"
+                :staff="staff"
+                :bookings="shown"
+                :gaps="gaps"
+                :filter-staff-id="filterStaffId"
+                :now="is_today ? nowLocal : null"
+                @open="selected = $event"
+                @book-gap="bookGap"
+                @offer="offer"
+                @filter="filterStaffId = $event"
+            />
+
+            <template v-else>
+                <DayGrid
+                    :staff="staff"
+                    :bookings="shown"
+                    :gaps="gaps"
+                    :day-start="bounds.start"
+                    :day-end="bounds.end"
+                    :now="is_today ? nowLocal : null"
+                    @open="selected = $event"
+                    @book-gap="bookGap"
+                />
+
+                <!--
+                    The freed slots get their action below the grid, where there
+                    is room for a real label: a 9rem column cannot hold "Offer to
+                    3 waiting" and a truncated call to action is not one.
+                -->
+                <ul v-if="freed.length" class="mt-6">
+                    <li
+                        v-for="booking in freed"
+                        :key="`freed-${booking.id}`"
+                        class="flex flex-wrap items-baseline gap-4 border-b border-b-rule border-l-2 border-l-accent px-4 py-3"
                     >
-                        {{ String(startHour + hour - 1).padStart(2, '0') }}:00
-                    </div>
-                </div>
-                <div
-                    v-for="column in columns"
-                    :key="`grid-${column.key}`"
-                    class="relative border-l border-rule"
-                    :data-day="view === 'week' ? column.key : date"
-                    :style="{ height: `${hours * pixelsPerHour}px` }"
-                    @click="openCreate(column.staffId, $event)"
-                >
-                    <div
-                        v-for="hour in hours"
-                        :key="hour"
-                        class="absolute inset-x-0 border-t border-rule"
-                        :style="{ top: `${(hour - 1) * pixelsPerHour}px`, height: `${pixelsPerHour}px` }"
-                    />
-                    <button
-                        v-for="booking in bookingsFor(column.key, column.staffId)"
-                        :key="booking.id"
-                        type="button"
-                        class="absolute inset-x-1 overflow-hidden rounded px-1 py-1 text-left text-12 text-white"
-                        :style="{
-                            top: `${topFor(booking)}px`,
-                            height: `${heightFor(booking)}px`,
-                            background: booking.staff_colour || 'var(--color-accent)',
-                        }"
-                        @click.stop="selected = booking"
-                    >
-                        <span class="block font-medium">{{ booking.customer_name }}</span>
-                        <span class="block">{{ booking.service_name }}</span>
-                    </button>
-                </div>
-            </div>
+                        <span class="numeral w-col-time shrink-0 text-14 font-medium">
+                            {{ booking.starts_at_local.slice(11) }}
+                        </span>
+                        <span class="flex-1 text-14">
+                            <span class="font-medium text-accent">Freed —</span>
+                            {{ booking.customer_name }} cancelled,
+                            <span class="numeral">{{ booking.minutes }}</span> min open with {{ booking.staff_name }}
+                        </span>
+                        <Button variant="accent" class="shrink-0" @click="offer(booking)">
+                            {{
+                                booking.offers_sent
+                                    ? `${booking.offers_sent} offer${booking.offers_sent === 1 ? '' : 's'} out`
+                                    : booking.waiting
+                                      ? `Offer to ${booking.waiting} waiting`
+                                      : 'Fill this slot'
+                            }}
+                        </Button>
+                    </li>
+                </ul>
+            </template>
+        </template>
+
+        <!--
+            The week. Deliberately the agenda rather than a seven-column grid:
+            seven days x four groomers is 28 columns, which is a spreadsheet, and
+            the week view's job is "which days are busy", not "what is Priya
+            doing at 14:15 on Thursday". That is what the day view is for.
+        -->
+        <div v-else class="space-y-8">
+            <section v-for="day in 7" :key="day">
+                <h2 class="border-b border-b-rule pb-2 text-17">
+                    {{
+                        new Date(`${addDays(range_start, day - 1)}T12:00:00`).toLocaleDateString(undefined, {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                        })
+                    }}
+                </h2>
+                <DayAgenda
+                    :staff="staff"
+                    :bookings="shown.filter((b) => b.starts_at_local.slice(0, 10) === addDays(range_start, day - 1))"
+                    :gaps="[]"
+                    :filter-staff-id="filterStaffId"
+                    :now="null"
+                    @open="selected = $event"
+                    @book-gap="bookGap"
+                    @offer="offer"
+                    @filter="filterStaffId = $event"
+                />
+            </section>
         </div>
 
         <SlideOver :show="selected !== null" :title="selected?.customer_name ?? 'Booking'" @close="selected = null">
             <div v-if="selected" class="space-y-2 text-14">
                 <p>{{ selected.service_name }}</p>
-                <p class="text-ink-2">
-                    <DateTime :value="selected.starts_at_local" />
-                    –
-                    {{ selected.ends_at_local.slice(11) }}
+                <p class="numeral text-ink-2">
+                    {{ selected.starts_at_local.slice(11) }} – {{ selected.ends_at_local.slice(11) }}
                 </p>
                 <p class="text-ink-2">{{ selected.staff_name }}</p>
                 <p v-if="selected.subject_name">{{ selected.subject_name }}</p>
-                <Link :href="route('bookings.show', selected.id)" class="inline-block text-14 underline decoration-rule underline-offset-4">
+                <p v-if="selected.overrun_minutes" class="text-ink-2">
+                    Booked for <span class="numeral">{{ selected.duration_minutes }}</span> min, holding
+                    <span class="numeral">{{ (selected.duration_minutes ?? 0) + selected.overrun_minutes }}</span> min.
+                </p>
+                <p v-if="selected.overlapping" class="text-danger">
+                    This overlaps another appointment on {{ selected.staff_name }}.
+                </p>
+                <Link
+                    :href="route('bookings.show', selected.id)"
+                    class="inline-block text-14 underline decoration-rule underline-offset-4"
+                >
                     Open booking
                 </Link>
             </div>
@@ -270,18 +384,22 @@ watch(
         <SlideOver :show="createOpen" title="New booking" @close="createOpen = false">
             <form class="space-y-3" @submit.prevent="submit">
                 <p v-if="formError" class="text-13 text-danger" role="alert">{{ formError }}</p>
-                <Select v-model="form.service_id" label="Service">
-                    <option v-for="service in services" :key="service.id" :value="service.id">{{ service.name }}</option>
-                </Select>
-                <Select v-model="form.staff_id" label="Staff">
-                    <option v-for="person in staff" :key="person.id" :value="person.id">{{ person.name }}</option>
-                </Select>
+                <Select
+                    v-model="form.service_id"
+                    label="Service"
+                    :options="services.map((s) => ({ value: s.id, label: s.name }))"
+                />
+                <Select
+                    v-model="form.staff_id"
+                    label="Staff"
+                    :options="staff.map((s) => ({ value: s.id, label: s.name }))"
+                />
                 <TextInput v-model="form.starts_at" type="datetime-local" label="Starts" :error="form.errors.starts_at" />
                 <TextInput v-model="form.customer_name" label="Client name" :error="form.errors.customer_name" />
                 <TextInput v-model="form.customer_email" type="email" label="Email" :error="form.errors.customer_email" />
                 <TextInput v-model="form.customer_phone" label="Phone" :error="form.errors.customer_phone" />
                 <TextInput v-model="form.subject_name" :label="page.props.vertical.subject_singular + ' name'" />
-                <Button type="submit" :disabled="form.processing">Save booking</Button>
+                <Button type="submit" :loading="form.processing">Save booking</Button>
             </form>
         </SlideOver>
     </AppLayout>

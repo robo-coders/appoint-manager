@@ -17,6 +17,7 @@
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPrivacyController;
 use App\Http\Controllers\DashboardController;
@@ -101,6 +102,8 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('/settings/branding', [BrandingController::class, 'edit'])->name('settings.branding.edit');
+    Route::patch('/settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
     Route::get('/settings/payments', [PaymentSettingsController::class, 'show'])->name('settings.payments.show');
     Route::post('/settings/payments/connect', [PaymentSettingsController::class, 'connect'])->name('settings.payments.connect');
     Route::get('/settings/payments/refresh', [PaymentSettingsController::class, 'refresh'])->name('settings.payments.refresh');

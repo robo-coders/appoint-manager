@@ -55,7 +55,7 @@ defineExpose({ focus: () => el.value?.focus() });
                 :required="required"
                 :aria-invalid="error ? 'true' : undefined"
                 :aria-describedby="error ? `${inputId}-error` : undefined"
-                class="h-control w-full rounded border bg-paper-sunk px-pad-x text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
+                class="h-control w-full rounded border bg-white px-pad-x text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
                 :class="[
                     error ? 'border-danger' : 'border-rule hover:border-rule-strong',
                     isMono ? 'font-mono' : '',

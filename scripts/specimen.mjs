@@ -39,11 +39,11 @@ const panel = (block, x, title) => {
     y += 8;
     SIZES.forEach((s) => {
         y += Math.min(s, 34) + 8;
-        o += `<text x="${x + 24}" y="${y}" fill="${ink}" font-family="sans-serif" font-size="${Math.min(s, 34)}" font-weight="500" letter-spacing="${s >= 34 ? -1 : s >= 20 ? -0.5 : -0.15}">Kestrel ${s}</text>`;
+        o += `<text x="${x + 24}" y="${y}" fill="${ink}" font-family="sans-serif" font-size="${Math.min(s, 34)}" font-weight="500" letter-spacing="${s >= 34 ? -1 : s >= 20 ? -0.5 : -0.15}">Appoint Manager ${s}</text>`;
         o += `<text x="${x + 446}" y="${y}" fill="${mut}" font-family="monospace" font-size="11" text-anchor="end">09:45  £42.50</text>`;
     });
     return o;
 };
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 620">${panel(dark, 0, 'Kestrel — light, warm paper, ink actions')}</svg>`;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 620">${panel(dark, 0, 'Appoint Manager — light, warm paper, ink actions')}</svg>`;
 writeFileSync(process.argv[2] || 'specimen.svg', svg);
 console.log('specimen written');

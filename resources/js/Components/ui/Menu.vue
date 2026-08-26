@@ -24,18 +24,31 @@ const toggle = async () => {
     open.value = !open.value;
     if (!open.value) return;
     await nextTick();
-    root.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    items()[0]?.focus();
 };
+
+const items = () => Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
 
 const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') return close();
-    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    // Tab out of an open menu closes it without stealing the focus move.
+    if (event.key === 'Tab') return close(false);
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+
     event.preventDefault();
-    const items = Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
-    if (!items.length) return;
-    const index = items.indexOf(document.activeElement as HTMLElement);
+
+    // Arrows on the closed trigger open the menu and land on an item.
+    if (!open.value) return toggle();
+
+    const list = items();
+    if (!list.length) return;
+
+    if (event.key === 'Home') return list[0].focus();
+    if (event.key === 'End') return list[list.length - 1].focus();
+
+    const index = list.indexOf(document.activeElement as HTMLElement);
     const next = event.key === 'ArrowDown' ? index + 1 : index - 1;
-    items[(next + items.length) % items.length]?.focus();
+    list[(next + list.length) % list.length]?.focus();
 };
 
 const onOutside = (event: MouseEvent) => {

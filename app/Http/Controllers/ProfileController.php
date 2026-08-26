@@ -7,7 +7,6 @@ use App\Enums\UserRole;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Booking;
 use App\Models\User;
-use Illuminate\Validation\ValidationException as ValidationError;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,8 +14,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException as ValidationError;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class ProfileController extends Controller
 {
@@ -55,7 +56,7 @@ class ProfileController extends Controller
      * would refuse the delete anyway. Instead the person is erased — name, email,
      * credentials — and the row is retired so the diary's history stays readable.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request): HttpResponse
     {
         $request->validate([
             'password' => ['required', 'current_password'],
@@ -92,7 +93,12 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return Redirect::to('/');
+        /*
+         * Same reason as logging out: the marketing homepage is Blade, and an
+         * Inertia client handed a Blade document paints it inside the shell it
+         * was already showing. `Inertia::location()` forces a real page visit.
+         */
+        return Inertia::location(marketing_url());
     }
 
     /**

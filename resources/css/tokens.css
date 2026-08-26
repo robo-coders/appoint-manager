@@ -1,5 +1,5 @@
 /*
- * Kestrel design tokens.
+ * Appoint Manager design tokens.
  *
  * Warm light surface, ink-black actions, one accent per tenant on the public
  * booking page only. The register is Mercury, Ramp, Linear, Stripe: quiet,
@@ -55,7 +55,7 @@
     --danger: #a8342c;
 
     /* ---- Accent ---------------------------------------------------------
-     * Kestrel's own accent. At most ONE per screen, and only where it carries
+     * The product accent. At most ONE per screen, and only where it carries
      * meaning: a cancelled slot needing action, a "first available" marker, a
      * waitlist count. If a screen has two, one is wrong.
      *
@@ -67,7 +67,39 @@
      * Also the focus ring, which is the one place it is allowed to repeat.
      */
     --accent: #a85729;
+
+    /* A 8% wash of the accent, for the one row on a screen that has earned it.
+     * Accent *type* on this tint measures 4.50:1 — exactly on the threshold —
+     * so this is a fill behind ink, never behind accent text. */
     --accent-tint: rgb(168 87 41 / 0.08);
+
+    /* ---- Brand ----------------------------------------------------------
+     * The tenant's own colour, and it appears in exactly two places on the
+     * public booking page: the salon's initial mark, and the primary button.
+     * The admin app never uses it — she is in it forty times a day and a
+     * colour chosen for her customers becomes noise as chrome.
+     *
+     * --brand defaults to ink, so a tenant that has not chosen one gets the
+     * product's own primary. The public booking surface overrides --brand and
+     * --brand-fg on its root; nothing else may.
+     *
+     * `tailwind.config.js` maps these to `bg-brand` / `text-brand-fg`, and
+     * `AppLogo tone="brand"` reads --brand. Both were dead until these existed.
+     */
+    --brand: var(--ink);
+    --brand-fg: var(--white);
+
+    /* Six presets, no free colour picker: a hex field guarantees someone ships
+     * neon yellow on white and it is *our* product that looks broken. Every
+     * one clears 4.5:1 for white text on the fill and 3:1 for the fill on
+     * paper — verified by `npm run check:contrast`, which reads them from
+     * here rather than from a copy of its own. */
+    --brand-forest: #2f5d4a;
+    --brand-plum: #7b3448;
+    --brand-navy: #24415f;
+    --brand-ochre: #8a5a1e;
+    --brand-slate: #414a52;
+    --brand-clay: #8c4a32;
 
     /* ---- Status ---------------------------------------------------------
      * The admin app stays monochrome: status reads from ink weight, not hue.
@@ -101,9 +133,18 @@
     --text-24: 1.5rem;
     --text-34: 2.125rem;
 
-    /* Tracking tightens with size; normal below 17. */
-    --tracking-34: -0.035em;
-    --tracking-24: -0.03em;
+    /* Tracking tightens with size; normal below 17.
+     *
+     * The ladder was set while the mockups were rendering in the system face,
+     * because Geist was named but never actually loaded. Re-measured at 34px
+     * with the real face: Geist is a tightly fitted grotesque already, and
+     * -0.035em closes the counters and pulls punctuation into the digit beside
+     * it ("£1,248 · 34"). Loosened to -0.03em, and 24 moved with it so the
+     * ladder still tightens with size rather than flattening at the top.
+     * 20 and 17 measured fine and are unchanged.
+     */
+    --tracking-34: -0.03em;
+    --tracking-24: -0.025em;
     --tracking-20: -0.02em;
     --tracking-17: -0.015em;
     --tracking-body: 0;
@@ -149,6 +190,38 @@
      */
     --rail: 148px;
     --rail-collapsed: 56px;
+    --topbar: 56px;
+
+    /* The public booking column. One thumb, one column, never wider. */
+    --booking-w: 440px;
+
+    /* Control chrome the mockups hardcoded. Every value is a multiple of 4.
+     *
+     * --badge-h stays at 20: it is on the 4px grid, and 16 clips a 12px label
+     * while 24 makes a status read as a button.
+     * --skeleton-h was 10 in the mockup, which is not on the grid at all. 8 is
+     * the nearest value that still reads as a line of text rather than a rule.
+     */
+    --badge-h: 20px;
+    --skeleton-h: 8px;
+
+    /* Bookings-table columns. Named so a column width never looks like a
+     * spacing value, and so the loading skeleton can be shaped to the real
+     * table instead of three generic bars.
+     *
+     * --col-when was 150 in the mockup and --col-amount 110; neither is on the
+     * 4px grid. Both moved to the next value up.
+     */
+    --col-when: 152px;
+    --col-time: 56px;
+    --col-staff: 96px;
+    --col-status: 132px;
+    --col-amount: 112px;
+    --col-actions: 56px;
+
+    /* The current appointment's sub-line hangs under the text, not under the
+     * time. Derived rather than restated so it cannot drift from the column. */
+    --sub-indent: calc(var(--col-time) + var(--space-4));
 
     /* ---- Density --------------------------------------------------------
      * The surfaces share one component library and differ in density. A
@@ -159,7 +232,12 @@
     --row-h: 34px;
     --rhythm: 8px;
     --field-text: var(--text-14);
-    --pad-x: 10px;
+
+    /* Horizontal padding inside a control. Was 10/14/8 — two of the three off
+     * the 4px grid, inherited from the density pass. Landed on 12/16/8, which
+     * keeps the ladder monotonic across the three surfaces and adds 2px a side
+     * to a compact control. */
+    --pad-x: 12px;
 }
 
 /* The public booking page. A stranger on a phone, once, on bad signal. */
@@ -168,7 +246,7 @@
     --row-h: 44px;
     --rhythm: 12px;
     --field-text: var(--text-15);
-    --pad-x: 14px;
+    --pad-x: 16px;
 }
 
 /* The super admin console. Two people at 2am. */

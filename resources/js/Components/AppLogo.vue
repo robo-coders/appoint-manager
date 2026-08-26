@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The Kestrel mark, and the mark locked up with the wordmark.
+ * The Appoint Manager mark, and the mark locked up with the wordmark.
  *
  * Inlined rather than loaded as a file so it inherits `currentColor` and costs
  * no request. The mark sits at cap height to the left of the wordmark.
@@ -18,7 +18,7 @@ withDefaults(
         /** Accessible name. Set to '' when the logo sits inside a labelled link. */
         label?: string;
     }>(),
-    { size: 20, variant: 'lockup', label: 'Kestrel', tone: 'ink' },
+    { size: 20, variant: 'lockup', label: 'Appoint Manager', tone: 'ink' },
 );
 </script>
 
@@ -47,7 +47,7 @@ withDefaults(
             v-if="variant === 'lockup'"
             class="font-display font-medium leading-none tracking-20"
             :style="{ fontSize: `${size * 0.95}px` }"
-            >Kestrel</span
+            >Appoint Manager</span
         >
     </span>
 </template>
