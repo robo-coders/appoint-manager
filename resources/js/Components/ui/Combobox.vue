@@ -78,11 +78,24 @@ const onKey = (event: KeyboardEvent) => {
 <template>
     <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
         <div class="relative">
+            <!--
+                The closed state is a combobox that happens to be a button, not
+                a button that happens to open a list. Without the role and the
+                state a screen reader announces "Europe · London, button" and
+                gives no clue that pressing it produces four hundred options —
+                and `aria-invalid` was missing entirely, so a rejected timezone
+                was described by a red border and nothing else.
+            -->
             <button
                 v-if="!open"
                 :id="inputId"
                 type="button"
+                role="combobox"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                :aria-controls="`${inputId}-list`"
                 :disabled="disabled"
+                :aria-invalid="error ? 'true' : undefined"
                 :aria-describedby="error ? `${inputId}-error` : undefined"
                 class="h-control w-full truncate rounded border bg-white px-pad-x text-left text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
                 :class="error ? 'border-danger' : 'border-rule hover:border-rule-strong'"
@@ -98,7 +111,12 @@ const onKey = (event: KeyboardEvent) => {
                     type="text"
                     role="combobox"
                     aria-expanded="true"
+                    aria-haspopup="listbox"
+                    aria-autocomplete="list"
                     :aria-controls="`${inputId}-list`"
+                    :aria-invalid="error ? 'true' : undefined"
+                    :aria-describedby="error ? `${inputId}-error` : undefined"
+                    :aria-activedescendant="matches[active] ? `${inputId}-option-${active}` : undefined"
                     :placeholder="placeholder ?? 'Type to filter…'"
                     class="h-control w-full rounded border border-ink bg-white px-pad-x text-field text-ink"
                     @keydown="onKey"
@@ -109,8 +127,14 @@ const onKey = (event: KeyboardEvent) => {
                     role="listbox"
                     class="appear absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded border border-rule bg-white py-1"
                 >
+                    <!--
+                        `aria-activedescendant` on the input points here. Without
+                        the id, arrowing down moved a highlight that nothing
+                        announced — the list was navigable by eye only.
+                    -->
                     <li
                         v-for="(option, index) in matches"
+                        :id="`${inputId}-option-${index}`"
                         :key="option.value"
                         role="option"
                         :aria-selected="option.value === model"

@@ -667,6 +667,12 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                                 />
                             </div>
                         </div>
+                        <p class="caption mt-3 max-w-measure">
+                            The icons are the 56px rail's only content, and they are decorative in the
+                            markup: the accessible name and the tooltip both come from the label. The
+                            148px rail stays text — the mockup draws it that way, and an icon beside a
+                            word it duplicates is decoration with a width.
+                        </p>
                     </State>
                 </Specimen>
 

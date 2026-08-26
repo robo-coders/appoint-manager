@@ -29,3 +29,5 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+tests/e2e/.auth/
+tests/e2e/.output/

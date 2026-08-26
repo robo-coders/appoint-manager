@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('time_off', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');

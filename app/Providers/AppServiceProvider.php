@@ -88,13 +88,29 @@ class AppServiceProvider extends ServiceProvider
      * The in-memory gateways are for tests and for a developer who has explicitly
      * asked for them. A missing secret is never a reason to use one.
      */
+    /**
+     * The fake gateways exist for the test suite and for nothing else.
+     *
+     * AUDIT C1. This used to answer true in any non-production environment with
+     * `STRIPE_FAKE=true`, which meant a staging box — or a local box somebody
+     * pointed a real Stripe webhook at — accepted the fake's literal
+     * `t=1,v1=test` signature and would confirm any booking id an unauthenticated
+     * request named. "Not production" is not a security boundary: `APP_ENV` is a
+     * string in a file, and staging holds real data often enough.
+     *
+     * So: `testing` only. Every other environment resolves a real gateway or
+     * throws at bind time, loudly, naming the variable that is missing — see the
+     * bindings above. `STRIPE_FAKE` is gone; there is nothing left for it to
+     * opt into.
+     *
+     * Local development therefore needs Stripe *test* keys in `.env`. That is a
+     * smaller cost than it looks: they are free, they are already what staging
+     * uses, and the alternative is a code path that is one `APP_ENV` typo away
+     * from taking no money and confirming everything.
+     */
     private function shouldUseFakeGateways(): bool
     {
-        if ($this->app->environment('production')) {
-            return false;
-        }
-
-        return $this->app->environment('testing') || (bool) config('services.stripe.fake');
+        return $this->app->environment('testing');
     }
 
     public function boot(): void

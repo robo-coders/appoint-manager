@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('slot_offers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('waitlist_entry_id')->constrained()->cascadeOnDelete();
             $table->foreignId('booking_id')->nullable()->constrained()->nullOnDelete();
             $table->dateTime('starts_at');

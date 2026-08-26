@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import KeyHint from '@/Components/ui/KeyHint.vue';
 import RailUserMenu from '@/Components/ui/RailUserMenu.vue';
+import { navIconFor } from '@/lib/navIcons';
 import { Link } from '@inertiajs/vue3';
+import Search from 'lucide-vue-next/dist/esm/icons/search';
 
 /**
  * The operator app's nav rail. `public/mockups/dashboard.html` is the target.
@@ -12,9 +14,14 @@ import { Link } from '@inertiajs/vue3';
  *
  * Three widths:
  *
- *   - **148px** at ≥1024px. The whole thing.
- *   - **56px** between 768 and 1023. Mark, initials, no labels — see `glyph`.
- *   - **A drawer** below 768, which is the 148px version slid in from the left.
+ *   - **148px** at ≥1024px. The whole thing, and **text only**: the mockup draws
+ *     it that way, the label is already the fastest thing on screen to read,
+ *     and an icon beside a word it duplicates is decoration with a width.
+ *   - **56px** between 768 and 1023. The mark, and one lucide icon per item —
+ *     see `lib/navIcons`. The label is gone at this width and something has to
+ *     stand in for it.
+ *   - **A drawer** below 768, which is the 148px version slid in from the left,
+ *     text and all.
  *
  * It lives in the component library rather than inside `AppLayout` because it
  * is made almost entirely of controls, and controls belong in one place. That
@@ -63,15 +70,19 @@ const emit = defineEmits<{ navigate: []; search: [] }>();
 /**
  * The icon rail's stand-in for a label.
  *
- * Not an icon: this product has no icon set, and eleven invented pictograms
- * would be eleven guesses about what "Time off" looks like. Two letters are
- * unambiguous, they inherit the type system, and the full label is still in
- * `aria-label` and in the tooltip.
+ * An icon where the map names one, and two letters where it does not.
  *
- * `glyph` on the link wins; the fallback is the first two letters, which is
- * only ever right by accident — see the type above.
+ * The letters came first, because this product had no icon set and eleven
+ * invented pictograms would have been eleven guesses about what "Time off"
+ * looks like. There is a set now, so the guessing is somebody else's, and at
+ * 56px an icon beats two letters: a plane is recognised, `To` has to be read.
+ *
+ * The fallback stays for anything `lib/navIcons` does not name — a rail item
+ * with no icon gets its glyph, never an empty box.
  */
 const glyphFor = (link: NavLink) => link.glyph ?? link.label.trim().slice(0, 2);
+
+const iconFor = (link: NavLink) => navIconFor(link.label);
 </script>
 
 <template>
@@ -121,12 +132,20 @@ const glyphFor = (link: NavLink) => link.glyph ?? link.label.trim().slice(0, 2);
                         @click="emit('navigate')"
                     >
                         <span :class="collapsed && !drawerOpen ? 'md:hidden' : ''">{{ link.label }}</span>
+                        <!--
+                            Decorative, always. The accessible name comes from
+                            the `aria-label` on the link, and `title` carries the
+                            same words for a pointer — an icon-only control needs
+                            both, and neither is the icon's job.
+                        -->
                         <span
                             v-if="collapsed && !drawerOpen"
                             class="hidden w-full justify-center font-medium md:flex"
                             aria-hidden="true"
-                            >{{ glyphFor(link) }}</span
                         >
+                            <component :is="iconFor(link)" v-if="iconFor(link)" :size="18" :stroke-width="1.75" />
+                            <template v-else>{{ glyphFor(link) }}</template>
+                        </span>
                         <span
                             v-if="link.count !== undefined && link.count !== null"
                             class="numeral shrink-0 text-12 text-ink-2"
@@ -147,7 +166,9 @@ const glyphFor = (link: NavLink) => link.glyph ?? link.label.trim().slice(0, 2);
                 @click="emit('search')"
             >
                 <span :class="collapsed && !drawerOpen ? 'md:hidden' : ''">Search</span>
-                <span v-if="collapsed && !drawerOpen" class="hidden w-full justify-center md:flex" aria-hidden="true">/</span>
+                <span v-if="collapsed && !drawerOpen" class="hidden w-full justify-center md:flex" aria-hidden="true">
+                    <Search :size="18" :stroke-width="1.75" />
+                </span>
                 <KeyHint :keys="['⌘', 'K']" :class="collapsed && !drawerOpen ? 'md:hidden' : ''" />
             </button>
         </nav>

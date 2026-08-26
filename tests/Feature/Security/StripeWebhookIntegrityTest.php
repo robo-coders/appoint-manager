@@ -3,6 +3,7 @@
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
+use App\Jobs\ProcessStripeEvent;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\StripeEvent;
@@ -177,4 +178,74 @@ it('still acknowledges a duplicate event without dispatching twice', function ()
     postWebhook($event)->assertOk();
 
     expect(StripeEvent::query()->where('event_id', 'evt_dup2')->count())->toBe(1);
+});
+
+/*
+ * AUDIT C2, the part the cases above do not reach: `account.updated` is the
+ * event that flips `stripe_onboarding_complete`, which is what decides whether
+ * a salon can take deposits at all. A connected account may only ever speak for
+ * itself.
+ */
+it('refuses an account.updated that speaks for a different connected account', function () {
+    $salon = aConnectedSalon(1000, 'acct_victim');
+    $salon['tenant']->forceFill(['stripe_onboarding_complete' => false])->save();
+
+    postWebhook([
+        'id' => 'evt_account_forged',
+        'type' => 'account.updated',
+        'account' => 'acct_attacker',
+        'data' => ['object' => ['id' => 'acct_victim', 'charges_enabled' => true]],
+    ])->assertOk();
+
+    ProcessStripeEvent::dispatchSync(StripeEvent::query()->latest('id')->first()->id);
+
+    expect($salon['tenant']->fresh()->stripe_onboarding_complete)->toBeFalse();
+    expect(WebhookFailure::query()->where('event_id', 'evt_account_forged')->exists())->toBeTrue();
+});
+
+/*
+ * Everything that gets written is re-derived from our own rows by id. The
+ * payload is a claim: a metadata block naming a tenant, an amount and a status
+ * of its own must change none of them.
+ */
+it('ignores every field in metadata except the booking id it has to verify', function () {
+    $salon = aConnectedSalon(1000, 'acct_good');
+    $other = aConnectedSalon(1000, 'acct_other');
+    $booking = pendingBooking($salon, 'pi_good', 1000);
+
+    postWebhook(paymentEvent([
+        'id' => 'pi_good',
+        'amount_received' => 1000,
+        'currency' => 'gbp',
+        'metadata' => [
+            'booking_id' => (string) $booking->id,
+            // All of this is attacker-controlled and none of it may be believed.
+            'tenant_id' => (string) $other['tenant']->id,
+            'deposit_at_booking' => '1',
+            'status' => 'completed',
+            'price_at_booking' => '1',
+        ],
+    ], 'evt_metadata_noise', 'acct_good'))->assertOk();
+
+    ProcessStripeEvent::dispatchSync(StripeEvent::query()->latest('id')->first()->id);
+
+    $booking->refresh();
+
+    expect($booking->tenant_id)->toBe($salon['tenant']->id)
+        ->and($booking->status)->toBe(BookingStatus::Confirmed)
+        ->and($booking->deposit_at_booking->amount)->toBe(1000)
+        ->and($booking->price_at_booking->amount)->toBeGreaterThan(1);
+});
+
+/*
+ * The event is stored with the account that sent it, so an attribution can be
+ * checked after the fact rather than argued about.
+ */
+it('records which connected account sent each event', function () {
+    $salon = aConnectedSalon(1000, 'acct_good');
+    pendingBooking($salon, 'pi_good', 1000);
+
+    postWebhook(paymentEvent(['id' => 'pi_good', 'amount_received' => 1000], 'evt_audit', 'acct_good'));
+
+    expect(StripeEvent::query()->where('event_id', 'evt_audit')->value('account_id'))->toBe('acct_good');
 });

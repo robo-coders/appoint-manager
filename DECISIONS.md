@@ -1047,7 +1047,45 @@ Outside the scope of phases 4–7, recorded rather than fixed:
   is a behaviour change, not a rebuild.
 - **The demo tenant's owner is named after the tenant** — "paw" — so the diary
   has a groomer called paw and the booking page proposes "Soonest with paw".
-  Local data, not code, but it makes every screenshot read oddly.
+  ~~Local data, not code, but it makes every screenshot read oddly.~~ Fixed in
+  the hardening pass: `DemoDataSeeder` now names the owner Rosa Adeyemi unless
+  the existing name already looks like a person's.
 - **`Bookings/Index` loads 200 rows with no pagination** and the table sorts
   them client-side. Fine at a salon's scale, wrong at an agency's. When it
   paginates, sorting and the customer search both move to the server with it.
+
+## Found during the hardening pass
+
+Two of these were fixed, because the work could not proceed around them. The
+third is a product question and is left alone.
+
+- **`->constrained()->index()` in ten migrations made the app unmigratable on
+  MySQL.** *Fixed.* Laravel names the index from the trailing `->index()` with
+  no arguments, and the generated name collided across tables — MySQL rejects
+  the second with `Duplicate foreign key constraint name '1'`. SQLite ignores
+  foreign key constraint names entirely, so every local test run and every CI
+  run passed while the production database engine could not accept the schema at
+  all. `foreignId()` already creates the index; the trailing call was redundant
+  as well as fatal. Found by standing up the e2e MySQL database, which is the
+  first thing in this repo's history to migrate against MySQL.
+
+- **The e2e suite was signing in nine times a minute against a five-a-minute
+  limiter.** *Fixed.* `RateLimiter::for('login')` allows five attempts per
+  minute per email and IP, which is correct. The specs were wrong: each signed
+  in for itself. The sixth onward were throttled, the page stayed on the login
+  form, and Playwright failed sixty seconds later with a navigation timeout that
+  read as a flaky screenshot. `auth.setup.ts` now signs in once and every
+  operator spec reuses the session. Total run time went from 9.5 minutes to 30
+  seconds, which is the more honest signal that the old suite was mostly waiting
+  on a rate limiter.
+
+- **`PublicBookingController::resolveStaff()` silently reassigns a booking to a
+  different member of staff.** Left alone. When the requested staff member is
+  taken, it finds another who is free at that time and books them instead,
+  without saying so. It is why the first version of the 409 race spec produced
+  two 201s: the loser was not refused, they were quietly given a different
+  groomer. That is defensible for "anyone will do" and wrong for "I want Rosa",
+  and the request carries no way to tell the two apart. The race spec now
+  exhausts every other groomer first so the guarantee it is testing is the one
+  the lock actually provides. Deciding what a staff *preference* means is a
+  product change, not a hardening fix.

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('availability_rules', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->unsignedTinyInteger('weekday');
             $table->time('start_time');

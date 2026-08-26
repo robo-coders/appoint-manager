@@ -120,6 +120,18 @@ const error = ref('');
 const submitting = ref(false);
 const booked = ref(false);
 
+/*
+ * A notice is not an error.
+ *
+ * "That time was just taken" describes the system working — somebody else was a
+ * second faster — and it has to survive the picker opening underneath it. It
+ * used to live in `error`, which `loadDays()` clears on every call, so the
+ * customer who lost a race watched the page rearrange itself with no
+ * explanation at all. Found by the end-to-end race test, which is the only
+ * thing that can be in two browsers at once.
+ */
+const notice = ref('');
+
 // The inline picker's own state.
 const weekStart = ref(props.suggestion.primary?.date ?? props.today);
 const days = ref<Record<string, Slot[]>>({});
@@ -184,6 +196,9 @@ const openPicker = async () => {
     await loadDays();
 };
 
+/** Choosing anything is an answer to the notice, so the notice goes. */
+const clearNotice = () => (notice.value = '');
+
 const shiftWeek = async (direction: number) => {
     weekStart.value = shiftDays(week.value[0], direction * 7);
     await loadDays();
@@ -206,6 +221,8 @@ const pickDay = (iso: string) => {
 const pickSlot = (slot: Slot) => {
     const base = proposal.value;
     if (!base) return;
+
+    clearNotice();
 
     const local = new Date(`${slot.starts_at}`);
     const dayLabel = local.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -244,6 +261,7 @@ const switchService = (id: number) => {
 };
 
 const acceptAlternative = (alternative: ProposalPayload) => {
+    clearNotice();
     proposal.value = alternative;
     context.value = [alternative.reason, ...(props.suggestion.context ?? '').split(' · ').slice(1)].join(' · ');
     alternatives.value = [
@@ -339,8 +357,10 @@ const reserve = async () => {
         const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
 
         if (status === 409) {
-            error.value = 'That time was just taken. Here is what is still free.';
             await openPicker();
+            // After `openPicker`, which clears `error` on its way through
+            // `loadDays`. A notice is not an error and does not share its slot.
+            notice.value = 'That time was just taken. Here is what is still free.';
         } else if (status === 503) {
             error.value = message ?? 'We couldn’t reach payments. Nothing has been charged — please try again in a moment.';
         } else if (status === 422) {
@@ -442,6 +462,14 @@ const joinWaitlist = async () => {
 <template>
     <div>
         <p v-if="error" class="mb-4 text-15 text-danger" role="alert">{{ error }}</p>
+
+        <!--
+            Not `--danger`. Losing a race is the mechanic working, and colouring
+            it as a failure tells a customer they did something wrong when the
+            only thing that happened is that somebody else was faster.
+            `role="status"` rather than `alert` for the same reason.
+        -->
+        <p v-if="notice" class="mb-4 text-15" role="status">{{ notice }}</p>
 
         <!-- ============================================================
              Paid. The deposit is the last thing between here and booked.

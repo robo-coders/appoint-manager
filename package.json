@@ -5,13 +5,16 @@
     "type": "module",
     "scripts": {
         "build": "vue-tsc && vite build",
-        "dev": "vite",
-        "check:design": "node scripts/check-design-tokens.mjs",
-        "check:contrast": "node scripts/check-contrast.mjs",
-        "check": "npm run check:design && npm run check:contrast && npm run check:components && npm run check:name && npm run check:php",
+        "check": "npm run check:design && npm run check:contrast && npm run check:components && npm run check:name && npm run test:unit && npm run check:php",
         "check:components": "node scripts/check-components.mjs",
+        "check:contrast": "node scripts/check-contrast.mjs",
+        "check:design": "node scripts/check-design-tokens.mjs",
+        "check:name": "node scripts/check-name.mjs",
         "check:php": "vendor/bin/pint --test",
-        "check:name": "node scripts/check-name.mjs"
+        "dev": "vite",
+        "test:e2e": "./scripts/e2e-setup.sh && playwright test",
+        "test:unit": "vitest run",
+        "test:unit:watch": "vitest"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",

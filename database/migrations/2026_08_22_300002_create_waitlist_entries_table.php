@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('waitlist_entries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete()->index();
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('subject_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('service_id')->constrained()->cascadeOnDelete();

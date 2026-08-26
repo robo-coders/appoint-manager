@@ -55,6 +55,9 @@ class DemoDataSeeder extends Seeder
     /** Demo-created staff carry this domain so the wipe can find exactly them. */
     private const STAFF_DOMAIN = '@demo.invalid';
 
+    /** What the owner is called when whatever they registered with is not a name. */
+    private const OWNER_NAME = 'Rosa Adeyemi';
+
     /** Demo-created failed jobs carry this uuid prefix, for the same reason. */
     private const JOB_UUID_PREFIX = 'demo-';
 
@@ -216,7 +219,25 @@ class DemoDataSeeder extends Seeder
             );
         }
 
-        $owner->forceFill(['is_bookable' => true, 'is_active' => true, 'colour' => '#2F5D4A'])->save();
+        /*
+         * The owner gets a person's name.
+         *
+         * It is whatever the tenant was registered with, and on the local demo
+         * tenant that is the salon's own name — which put a groomer called
+         * "paw" in the diary and made the booking page propose "Soonest with
+         * paw". The email and the login are untouched; only the display name
+         * moves, and only when it is not already a person's name.
+         *
+         * Two words with a capital each is the test, which is crude and
+         * deliberately so: it leaves "Rosa Adeyemi" alone and replaces "paw",
+         * "Willow Street Grooming" and "test".
+         */
+        $owner->forceFill([
+            'name' => $this->looksLikeAPersonsName($owner->name) ? $owner->name : self::OWNER_NAME,
+            'is_bookable' => true,
+            'is_active' => true,
+            'colour' => '#2F5D4A',
+        ])->save();
 
         $team = [$owner];
 
@@ -713,6 +734,30 @@ class DemoDataSeeder extends Seeder
                 'expires_at' => $this->today->addDays(21),
             ]);
         }
+    }
+
+    /**
+     * Does this read as a person rather than as a business?
+     *
+     * Two or more words, each starting with a capital. It is a heuristic and it
+     * will be wrong about somebody eventually — the cost of being wrong is that
+     * a demo tenant keeps a name it already had, which is the safe direction.
+     */
+    private function looksLikeAPersonsName(?string $name): bool
+    {
+        $parts = preg_split('/\s+/', trim((string) $name)) ?: [];
+
+        if (count($parts) < 2) {
+            return false;
+        }
+
+        foreach ($parts as $part) {
+            if ($part === '' || mb_strtoupper(mb_substr($part, 0, 1)) !== mb_substr($part, 0, 1)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @param  list<User>  $staff */

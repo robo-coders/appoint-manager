@@ -25,10 +25,24 @@ final class FakeStripeGateway implements StripeGateway
      * A last line of defence: this class accepts a hardcoded signature and takes no
      * money. If it is ever reachable in production, that is the emergency.
      */
-    private function refuseInProduction(): void
+    /**
+     * A second lock on the same door.
+     *
+     * The binding in `AppServiceProvider` already makes this class unreachable
+     * outside `testing`. This is here anyway because the class is `new`-able —
+     * a test helper, a seeder or a future refactor can construct one directly,
+     * and the thing it would then be willing to do is accept a forged webhook.
+     *
+     * It refuses everywhere except `testing`, not just in production. AUDIT C1
+     * is specifically about an environment nobody thought of.
+     */
+    private function refuseOutsideTesting(): void
     {
-        if (app()->environment('production')) {
-            throw new RuntimeException('FakeStripeGateway must never handle production traffic.');
+        if (! app()->environment('testing')) {
+            throw new RuntimeException(
+                'FakeStripeGateway is for the test suite only. It accepts forged webhook signatures '
+                .'and charges no cards; resolving it anywhere else is a configuration error.'
+            );
         }
     }
 
@@ -66,7 +80,7 @@ final class FakeStripeGateway implements StripeGateway
 
     public function createPaymentIntent(Tenant $tenant, Booking $booking): array
     {
-        $this->refuseInProduction();
+        $this->refuseOutsideTesting();
 
         if ($this->throwOnCreate) {
             throw new RuntimeException('Stripe unavailable.');
@@ -96,7 +110,7 @@ final class FakeStripeGateway implements StripeGateway
 
     public function constructEvent(string $payload, string $signature): array
     {
-        $this->refuseInProduction();
+        $this->refuseOutsideTesting();
 
         if ($signature !== 't=1,v1=test') {
             throw new RuntimeException('Invalid Stripe signature.', 400);

@@ -40,9 +40,17 @@ return [
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
 
-        // Opt in to the in-memory gateway for local development. Never set this in
-        // production: the fake accepts forged webhook signatures by design.
-        'fake' => (bool) env('STRIPE_FAKE', false),
+        /*
+         * `STRIPE_FAKE` used to live here. It is gone — AUDIT C1.
+         *
+         * It opted a non-production environment into `FakeStripeGateway`, which
+         * accepts a literal `t=1,v1=test` webhook signature by design. That made
+         * "is this box production?" a security boundary, and `APP_ENV` is a
+         * string in a file. The fake now binds under `testing` and nowhere else;
+         * see App\Providers\AppServiceProvider::shouldUseFakeGateways().
+         *
+         * Local development uses Stripe *test* keys, the same ones staging uses.
+         */
     ],
 
     'sms' => [
