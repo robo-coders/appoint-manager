@@ -32,3 +32,4 @@ auth.json
 tests/e2e/.auth/
 tests/e2e/.output/
 .DS_Store
+.DS_Store
