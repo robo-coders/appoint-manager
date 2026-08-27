@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiaryDesk mockup — marketing direction A, the ledger</title>
+<meta name="description" content="Free grooming software is paid for by your clients. DiaryDesk is paid for by you.">
+<!--
+    DIRECTION A — "Free software, paid for by your clients."
+
+    The bet: the only price comparison that matters is who pays. The market
+    leader's free plan charges the dog's owner a booking fee; we charge the
+    salon and charge her clients nothing. The page's job is to make her do that
+    arithmetic, with our own £39 printed as the largest number on the screen.
+
+    Two structural decisions worth knowing about, both taken after looking at
+    screenshots of the first attempt:
+
+    1. The comparison is ONE bill with two figure columns, not two separate
+       statements. Two statements meant that at 375 the two halves of the
+       argument never appeared on screen together, which is where most salon
+       owners will read this. A bill with two columns fits a phone.
+    2. Every section below the hero runs on the same editorial two-column
+       spine — the section's claim on the left, its evidence on the right. The
+       first attempt left the right half of a 1280 viewport empty on four
+       sections out of six, which is not deliberate whitespace, it is an
+       unfilled grid.
+
+    Fonts are self-hosted from public/fonts/, declared with two candidate
+    sources — ../../fonts/ for this file's home in public/mockups/directions/ and
+    ../fonts/ for the depth the three approved mockups sit at. Either way it
+    renders in the real Geist, opened from disk or served from public/.
+-->
+<style>
+@font-face{font-family:'Geist';src:url('../../../public/fonts/Geist-Regular.woff2') format('woff2'),url('../../../public/fonts/Geist-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist';src:url('../../../public/fonts/Geist-Medium.woff2') format('woff2'),url('../../../public/fonts/Geist-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('../../../public/fonts/GeistMono-Regular.woff2') format('woff2'),url('../../../public/fonts/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+</style>
+<style>
+/* ==========================================================================
+   1. TOKENS — copied verbatim from resources/css/tokens.css
+   check:design compares this :root against tokens.css declaration by
+   declaration, in both directions: a missing token fails, and so does an extra
+   one. Nothing marketing-specific may be added here. See section 2.
+   ========================================================================== */
+:root{
+    color-scheme: light;
+    --paper:#fcfbf9; --paper-sunk:#f4f2ee; --white:#ffffff;
+    --ink:#181714; --ink-2:#6f6d66; --ink-3:#a3a099; --ink-4:#cfccc4;
+    --rule:rgb(24 23 20 / .08); --rule-strong:rgb(24 23 20 / .16); --rule-hover:rgb(24 23 20 / .34);
+    --danger:#a8342c;
+    --accent:#a85729; --accent-tint:rgb(168 87 41 / .08);
+    --status-confirmed:var(--ink); --status-pending:var(--ink-3); --status-cancelled:var(--danger);
+    --ink-tint:rgb(24 23 20 / .055); --overlay:rgb(24 23 20 / .32);
+    --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --text-12:.75rem; --text-13:.8125rem; --text-14:.875rem; --text-15:.9375rem;
+    --text-17:1.0625rem; --text-20:1.25rem; --text-24:1.5rem; --text-34:2.125rem;
+    --tracking-34:-.03em; --tracking-24:-.025em; --tracking-20:-.02em; --tracking-17:-.015em; --tracking-body:0;
+    --leading-display:1.1; --leading-heading:1.3; --leading-body:1.5;
+    --measure:68ch;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+    --radius:6px;
+    --duration-fast:120ms; --duration:180ms; --ease:cubic-bezier(.2,0,0,1);
+    --focus-ring:0 0 0 2px var(--paper),0 0 0 4px var(--accent);
+    --tap:44px;
+    --rail:148px; --rail-collapsed:56px; --topbar:56px;
+    --brand:var(--ink); --brand-fg:var(--white);
+    --brand-forest:#2f5d4a; --brand-plum:#7b3448; --brand-navy:#24415f;
+    --brand-ochre:#8a5a1e; --brand-slate:#414a52; --brand-clay:#8c4a32;
+    --badge-h:20px; --skeleton-h:8px;
+    --col-when:152px; --col-time:56px; --col-staff:96px; --col-status:132px;
+    --col-amount:112px; --col-actions:56px;
+    --sub-indent:calc(var(--col-time) + var(--space-4));
+    --booking-w:440px;--auth-col:560px;--auth-form:380px;
+    /* Density — the operator app is the default (compact). */
+    --control-h:36px; --row-h:34px; --rhythm:8px; --field-text:var(--text-14); --pad-x:12px;
+}
+[data-density='roomy']{--control-h:48px;--row-h:44px;--rhythm:12px;--field-text:var(--text-15);--pad-x:16px;}
+[data-density='console']{--control-h:32px;--row-h:28px;--rhythm:8px;--field-text:var(--text-13);--pad-x:8px;}
+@media (prefers-reduced-motion: reduce){
+    :root{--duration-fast:0ms;--duration:0ms;}
+    *,*::before,*::after{animation-duration:0ms!important;animation-iteration-count:1!important;
+        transition-duration:0ms!important;scroll-behavior:auto!important;}
+}
+
+/* ==========================================================================
+   2. SURFACE CHROME — the marketing surface's own dimensions
+   Every other surface owns its layout widths as named tokens: --rail for the
+   operator app, --booking-w for public booking, --auth-col for auth. Marketing
+   has none yet, so it declares its own here rather than scattering magic
+   numbers through the layout. Phase 11 should promote these into tokens.css
+   beside the others. They are deliberately NOT in :root: check:design fails a
+   mockup whose :root carries a token tokens.css does not have.
+
+   --page 1152 is a multiple of 16 and on the 4px grid, and leaves a 40px
+   margin either side at 1280.
+   ========================================================================== */
+[data-surface='marketing']{
+    --page:1152px;
+    --gutter:var(--space-4);
+    /* The narrow column the argument is set in. Bounded so the 34px headline
+       wraps to two or three lines and reads as a mass of type, not a banner. */
+    --arg:19ch;
+}
+@media (min-width:768px){ [data-surface='marketing']{ --gutter:var(--space-8); } }
+
+/* ==========================================================================
+   3. BASE — mirrors resources/css/base.css
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+    font-size:var(--text-15);font-weight:400;line-height:var(--leading-body);
+    letter-spacing:var(--tracking-body);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{margin:0;font-weight:500;line-height:var(--leading-heading);}
+p{margin:0;} ul,ol,dl,dd{margin:0;padding:0;list-style:none;}
+table{border-collapse:collapse;width:100%;}
+th,td{padding:0;text-align:left;font-weight:400;}
+a{color:inherit;}
+:focus{outline:none;}
+:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--radius);}
+::selection{background:var(--ink);color:var(--white);}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.skip{position:absolute;left:var(--space-4);top:var(--space-2);z-index:2;
+    background:var(--ink);color:var(--white);padding:var(--space-2) var(--space-4);
+    border-radius:var(--radius);font-size:var(--text-14);transform:translateY(-200%);}
+.skip:focus{transform:none;}
+
+/* ---- Type roles ---------------------------------------------------------- */
+.t12{font-size:var(--text-12);line-height:var(--leading-body);}
+.t13{font-size:var(--text-13);line-height:var(--leading-body);}
+.t14{font-size:var(--text-14);line-height:var(--leading-body);}
+.t15{font-size:var(--text-15);line-height:var(--leading-body);}
+.t17{font-size:var(--text-17);line-height:var(--leading-heading);letter-spacing:var(--tracking-17);}
+.t20{font-size:var(--text-20);line-height:var(--leading-heading);letter-spacing:var(--tracking-20);}
+.t24{font-size:var(--text-24);line-height:var(--leading-heading);letter-spacing:var(--tracking-24);}
+.t34{font-size:var(--text-34);line-height:var(--leading-display);letter-spacing:var(--tracking-34);}
+.dim{color:var(--ink-2);}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.med{font-weight:500;}
+
+/* ---- Controls ------------------------------------------------------------ */
+.btn{display:inline-flex;align-items:center;justify-content:center;
+    min-height:var(--tap);padding:0 var(--space-4);border-radius:var(--radius);
+    background:var(--ink);color:var(--white);font-size:var(--text-14);font-weight:500;
+    text-decoration:none;transition:opacity var(--duration-fast) var(--ease);}
+.btn:hover{opacity:.9;}
+.link{text-decoration:underline;text-decoration-color:var(--rule-strong);
+    text-underline-offset:4px;
+    transition:text-decoration-color var(--duration-fast) var(--ease);}
+.link:hover{text-decoration-color:var(--ink);}
+.quiet{color:var(--ink-2);text-decoration:none;
+    transition:color var(--duration-fast) var(--ease);}
+.quiet:hover{color:var(--ink);}
+.act{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;}
+
+/* ==========================================================================
+   4. PAGE FRAME
+   ========================================================================== */
+.wrap{max-width:var(--page);margin:0 auto;padding-left:var(--gutter);padding-right:var(--gutter);}
+
+.masthead{border-bottom:1px solid var(--rule);}
+.masthead .wrap{display:flex;align-items:center;justify-content:space-between;
+    gap:var(--space-4);min-height:var(--topbar);}
+.wordmark{font-size:var(--text-17);letter-spacing:var(--tracking-17);font-weight:500;
+    text-decoration:none;}
+.masthead nav{display:flex;align-items:center;gap:var(--space-6);font-size:var(--text-13);}
+/* 375: four links do not need a hamburger, they need to not be there. Pricing
+   and the trade page live in the footer on a phone; the door in is what stays. */
+.masthead nav .off-phone{display:none;}
+@media (min-width:768px){ .masthead nav .off-phone{display:inline;} }
+
+/* ---- The editorial spine ------------------------------------------------
+   Claim left, evidence right, from 1000 up. Every section below the hero uses
+   it, which is what makes 1280 a layout rather than a phone layout with more
+   padding. The rhythm varies by how much the right column carries, not by
+   changing the grid.
+   -------------------------------------------------------------------------- */
+.sec{border-top:1px solid var(--rule);}
+.sec > .wrap{padding-top:var(--space-12);padding-bottom:var(--space-12);}
+@media (min-width:768px){
+    .sec > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-16);}
+}
+.sec-airy > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-16);}
+@media (min-width:768px){
+    .sec-airy > .wrap{padding-top:calc(var(--space-16) + var(--space-12));
+                      padding-bottom:calc(var(--space-16) + var(--space-12));}
+}
+.sec-tight > .wrap{padding-top:var(--space-8);padding-bottom:var(--space-8);}
+@media (min-width:768px){
+    .sec-tight > .wrap{padding-top:var(--space-12);padding-bottom:var(--space-12);}
+}
+
+@media (min-width:1000px){
+    .split{display:grid;grid-template-columns:4fr 7fr;gap:var(--space-16);
+        align-items:start;}
+}
+@media (min-width:1200px){
+    .split{grid-template-columns:4fr 7fr;gap:calc(var(--space-16) + var(--space-8));}
+}
+.claim h2{font-size:var(--text-24);letter-spacing:var(--tracking-24);max-width:22ch;}
+.claim .lede{margin-top:var(--space-4);color:var(--ink-2);max-width:40ch;}
+.evidence{margin-top:var(--space-8);}
+@media (min-width:1000px){ .evidence{margin-top:0;} }
+
+/* ---- Hero ---------------------------------------------------------------- */
+.hero > .wrap{padding-top:var(--space-12);padding-bottom:var(--space-12);}
+@media (min-width:768px){
+    .hero > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-16);}
+}
+@media (min-width:1200px){
+    .hero > .wrap{padding-top:calc(var(--space-16) + var(--space-8));
+                  padding-bottom:calc(var(--space-16) + var(--space-8));}
+}
+.hero h1{max-width:var(--arg);}
+.hero .sub{margin-top:var(--space-6);max-width:36ch;}
+.hero .act{margin-top:var(--space-8);}
+
+/* ---- The bill -----------------------------------------------------------
+   One bill, two figure columns. No tick column, no crosses, no recommended
+   badge, no fill on the column we are selling — the single accented figure is
+   the only marking on it, and it is the number the whole page is about.
+   -------------------------------------------------------------------------- */
+.bill{width:100%;}
+.bill caption{text-align:left;font-size:var(--text-13);color:var(--ink-2);
+    padding-bottom:var(--space-3);}
+.bill thead th{font-size:var(--text-13);color:var(--ink-2);
+    padding-bottom:var(--space-2);border-bottom:1px solid var(--rule-strong);
+    vertical-align:bottom;}
+.bill tbody tr{border-bottom:1px solid var(--rule);}
+.bill td,.bill th{font-size:var(--text-13);}
+@media (min-width:768px){ .bill td,.bill th{font-size:var(--text-14);} }
+.bill td{padding-top:var(--space-3);padding-bottom:var(--space-3);
+    vertical-align:baseline;}
+/* Figures are mono and tabular. The column headings and the words "at cost"
+   are prose sitting in a figure column, so they are not — mono is for numbers
+   only, and the first pass had both of them set in it. */
+.bill td.fig,.bill th.fig{text-align:right;
+    width:var(--col-amount);padding-left:var(--space-3);}
+.bill td.fig{white-space:nowrap;
+    font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.bill td.words{font-family:var(--font-sans);}
+.bill tr.sum{border-bottom:0;}
+.bill tr.sum td{padding-top:var(--space-4);padding-bottom:0;}
+.bill tr.sum-first td{border-top:1px solid var(--rule-strong);
+    padding-top:var(--space-6);}
+.bill .big{font-size:var(--text-20);letter-spacing:var(--tracking-20);}
+@media (min-width:768px){
+    .bill .big{font-size:var(--text-24);letter-spacing:var(--tracking-24);}
+}
+/* The one accent on this screen, and it carries the argument: the single
+   figure that differs between the two columns. */
+.bill .diff{color:var(--accent);}
+
+.punch{margin-top:var(--space-8);font-size:var(--text-17);
+    line-height:var(--leading-heading);letter-spacing:var(--tracking-17);
+    max-width:46ch;}
+.footnote{margin-top:var(--space-6);font-size:var(--text-13);color:var(--ink-2);
+    max-width:60ch;}
+
+/* ---- The checkout pair, side by side inside the evidence column ---------- */
+.tills{display:grid;gap:var(--space-4);}
+@media (min-width:560px){ .tills{grid-template-columns:1fr 1fr;gap:var(--space-6);} }
+.till{border:1px solid var(--rule);border-radius:var(--radius);
+      background:var(--white);padding:var(--space-4);}
+.till h3{font-size:var(--text-13);color:var(--ink-2);font-weight:400;
+    padding-bottom:var(--space-3);}
+.till dl{display:grid;grid-template-columns:1fr auto;
+    row-gap:var(--space-2);column-gap:var(--space-3);font-size:var(--text-13);}
+@media (min-width:768px){ .till dl{font-size:var(--text-14);} }
+.till dd{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.till .off{border-top:1px solid var(--rule-strong);margin-top:var(--space-2);
+    padding-top:var(--space-3);}
+.till .sum{display:grid;grid-template-columns:1fr auto;column-gap:var(--space-3);
+    font-size:var(--text-15);}
+.till .sum span:last-child{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.after-tills{margin-top:var(--space-6);font-size:var(--text-15);max-width:52ch;}
+
+/* ---- Definition rows (no cards, hairlines only) -------------------------- */
+.facts{border-top:1px solid var(--rule);}
+.facts > div{border-bottom:1px solid var(--rule);
+    padding-top:var(--space-4);padding-bottom:var(--space-4);}
+.facts dt{font-size:var(--text-15);}
+.facts dd{margin-top:var(--space-1);color:var(--ink-2);font-size:var(--text-14);
+    max-width:64ch;}
+
+/* ---- Leaving ------------------------------------------------------------- */
+.leave p{max-width:62ch;}
+.leave p + p{margin-top:var(--space-4);}
+
+/* ---- Price --------------------------------------------------------------- */
+.price{display:flex;flex-wrap:wrap;align-items:baseline;
+    gap:var(--space-2) var(--space-4);}
+.price .amt{font-size:var(--text-34);letter-spacing:var(--tracking-34);
+    line-height:var(--leading-display);
+    font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.concede p{max-width:58ch;}
+.concede p + p{margin-top:var(--space-4);}
+
+/* ---- FAQ ---------------------------------------------------------------- */
+.qa{border-top:1px solid var(--rule);}
+.qa > div{border-bottom:1px solid var(--rule);
+    padding-top:var(--space-6);padding-bottom:var(--space-6);}
+.qa dt{font-size:var(--text-15);}
+.qa dd{margin-top:var(--space-2);color:var(--ink-2);font-size:var(--text-14);
+    max-width:70ch;}
+
+/* ---- Footer -------------------------------------------------------------- */
+footer{border-top:1px solid var(--rule);background:var(--paper-sunk);}
+footer .wrap{padding-top:var(--space-8);padding-bottom:var(--space-8);
+    display:flex;flex-wrap:wrap;gap:var(--space-6);
+    font-size:var(--text-13);color:var(--ink-2);}
+footer nav{display:flex;flex-wrap:wrap;gap:var(--space-6);}
+</style>
+</head>
+<body data-surface="marketing">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+    <div class="wrap">
+        <a class="wordmark" href="#main">DiaryDesk</a>
+        <nav aria-label="Main">
+            <a class="quiet off-phone" href="#price">Pricing</a>
+            <a class="quiet off-phone" href="#main">Dog grooming</a>
+            <a class="quiet" href="#main">Log in</a>
+            <a class="link" href="#main">Start free trial</a>
+        </nav>
+    </div>
+</header>
+
+<main id="main">
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Hero. The headline sits in the narrow column and the bill is the
+         dominant element — which is what lets 34px hold at 1280 without a
+         marketing display size. The punchline and the footnote live inside the
+         hero rather than in a band of their own; as a separate band they were
+         two orphaned paragraphs in an empty field.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="hero">
+        <div class="wrap split">
+            <div class="claim">
+                <h1 class="t34">Free software, paid for by your clients.</h1>
+                <p class="sub t17 dim">The free grooming diaries charge the dog's owner a
+                    booking fee. It lands on your booking page, under your name, at a rate
+                    you did not set. We charge you instead.</p>
+                <div class="act">
+                    <a class="btn" href="#main">Start free trial</a>
+                    <span class="t13 dim">Thirty days. No card.</span>
+                </div>
+            </div>
+
+            <div class="evidence">
+                <table class="bill">
+                    <caption>One month, eighty appointments</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col"><span class="sr-only">Line</span></th>
+                            <th scope="col" class="fig">On a free plan</th>
+                            <th scope="col" class="fig">On DiaryDesk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">Software</th>
+                            <td class="fig">£0.00</td>
+                            <td class="fig">£39.00</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Booking fee, charged to the dog's owner</th>
+                            <td class="fig">£100.00</td>
+                            <td class="fig">£0.00</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Card processing</th>
+                            <td class="fig words dim">at cost</td>
+                            <td class="fig words dim">at cost</td>
+                        </tr>
+                        <tr class="sum sum-first">
+                            <th scope="row">You pay</th>
+                            <td class="fig big">£0.00</td>
+                            <td class="fig big">£39.00</td>
+                        </tr>
+                        <tr class="sum">
+                            <th scope="row">Your clients pay</th>
+                            <td class="fig big">£100.00</td>
+                            <td class="fig big diff">£0.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="punch">£39 of your money, or £100 of theirs. That is the whole
+                    difference, and everything below is us showing our working.</p>
+
+                <p class="footnote">Eighty appointments a month is four dogs a day, five days a
+                    week — put your own number in and the shape does not change. Their fee is
+                    roughly £1.25 a booking. Card processing is Stripe's own per-transaction
+                    fee: we pass it through at cost and do not mark it up, and it is left out
+                    of both columns because we have not set the figure yet.
+                    <span class="med">Placeholder, not a published rate.</span></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         What the fee looks like where it actually appears.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="sec">
+        <div class="wrap split">
+            <div class="claim">
+                <h2>Your client sees that fee. She does not see who set it.</h2>
+                <p class="lede">This is the last line she reads before she pays a deposit to
+                    hold her Thursday morning.</p>
+            </div>
+            <div class="evidence">
+                <div class="tills">
+                    <div class="till">
+                        <h3>On a free plan</h3>
+                        <dl>
+                            <dt>Deposit, holds the slot</dt><dd>£10.00</dd>
+                            <dt>Booking fee</dt><dd>£1.25</dd>
+                        </dl>
+                        <div class="off">
+                            <div class="sum"><span>Total today</span><span>£11.25</span></div>
+                        </div>
+                    </div>
+                    <div class="till">
+                        <h3>On DiaryDesk</h3>
+                        <dl>
+                            <dt>Deposit, holds the slot</dt><dd>£10.00</dd>
+                        </dl>
+                        <div class="off">
+                            <div class="sum"><span>Total today</span><span>£10.00</span></div>
+                        </div>
+                    </div>
+                </div>
+                <p class="after-tills">She does not read that middle line and think of a
+                    software company. She reads it and thinks of you. That is the part that is
+                    hard to price, and it is why we bill you and not her.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Ownership — the half of the argument that survives the fee going away.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="sec sec-airy">
+        <div class="wrap split">
+            <div class="claim">
+                <h2>Where the money lands</h2>
+                <p class="lede">Deposits are not much use to you if they sit in somebody
+                    else's balance until somebody else releases them.</p>
+            </div>
+            <div class="evidence">
+                <dl class="facts">
+                    <div>
+                        <dt>The Stripe account is in your name.</dt>
+                        <dd>You open it during setup — Stripe Express, your salon, your bank
+                            details. We are not the merchant on your clients' statements and
+                            we never hold their money.</dd>
+                    </div>
+                    <div>
+                        <dt>Deposits arrive in your bank, not ours.</dt>
+                        <dd>Not into a balance we control and release on a schedule we chose.
+                            Refunds are yours to give, from your own account, without asking
+                            us first.</dd>
+                    </div>
+                    <div>
+                        <dt>Your clients are yours.</dt>
+                        <dd>Names, dogs, breeds, appointment history — all of it exports to a
+                            spreadsheet whenever you want. There is no marketplace and no
+                            pet-owner app, so nobody is shown three other groomers on the way
+                            to booking with you.</dd>
+                    </div>
+                    <div>
+                        <dt>One booking page, and it is yours.</dt>
+                        <dd>Your name, your services, your hours, your colour. Not a profile
+                            inside somebody else's directory.</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         The confidence move: publish the exit, including what she cannot take.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="sec sec-airy">
+        <div class="wrap split">
+            <div class="claim">
+                <h2>How you leave</h2>
+                <p class="lede">We would rather write this down now than have you find it out
+                    later.</p>
+            </div>
+            <div class="evidence leave t15">
+                <p>There is no contract and no notice period. It is a monthly subscription and
+                    you end it in settings, in one place, without emailing anybody. Your client
+                    list and your appointment history export to a spreadsheet on the way out.
+                    The Stripe account leaves with you, because it was always yours.</p>
+                <p>What you cannot take is the booking page itself. That lives here, and if you
+                    go, the link stops working — so keep your own note of where you sent your
+                    clients. Everything you brought, you keep.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Price, stated once, with the concession beside it rather than buried.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="sec" id="price">
+        <div class="wrap split">
+            <div class="claim">
+                <div class="price">
+                    <span class="amt">£39</span>
+                    <span class="t17 dim">a month</span>
+                </div>
+                <p class="lede">Or £390 a year, which is two months off. Thirty days free, and
+                    we do not ask for a card to start.</p>
+                <div class="act" style="margin-top:var(--space-8)">
+                    <a class="btn" href="#main">Start free trial</a>
+                    <a class="link t14" href="#main">Or have us set it up</a>
+                </div>
+            </div>
+            <div class="evidence concede t15">
+                <p>One plan. There is no tier where deposits are switched off, no per-booking
+                    charge to you, and no charge at all to the people who book with you.</p>
+                <p>There is genuinely good free grooming software, and we are not going to
+                    pretend there isn't. It is free to you because it is not free to them. If
+                    you would rather your clients were not the ones paying for your diary,
+                    £39 is what it costs to move that bill onto your side of the counter.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         FAQ. Hairlines, not bordered boxes. The first two answers concede
+         ground on purpose — conceding is what makes the rest of the page
+         readable as honest rather than as a pitch.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="sec">
+        <div class="wrap split">
+            <div class="claim">
+                <h2>The questions we actually get</h2>
+                <p class="lede">Including the two that go badly for us.</p>
+            </div>
+            <div class="evidence">
+                <dl class="qa">
+                    <div>
+                        <dt>Tuft is free and it already does deposits. Why would I pay £39?</dt>
+                        <dd>Because their free plan is funded by a booking fee on your clients
+                            and ours is funded by you. At eighty appointments a month that is
+                            around £100 of their money against £39 of yours. If your book is
+                            quiet — twenty appointments, say — the free plan is genuinely
+                            cheaper for everyone involved and we will not pretend otherwise.
+                            Deposits are not the reason to come here. Who pays for them
+                            is.</dd>
+                    </div>
+                    <div>
+                        <dt>What if they stop charging my clients?</dt>
+                        <dd>They have said publicly that they are looking at letting groomers
+                            absorb the fee instead. If that lands, the bill at the top of this
+                            page stops being an argument, and you would be choosing on the rest
+                            of it: your own booking page, your own Stripe account, your own
+                            client list, and nobody's marketplace standing between you and the
+                            people who already know you. We would rather you knew that argument
+                            had an expiry date.</dd>
+                    </div>
+                    <div>
+                        <dt>Will asking for a deposit lose me clients?</dt>
+                        <dd>The ones who vanish on a Saturday might. A medium full groom
+                            averages <span class="mono">£55</span> in the UK. Three no-shows a
+                            week is <span class="mono">£165</span>, and
+                            <span class="mono">£660</span> over a month. A
+                            <span class="mono">£10</span> hold is not a punishment: it comes
+                            off the bill on the day, and it is how the book stays honest.</dd>
+                    </div>
+                    <div>
+                        <dt>What happens to the book I already have?</dt>
+                        <dd>We import names, dogs and the next fortnight from a spreadsheet
+                            before your booking page goes live, so you are not starting from an
+                            empty diary. For the first ten salons we come and do it with
+                            you.</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <section class="sec sec-tight">
+        <div class="wrap split">
+            <div class="claim">
+                <h2 class="t17" style="letter-spacing:var(--tracking-17)">From groomers using
+                    it</h2>
+            </div>
+            <div class="evidence">
+                <p class="t14 dim" style="max-width:56ch;margin-top:0">Nothing here yet. When a
+                    real salon writes something we can print, it goes here. Not before.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>DiaryDesk</span>
+        <nav aria-label="Footer">
+            <a class="quiet" href="#price">Pricing</a>
+            <a class="quiet" href="#main">Dog grooming</a>
+            <a class="quiet" href="#main">About</a>
+            <a class="quiet" href="#main">Contact</a>
+            <a class="quiet" href="#main">Privacy</a>
+            <a class="quiet" href="#main">Terms</a>
+        </nav>
+    </div>
+</footer>
+</body>
+</html>

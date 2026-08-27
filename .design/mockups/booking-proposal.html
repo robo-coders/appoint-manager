@@ -4,8 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Appoint Manager mockup — public booking, proposal model</title>
-<link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-<link rel="stylesheet" href="https://fonts.bunny.net/css?family=geist:400,500|geist-mono:400,500|inter:400,500&display=swap">
+<!--
+    Self-hosted, from public/fonts/ — the same three woff2 files the app itself
+    now ships (resources/fonts/, @font-face'd in resources/css/base.css). The
+    relative path resolves both ways: opened straight from disk, and served from
+    public/ by the app, which is what keeps these openable with no build step
+    while still rendering in the real face under the app's CSP.
+-->
+<style>
+@font-face{font-family:'Geist';src:url('../../public/fonts/Geist-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist';src:url('../../public/fonts/Geist-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('../../public/fonts/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+</style>
 <style>
 /* ==========================================================================
    1. TOKENS — copied verbatim from resources/css/tokens.css
@@ -29,7 +39,7 @@
     --status-confirmed:var(--ink); --status-pending:var(--ink-3); --status-cancelled:var(--danger);
     --ink-tint:rgb(24 23 20 / .055); --overlay:rgb(24 23 20 / .32);
 
-    --font-sans:'Geist','Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;
     --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
 
     --text-12:.75rem; --text-13:.8125rem; --text-14:.875rem; --text-15:.9375rem;
@@ -54,7 +64,7 @@
     --col-when:152px; --col-time:56px; --col-staff:96px; --col-status:132px;
     --col-amount:112px; --col-actions:56px;
     --sub-indent:calc(var(--col-time) + var(--space-4));
-    --booking-w:440px;
+    --booking-w:440px;--auth-col:560px;--auth-form:380px;
 
     /* Density — default is the operator app (compact). */
     --control-h:36px; --row-h:34px; --rhythm:8px; --field-text:var(--text-14); --pad-x:12px;

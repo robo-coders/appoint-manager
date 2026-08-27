@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiaryDesk mockup — marketing direction B, thirty seconds</title>
+<meta name="description" content="One appointment, one decision, deposit included. This is the whole booking, from your client's side.">
+<!--
+    DIRECTION B — "Thirty seconds, on a phone, in a car park."
+
+    The bet: the difference that survives a free competitor is not the feature
+    list, it is the shape of the booking. Every other diary shows the dog's
+    owner a month grid. The AppointmentSuggester puts one appointment in front
+    of her and asks yes or no, with the deposit inside that same decision.
+
+    So the page is not a feature list and not a dashboard tour. It is one
+    booking, told from the client's side, in the real surfaces at their real
+    densities — roomy for her, compact for the diary at the end. The mono clock
+    down the left edge is the spine, and it runs unbroken from the headline to
+    the end of the booking.
+
+    Four things changed after looking at screenshots of the first attempt:
+
+    1. The spine's hairline was drawn per frame and came out as a row of
+       disconnected segments. It is now one absolutely-positioned rule on the
+       spine itself, with a visible terminus.
+    2. The marginal commentary was bottom-aligned, so it sat at a different
+       height beside every surface and read as accidental. It is top-aligned
+       now, which is what a margin note does.
+    3. The deposit frame rendered a card field carrying a Stripe test number.
+       That is a fake screenshot of somebody else's component, so it is gone:
+       the frame now shows the decision (£10 now, £45 on the day) and the
+       button, which is what the frame is actually about.
+    4. Everything below the booking reverted to a left column with an empty
+       right half at 1280. The whole page now runs on the spine's geometry, and
+       the third column carries real content in each section rather than air.
+
+    Fonts are self-hosted from public/fonts/, declared with two candidate
+    sources — ../../fonts/ for this file's home in public/mockups/directions/ and
+    ../fonts/ for the depth the three approved mockups sit at. Either way it
+    renders in the real Geist, opened from disk or served from public/.
+-->
+<style>
+@font-face{font-family:'Geist';src:url('../../../public/fonts/Geist-Regular.woff2') format('woff2'),url('../../../public/fonts/Geist-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist';src:url('../../../public/fonts/Geist-Medium.woff2') format('woff2'),url('../../../public/fonts/Geist-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('../../../public/fonts/GeistMono-Regular.woff2') format('woff2'),url('../../../public/fonts/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+</style>
+<style>
+/* ==========================================================================
+   1. TOKENS — copied verbatim from resources/css/tokens.css
+   check:design compares this :root against tokens.css in both directions: a
+   missing token fails and so does an extra one. Marketing chrome is declared
+   in section 2 instead.
+   ========================================================================== */
+:root{
+    color-scheme: light;
+    --paper:#fcfbf9; --paper-sunk:#f4f2ee; --white:#ffffff;
+    --ink:#181714; --ink-2:#6f6d66; --ink-3:#a3a099; --ink-4:#cfccc4;
+    --rule:rgb(24 23 20 / .08); --rule-strong:rgb(24 23 20 / .16); --rule-hover:rgb(24 23 20 / .34);
+    --danger:#a8342c;
+    --accent:#a85729; --accent-tint:rgb(168 87 41 / .08);
+    --status-confirmed:var(--ink); --status-pending:var(--ink-3); --status-cancelled:var(--danger);
+    --ink-tint:rgb(24 23 20 / .055); --overlay:rgb(24 23 20 / .32);
+    --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --text-12:.75rem; --text-13:.8125rem; --text-14:.875rem; --text-15:.9375rem;
+    --text-17:1.0625rem; --text-20:1.25rem; --text-24:1.5rem; --text-34:2.125rem;
+    --tracking-34:-.03em; --tracking-24:-.025em; --tracking-20:-.02em; --tracking-17:-.015em; --tracking-body:0;
+    --leading-display:1.1; --leading-heading:1.3; --leading-body:1.5;
+    --measure:68ch;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+    --radius:6px;
+    --duration-fast:120ms; --duration:180ms; --ease:cubic-bezier(.2,0,0,1);
+    --focus-ring:0 0 0 2px var(--paper),0 0 0 4px var(--accent);
+    --tap:44px;
+    --rail:148px; --rail-collapsed:56px; --topbar:56px;
+    --brand:var(--ink); --brand-fg:var(--white);
+    --brand-forest:#2f5d4a; --brand-plum:#7b3448; --brand-navy:#24415f;
+    --brand-ochre:#8a5a1e; --brand-slate:#414a52; --brand-clay:#8c4a32;
+    --badge-h:20px; --skeleton-h:8px;
+    --col-when:152px; --col-time:56px; --col-staff:96px; --col-status:132px;
+    --col-amount:112px; --col-actions:56px;
+    --sub-indent:calc(var(--col-time) + var(--space-4));
+    --booking-w:440px;--auth-col:560px;--auth-form:380px;
+    /* Density — the operator app is the default (compact). */
+    --control-h:36px; --row-h:34px; --rhythm:8px; --field-text:var(--text-14); --pad-x:12px;
+}
+[data-density='roomy']{--control-h:48px;--row-h:44px;--rhythm:12px;--field-text:var(--text-15);--pad-x:16px;}
+[data-density='console']{--control-h:32px;--row-h:28px;--rhythm:8px;--field-text:var(--text-13);--pad-x:8px;}
+@media (prefers-reduced-motion: reduce){
+    :root{--duration-fast:0ms;--duration:0ms;}
+    *,*::before,*::after{animation-duration:0ms!important;animation-iteration-count:1!important;
+        transition-duration:0ms!important;scroll-behavior:auto!important;}
+}
+
+/* ==========================================================================
+   2. SURFACE CHROME
+   Marketing's own layout widths, declared here and not in :root — the mockup
+   gate fails a :root that carries a token tokens.css does not have. Phase 11
+   should promote these into tokens.css beside --rail, --booking-w and
+   --auth-col, which exist for exactly this reason.
+   ========================================================================== */
+[data-surface='marketing']{
+    --page:1152px;
+    --gutter:var(--space-4);
+    /* The clock rail. --col-time is the app's own bare HH:MM column, which is
+       the same job this column does. */
+    --clock:var(--col-time);
+    /* The offset from the page edge to the spine's text column. Derived so the
+       headline, every surface and every heading below share one left edge. */
+    --spine-in:calc(var(--clock) + var(--space-6));
+}
+@media (min-width:768px){ [data-surface='marketing']{ --gutter:var(--space-8); } }
+@media (min-width:1200px){
+    [data-surface='marketing']{ --spine-in:calc(var(--clock) + var(--space-12)); }
+}
+
+/* ==========================================================================
+   3. BASE — mirrors resources/css/base.css
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);
+    font-size:var(--text-15);font-weight:400;line-height:var(--leading-body);
+    letter-spacing:var(--tracking-body);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{margin:0;font-weight:500;line-height:var(--leading-heading);}
+p{margin:0;} ul,ol,dl,dd{margin:0;padding:0;list-style:none;}
+a{color:inherit;}
+:focus{outline:none;}
+:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--radius);}
+::selection{background:var(--ink);color:var(--white);}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.skip{position:absolute;left:var(--space-4);top:var(--space-2);z-index:2;
+    background:var(--ink);color:var(--white);padding:var(--space-2) var(--space-4);
+    border-radius:var(--radius);font-size:var(--text-14);transform:translateY(-200%);}
+.skip:focus{transform:none;}
+
+/* ---- Type roles ---------------------------------------------------------- */
+.t12{font-size:var(--text-12);line-height:var(--leading-body);}
+.t13{font-size:var(--text-13);line-height:var(--leading-body);}
+.t14{font-size:var(--text-14);line-height:var(--leading-body);}
+.t15{font-size:var(--text-15);line-height:var(--leading-body);}
+.t17{font-size:var(--text-17);line-height:var(--leading-heading);letter-spacing:var(--tracking-17);}
+.t20{font-size:var(--text-20);line-height:var(--leading-heading);letter-spacing:var(--tracking-20);}
+.t24{font-size:var(--text-24);line-height:var(--leading-heading);letter-spacing:var(--tracking-24);}
+.t34{font-size:var(--text-34);line-height:var(--leading-display);letter-spacing:var(--tracking-34);}
+.dim{color:var(--ink-2);}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.med{font-weight:500;}
+
+/* ---- Controls ------------------------------------------------------------ */
+.btn{display:inline-flex;align-items:center;justify-content:center;
+    min-height:var(--tap);height:var(--control-h);padding:0 var(--pad-x);
+    border-radius:var(--radius);background:var(--ink);color:var(--white);
+    font-size:var(--text-14);font-weight:500;text-decoration:none;
+    transition:opacity var(--duration-fast) var(--ease);}
+.btn-wide{width:100%;}
+.btn:hover{opacity:.9;}
+.link{text-decoration:underline;text-decoration-color:var(--rule-strong);
+    text-underline-offset:4px;
+    transition:text-decoration-color var(--duration-fast) var(--ease);}
+.link:hover{text-decoration-color:var(--ink);}
+.quiet{color:var(--ink-2);text-decoration:none;
+    transition:color var(--duration-fast) var(--ease);}
+.quiet:hover{color:var(--ink);}
+.act{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;}
+
+/* ==========================================================================
+   4. PAGE FRAME
+   ========================================================================== */
+.wrap{max-width:var(--page);margin:0 auto;padding-left:var(--gutter);padding-right:var(--gutter);}
+
+.masthead{border-bottom:1px solid var(--rule);}
+.masthead .wrap{display:flex;align-items:center;justify-content:space-between;
+    gap:var(--space-4);min-height:var(--topbar);}
+.wordmark{font-size:var(--text-17);letter-spacing:var(--tracking-17);font-weight:500;
+    text-decoration:none;}
+.masthead nav{display:flex;align-items:center;gap:var(--space-6);font-size:var(--text-13);}
+.masthead nav .off-phone{display:none;}
+@media (min-width:768px){ .masthead nav .off-phone{display:inline;} }
+
+/* ==========================================================================
+   5. THE SPINE GEOMETRY
+   One grid, used by every section on the page: clock | surface | margin note.
+
+   At 375 there is no rail at all — a 56px gutter would eat the 440px surface
+   that is the entire point of this direction — so the clock becomes an inline
+   mono label above its frame and the frames are separated by hairlines. At 768
+   the rail and its unbroken vertical rule appear. At 1200 a third column of
+   margin notes opens, so the widest layout gains a column rather than gaining
+   padding.
+   ========================================================================== */
+.row{display:block;}
+.rail{display:block;}
+.note{margin-top:var(--space-4);color:var(--ink-2);font-size:var(--text-14);
+    max-width:52ch;}
+.note p + p{margin-top:var(--space-3);}
+
+@media (min-width:768px){
+    .row{display:grid;grid-template-columns:var(--clock) minmax(0,1fr);
+        column-gap:var(--space-6);}
+    .rail{text-align:right;padding-right:var(--space-4);}
+    .rail .sticks{position:sticky;top:var(--space-4);display:block;}
+    /* 768 is two columns, and a row has three children. Both the surface and
+       its margin note are pinned to column 2 so the note stacks under the
+       surface; without this the note auto-places into the 56px clock column
+       and wraps at one character per line. */
+    .row > .col,.row > .note{grid-column:2;}
+}
+@media (min-width:1200px){
+    .row{grid-template-columns:var(--clock) var(--booking-w) minmax(0,1fr);
+        column-gap:var(--space-12);}
+    .row > .col{grid-column:2;}
+    .row > .note{grid-column:3;margin-top:0;}
+    /* The handover's surface is the operator app, which is wider than the
+       client's 440px column. The row widens column 2 to --auth-col rather than
+       spanning both, so the margin note keeps its own column and the section
+       does not leave the right half of a 1280 viewport empty. */
+    .row-wide{grid-template-columns:var(--clock) var(--auth-col) minmax(0,1fr);}
+}
+
+.clock{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+    font-size:var(--text-13);color:var(--ink-2);}
+.railtag{font-size:var(--text-13);color:var(--ink-2);}
+
+/* ---- The opening block --------------------------------------------------- */
+.opening > .wrap{padding-top:var(--space-12);padding-bottom:var(--space-8);}
+@media (min-width:768px){
+    .opening > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-12);}
+}
+@media (min-width:1200px){
+    .opening > .wrap{padding-top:calc(var(--space-16) + var(--space-8));}
+}
+.opening h1{max-width:20ch;}
+.opening .sub{margin-top:var(--space-6);max-width:40ch;}
+.opening .act{margin-top:var(--space-8);}
+/* The hero's margin note answers the one objection this direction would
+   otherwise dodge above the fold: that there is a free alternative.
+
+   It is a MARGIN note, and at 375 there is no margin — putting it in the flow
+   there pushed the proposal, which is the entire point of this direction, down
+   to the third screen. On a phone it is gone, and the price section carries the
+   same admission in full. */
+.opening .note{display:none;}
+@media (min-width:768px){
+    .opening .note{display:block;border-left:1px solid var(--rule);
+        padding-left:var(--space-4);font-size:var(--text-13);max-width:36ch;}
+}
+@media (min-width:1200px){ .opening .note{align-self:end;} }
+
+/* ---- The booking spine --------------------------------------------------- */
+.spine{padding-bottom:var(--space-12);}
+.spine > .wrap{position:relative;}
+@media (min-width:768px){
+    /* One rule, drawn once on the wrap, so the spine cannot come out as the row
+       of disconnected segments a per-frame border gave on the first pass. */
+    .spine > .wrap::before{content:'';position:absolute;top:0;bottom:0;
+        left:calc(var(--gutter) + var(--clock));width:1px;background:var(--rule);}
+    /* The booking is bracketed rather than fading out at both ends: a heavier
+       hairline runs in from the page edge to meet the spine, above the first
+       frame and below the last. */
+    .spine .frame:first-of-type .rail{border-top:1px solid var(--rule-strong);
+        padding-top:var(--space-3);}
+    .spine .frame:last-of-type .rail{border-bottom:1px solid var(--rule-strong);}
+}
+.frame{padding-top:var(--space-8);padding-bottom:var(--space-8);
+    border-top:1px solid var(--rule);}
+.frame:first-of-type{border-top:0;padding-top:var(--space-4);}
+@media (min-width:768px){
+    .frame{border-top:0;padding-top:var(--space-12);padding-bottom:var(--space-12);}
+    .frame:first-of-type{padding-top:var(--space-8);}
+}
+.frame h2{margin-top:var(--space-1);font-size:var(--text-17);
+    letter-spacing:var(--tracking-17);max-width:30ch;}
+@media (min-width:768px){ .frame h2{margin-top:0;} }
+.stage{margin-top:var(--space-4);max-width:var(--booking-w);}
+@media (min-width:768px){ .stage{margin-top:var(--space-6);} }
+
+/* ==========================================================================
+   6. THE RENDERED SURFACES
+   The product's own components at the product's own densities, not drawings of
+   them. Containment is spent once per surface: one hairline, one 6px radius,
+   no nested cards.
+   ========================================================================== */
+
+/* A text message, quoted. Not a chat bubble. */
+.sms{background:var(--paper-sunk);border:1px solid var(--rule);
+    border-radius:var(--radius);padding:var(--space-4);}
+.sms .from{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+    font-size:var(--text-12);color:var(--ink-2);}
+.sms .said{margin-top:var(--space-2);font-size:var(--text-14);}
+.sms .url{font-family:var(--font-mono);}
+
+/* The proposal and the confirmation, on the public booking density. */
+.card{background:var(--white);border:1px solid var(--rule);
+    border-radius:var(--radius);padding:var(--space-4);}
+.card .salon{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-3);
+    align-items:baseline;font-size:var(--text-13);color:var(--ink-2);}
+/* The one accent on this page, and it is one of the three meanings tokens.css
+   rations it for: a "first available" marker. It sits with the appointment it
+   describes, not under the buttons. */
+.card .first{color:var(--accent);}
+.card .when{margin-top:var(--space-3);font-size:var(--text-20);
+    letter-spacing:var(--tracking-20);line-height:var(--leading-heading);}
+.card .span{margin-top:var(--space-1);font-family:var(--font-mono);
+    font-variant-numeric:tabular-nums;font-size:var(--text-17);}
+.card .what{margin-top:var(--space-2);font-size:var(--text-14);color:var(--ink-2);}
+.card .money{margin-top:var(--space-4);padding-top:var(--space-3);
+    border-top:1px solid var(--rule);
+    display:grid;grid-template-columns:1fr auto;row-gap:var(--space-2);
+    column-gap:var(--space-4);font-size:var(--text-14);align-items:baseline;}
+.card .money .fig{text-align:right;font-family:var(--font-mono);
+    font-variant-numeric:tabular-nums;}
+.card .money .now{font-size:var(--text-20);letter-spacing:var(--tracking-20);}
+.card .doing{margin-top:var(--space-4);display:grid;row-gap:var(--space-3);
+    justify-items:center;}
+.card .paid{font-size:var(--text-13);color:var(--ink-2);text-align:center;}
+
+.done .head{font-size:var(--text-20);letter-spacing:var(--tracking-20);}
+.done .lines{margin-top:var(--space-3);border-top:1px solid var(--rule);
+    padding-top:var(--space-3);display:grid;row-gap:var(--space-2);
+    font-size:var(--text-14);color:var(--ink-2);}
+
+/* ==========================================================================
+   7. THE HANDOVER — the density switches to the operator app
+   ========================================================================== */
+.handover{border-top:1px solid var(--rule);}
+.handover > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-16);}
+.handover h2{max-width:26ch;}
+.diary{margin-top:var(--space-6);max-width:var(--auth-col);
+    border:1px solid var(--rule);border-radius:var(--radius);
+    background:var(--white);overflow:hidden;}
+.diary .day{padding:var(--space-3) var(--space-4);background:var(--paper-sunk);
+    border-bottom:1px solid var(--rule);font-size:var(--text-13);color:var(--ink-2);}
+.diary ul{padding:var(--space-2) 0;}
+.diary li{display:grid;grid-template-columns:var(--col-time) minmax(0,1fr) auto;
+    align-items:center;column-gap:var(--space-3);
+    min-height:var(--row-h);padding:0 var(--space-4);font-size:var(--text-14);}
+.diary li + li{border-top:1px solid var(--rule);}
+.diary .time{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.diary .tail{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+    color:var(--ink-2);font-size:var(--text-13);text-align:right;}
+/* The new booking is the selected item in the set, so it is the only one that
+   gets a fill. Everything else sits on the page. */
+.diary li.new{background:var(--ink-tint);}
+.diary li.free{color:var(--ink-2);}
+
+/* ==========================================================================
+   8. CLOSING SECTIONS — same geometry, so the left edge never moves
+   ========================================================================== */
+.band{border-top:1px solid var(--rule);}
+.band > .wrap{padding-top:var(--space-16);padding-bottom:var(--space-16);}
+.band-tight > .wrap{padding-top:var(--space-8);padding-bottom:var(--space-8);}
+@media (min-width:768px){
+    .band-tight > .wrap{padding-top:var(--space-12);padding-bottom:var(--space-12);}
+}
+.prose{margin-top:var(--space-6);max-width:58ch;}
+.prose p + p{margin-top:var(--space-4);}
+.lede{margin-top:var(--space-4);max-width:44ch;color:var(--ink-2);}
+
+/* A margin note that is an admission rather than a claim. Set apart by a
+   hairline on its leading edge, not by a box. */
+.admit{border-left:1px solid var(--rule);padding-left:var(--space-4);
+    font-size:var(--text-14);color:var(--ink-2);max-width:40ch;}
+.admit .lab{display:block;color:var(--ink);margin-bottom:var(--space-2);}
+.admit p + p{margin-top:var(--space-3);}
+
+.price{display:flex;flex-wrap:wrap;align-items:baseline;
+    gap:var(--space-2) var(--space-4);}
+.price .amt{font-size:var(--text-34);letter-spacing:var(--tracking-34);
+    line-height:var(--leading-display);
+    font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+footer{border-top:1px solid var(--rule);background:var(--paper-sunk);}
+footer .wrap{padding-top:var(--space-8);padding-bottom:var(--space-8);
+    display:flex;flex-wrap:wrap;gap:var(--space-6);
+    font-size:var(--text-13);color:var(--ink-2);}
+footer nav{display:flex;flex-wrap:wrap;gap:var(--space-6);}
+</style>
+</head>
+<body data-surface="marketing">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+    <div class="wrap">
+        <a class="wordmark" href="#main">DiaryDesk</a>
+        <nav aria-label="Main">
+            <a class="quiet off-phone" href="#price">Pricing</a>
+            <a class="quiet off-phone" href="#main">Dog grooming</a>
+            <a class="quiet" href="#main">Log in</a>
+            <a class="link" href="#main">Start free trial</a>
+        </nav>
+    </div>
+</header>
+
+<main id="main">
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         The opening, on the spine's own grid so the headline starts where
+         every surface below it starts.
+         ───────────────────────────────────────────────────────────────────── -->
+    <section class="opening">
+        <div class="wrap row">
+            <div class="rail" aria-hidden="true"></div>
+            <div class="col">
+                <h1 class="t34">Thirty seconds, on a phone, in a car park.</h1>
+                <p class="sub t17 dim">This is the whole booking, from your client's side: one
+                    appointment, one decision, deposit included.</p>
+                <div class="act">
+                    <a class="btn" href="#main">Start free trial</a>
+                    <span class="t13 dim">Thirty days. No card.</span>
+                </div>
+            </div>
+            <div class="note">
+                <p>There is free grooming software and it is good. It is £39 a month here
+                    because we charge you rather than charging the people who book with you.
+                    That trade is at the <a class="link" href="#price">bottom of this
+                    page</a>, in full.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="spine">
+        <div class="wrap">
+
+            <!-- 00:00 ───────────────────────────────────────────────────── -->
+            <section class="frame row">
+                <div class="rail"><span class="sticks clock">00:00</span></div>
+                <div class="col">
+                    <h2>The text arrives.</h2>
+                    <div class="stage">
+                        <div class="sms">
+                            <p class="from">Paws &amp; Claws · today, 18:40</p>
+                            <p class="said">Hi Sarah — Buster is due for his groom. Book him in
+                                here: <span class="url">diarydesk.co/paws-and-claws</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="note">
+                    <p>Or she taps the same link on your Facebook page, or the one in your
+                        window. Nothing to install and no password to invent — which is the
+                        whole difference between a booking and an intention.</p>
+                </div>
+            </section>
+
+            <!-- 00:06 ───────────────────────────────────────────────────── -->
+            <section class="frame row">
+                <div class="rail"><span class="sticks clock">00:06</span></div>
+                <div class="col">
+                    <h2>One appointment, not a calendar.</h2>
+                    <div class="stage">
+                        <div class="card" data-density="roomy">
+                            <p class="salon"><span>Paws &amp; Claws · East Kilbride</span>
+                                <span class="first">First available</span></p>
+                            <p class="when">Thursday 4 September</p>
+                            <p class="span">09:00 – 10:30</p>
+                            <p class="what">Full groom — medium dog · 90 minutes · Buster</p>
+                            <div class="money">
+                                <span>Full groom</span><span class="fig">£55.00</span>
+                                <span>To hold it now</span><span class="fig">£10.00</span>
+                            </div>
+                            <div class="doing">
+                                <a class="btn btn-wide" href="#main">Book this appointment</a>
+                                <a class="quiet t14" href="#main">Another time</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="note">
+                    <p>A grid asks your client to plan. A proposal asks her to agree.</p>
+                    <p>We read your opening hours, how long that service takes on that size of
+                        dog, and what is already in the book, then put the earliest one that
+                        works in front of her.</p>
+                    <p>If Thursday is wrong, “another time” is one tap away — and it is
+                        deliberately the quietest thing on the screen.</p>
+                </div>
+            </section>
+
+            <!-- 00:19 ───────────────────────────────────────────────────── -->
+            <section class="frame row">
+                <div class="rail"><span class="sticks clock">00:19</span></div>
+                <div class="col">
+                    <h2>The deposit is inside the same decision.</h2>
+                    <div class="stage">
+                        <div class="card" data-density="roomy">
+                            <p class="salon"><span>Thursday 4 September, 09:00</span></p>
+                            <div class="money" style="margin-top:var(--space-3)">
+                                <span class="now">Pay now</span>
+                                <span class="fig now">£10.00</span>
+                                <span class="dim">On the day, when Buster is collected</span>
+                                <span class="fig dim">£45.00</span>
+                            </div>
+                            <div class="doing">
+                                <a class="btn btn-wide" href="#main">Pay £10.00 and book</a>
+                            </div>
+                            <p class="paid">Paid to Paws &amp; Claws. Card details are handled
+                                by Stripe.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="note">
+                    <p>Not a second step afterwards, and not an email asking her to send a
+                        transfer. One screen, one amount, one button — the payment is the thing
+                        that makes the appointment real.</p>
+                    <p>It goes to a Stripe account in your salon's name, straight to your bank.
+                        We never hold your clients' money, and the refund is yours to give
+                        without asking us.</p>
+                </div>
+            </section>
+
+            <!-- 00:24 ───────────────────────────────────────────────────── -->
+            <section class="frame row">
+                <div class="rail"><span class="sticks clock">00:24</span></div>
+                <div class="col">
+                    <h2>Done.</h2>
+                    <div class="stage">
+                        <div class="card done" data-density="roomy">
+                            <p class="head">Booked — Thursday 4 September, 09:00</p>
+                            <div class="lines">
+                                <span>We have texted Sarah the details.</span>
+                                <span>She gets a reminder the day before.</span>
+                                <span>Moving or cancelling is a link in that text.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="note">
+                    <p>Twenty-four seconds. She has not typed an address, chosen a password or
+                        downloaded anything — and you did not answer the phone with wet
+                        hands.</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         The handover. Same language, different density: this is the operator
+         app, which she is in forty times a day.
+         ───────────────────────────────────────────────────────────────────── -->
+    <div class="handover">
+        <div class="wrap row row-wide">
+            <div class="rail"><span class="railtag">then</span></div>
+            <div class="col">
+                <h2 class="t24">And in your diary, the same minute.</h2>
+                <div class="diary">
+                    <p class="day">Thursday 4 September · Europe/London</p>
+                    <ul>
+                        <li class="new">
+                            <span class="time">09:00</span>
+                            <span>Buster — full groom, medium</span>
+                            <span class="tail">£10.00 held</span>
+                        </li>
+                        <li>
+                            <span class="time">10:45</span>
+                            <span>Daisy — bath and blow dry</span>
+                            <span class="tail">paid</span>
+                        </li>
+                        <li class="free">
+                            <span class="time">11:45</span>
+                            <span>Open</span>
+                            <span class="tail">75 min</span>
+                        </li>
+                        <li>
+                            <span class="time">13:00</span>
+                            <span>Milo — nail clip</span>
+                            <span class="tail">no deposit</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="note">
+                <p>Denser than the page your client saw, because you are in it forty times a
+                    day and she is in it once: 34px rows, times in mono down the left, the next
+                    dog first.</p>
+                <p>Same colours, same hairlines, same 6px corners — one product at two
+                    speeds.</p>
+                <p>It is a diary you read in three seconds standing up, not a dashboard you
+                    interpret sitting down.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Why. Prose only — drawing a competitor's calendar would be inventing
+         their interface. The margin note is where the argument admits its
+         own limit.
+         ───────────────────────────────────────────────────────────────────── -->
+    <div class="band">
+        <div class="wrap row">
+            <div class="rail"><span class="railtag">why</span></div>
+            <div class="col">
+                <h2 class="t24">Why we do not show her a calendar</h2>
+                <div class="prose">
+                    <p>Every other diary opens on a month grid. That is the honest thing to
+                        build if you do not know who is looking at it: pick a date, pick a time,
+                        hope something is free, start again if it is not.</p>
+                    <p>But you do know her. She comes every eight weeks, she has a medium
+                        doodle who takes ninety minutes, and she wants the first Thursday
+                        morning you have got. A grid makes her work that out. We already know
+                        it, so we say it.</p>
+                    <p>The grid still exists. It is behind “another time”, which is the
+                        quietest control on the page, because the people who need it are the
+                        exception and not the rule.</p>
+                </div>
+            </div>
+            <div class="note admit">
+                <span class="lab">Where a grid still wins</span>
+                <p>A client with one specific afternoon free in the next month is better served
+                    by seeing the whole month at once. So is anyone booking around a holiday.</p>
+                <p>They get there in one tap, and we would rather that tap existed than pretend
+                    a proposal suits everybody.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Price. Late, short, and honest about the free alternative — the fee
+         fact appears here as a supporting note, not as this page's argument.
+         ───────────────────────────────────────────────────────────────────── -->
+    <div class="band" id="price">
+        <div class="wrap row">
+            <div class="rail"><span class="railtag">cost</span></div>
+            <div class="col">
+                <div class="price">
+                    <span class="amt">£39</span>
+                    <span class="t17 dim">a month</span>
+                </div>
+                <p class="lede">Or £390 a year, which is two months off. Thirty days free, and
+                    we do not ask for a card to start. One plan; nothing is switched off on
+                    it.</p>
+                <div class="act" style="margin-top:var(--space-8)">
+                    <a class="btn" href="#main">Start free trial</a>
+                    <a class="link t14" href="#main">Or have us set it up</a>
+                </div>
+            </div>
+            <div class="note admit">
+                <span class="lab">Against free</span>
+                <p>The free grooming diaries are paid for by a booking fee on your clients —
+                    roughly £1.25 every time one of them books with you. We charge them
+                    nothing, and Stripe's own processing fee is passed through at cost rather
+                    than marked up.</p>
+                <p>That figure is not printed here because we have not set it. We would rather
+                    leave a gap than print a number that looks official.
+                    <span class="med">Placeholder.</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="band band-tight">
+        <div class="wrap row">
+            <div class="rail" aria-hidden="true"></div>
+            <div class="col">
+                <p class="t14 dim" style="max-width:56ch">From groomers using it: nothing here
+                    yet. When a real salon writes something we can print, it goes here. Not
+                    before.</p>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>DiaryDesk</span>
+        <nav aria-label="Footer">
+            <a class="quiet" href="#price">Pricing</a>
+            <a class="quiet" href="#main">Dog grooming</a>
+            <a class="quiet" href="#main">About</a>
+            <a class="quiet" href="#main">Contact</a>
+            <a class="quiet" href="#main">Privacy</a>
+            <a class="quiet" href="#main">Terms</a>
+        </nav>
+    </div>
+</footer>
+</body>
+</html>
