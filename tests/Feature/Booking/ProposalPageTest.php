@@ -122,6 +122,35 @@ it('states the deposit and the refund cut-off as a date', function () {
 });
 
 /*
+ * The groomer's name, once, server-side.
+ *
+ * The booking page needs it to say "with Ana instead of Maya" when an
+ * alternative is with somebody other than the groomer being proposed — the
+ * `resolveStaff()` silent-reassignment behaviour recorded in DECISIONS.md, made
+ * visible. The comparison is client state (accepting an alternative changes what
+ * "different" means), but the *name* is formatted here, so the rule that
+ * customer-facing strings are built in PHP holds where it is about formatting.
+ */
+it('names staff to a customer by first name only, as its own field', function () {
+    $salon = aBookingSalon();
+
+    $props = bookingProps($this->get(route('public.booking.show', $salon['tenant']->slug))->getContent());
+    $primary = $props['suggestion']['primary'];
+
+    expect($primary['staff_name'])->toBe('Ana Duarte');
+    expect($primary['staff_first_name'])->toBe('Ana');
+    // The muted column on an alternative row is built from the same value, so
+    // the two can never disagree about what the groomer is called.
+    expect($primary['meta'])->toContain('· Ana');
+    expect($primary['meta'])->not->toContain('Duarte');
+
+    foreach ($props['suggestion']['alternatives'] as $alternative) {
+        expect($alternative)->toHaveKey('staff_first_name');
+        expect($alternative['staff_first_name'])->not->toContain(' ');
+    }
+});
+
+/*
  * Recognition, and the boundary that stops it leaking. Both salons are served
  * from one hostname, so one salon's cookie is presented to the next.
  */

@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { MENU_CLOSE } from './menuClose';
 
 /**
  * A small action menu. Row actions live in one of these rather than as a row of
  * inline links, so a table row has one affordance instead of five.
+ *
+ * **Closing is provided to the items rather than left to bubbling.** The panel
+ * has an `@click` on it and a click on an item does bubble through it, but that
+ * was not enough for the one case that matters: an item whose handler opens a
+ * modal. `SuperAdmin/Index` has one — "Sign in as the owner…" opens the
+ * impersonation confirm — and the menu stayed on screen underneath the dialog's
+ * overlay, so a confirm that exists to be read carefully was read through a
+ * second surface. An item now closes the menu itself, before its own handler
+ * runs, which does not depend on what that handler goes on to do.
  */
 withDefaults(defineProps<{ label?: string; align?: 'left' | 'right' }>(), {
     label: 'Actions',
@@ -19,6 +29,13 @@ const close = (restoreFocus = true) => {
     open.value = false;
     if (restoreFocus) trigger.value?.focus();
 };
+
+/*
+ * Handed to every `MenuItem` below this menu. `provide`/`inject` rather than a
+ * prop because the items arrive through a slot, so the consumer would otherwise
+ * have to wire this on each one and would forget on the one that matters.
+ */
+provide(MENU_CLOSE, () => close(false));
 
 const toggle = async () => {
     open.value = !open.value;

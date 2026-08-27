@@ -48,13 +48,35 @@ const filters = reactive({ ...props.filters });
 
 const apply = () => router.get(route('bookings.index'), { ...filters }, { preserveState: true, replace: true });
 
+/*
+ * `narrow` is the phone layout. At 375px this table put the amount and the row
+ * menu off the right-hand edge behind a horizontal scroll — the "Amo…" and "£."
+ * that a screenshot at that width shows — while "Sep 16 15:30" broke into three
+ * lines in a 152px column. The row is a list item there instead: who it is on
+ * top, the appointment underneath, the money hard right. See `ui/Table`.
+ *
+ * The second line takes the columns in the order they are declared here, which
+ * is why `when` leads it: on a phone the question is "when is this", and the
+ * customer is already the headline.
+ */
 const columns: Column[] = [
-    { key: 'when', label: 'When', width: 'when', sortable: true },
-    { key: 'customer', label: 'Customer', sortable: true },
-    { key: 'service', label: 'Service', secondary: true },
+    { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'line' },
+    { key: 'customer', label: 'Customer', sortable: true, narrow: 'title' },
+    { key: 'service', label: 'Service', secondary: true, narrow: 'line' },
+    // Not in the narrow row. Four parts on the second line wrapped to three,
+    // and the groomer was the part that ended up alone on the last one. It is
+    // already `secondary`, so a phone never showed it in the table either.
     { key: 'staff', label: 'Staff', width: 'staff', secondary: true },
-    { key: 'status', label: 'Status', width: 'status' },
-    { key: 'amount', label: 'Amount', width: 'amount', align: 'right', numeric: true, sortable: true },
+    { key: 'status', label: 'Status', width: 'status', narrow: 'meta' },
+    {
+        key: 'amount',
+        label: 'Amount',
+        width: 'amount',
+        align: 'right',
+        numeric: true,
+        sortable: true,
+        narrow: 'meta',
+    },
 ];
 
 /*

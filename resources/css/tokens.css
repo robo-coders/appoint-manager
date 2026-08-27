@@ -119,8 +119,16 @@
      * Weights 400 and 500 only. Never 600, never 700.
      * Numbers are mono and tabular: times, prices, durations, counts and IDs.
      * Never mono for prose.
+     *
+     * Both families are self-hosted woff2 — see the @font-face block at the top
+     * of base.css. `Inter` has been dropped from the sans stack: it was there as
+     * a second web font for the case where Geist failed to fetch from
+     * fonts.bunny.net, and with Geist served from our own origin that case is
+     * "the stylesheet loaded but a font on the same origin did not", which no
+     * second web font improves. What is left after Geist is the system
+     * grotesque, which is the honest fallback and costs nothing.
      */
-    --font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
     --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
     /* Eight sizes. Nothing else. */
@@ -195,6 +203,14 @@
     /* The public booking column. One thumb, one column, never wider. */
     --booking-w: 440px;
 
+    /* The auth surface's two columns. --auth-col is the working column: wide
+     * enough that the form is never the whole page on a laptop, narrow enough
+     * that the quiet column beside it is the larger of the two. --auth-form is
+     * the form inside it, set so a 14px label and a 36px control read as one
+     * measure rather than as a stretched row. */
+    --auth-col: 560px;
+    --auth-form: 380px;
+
     /* Control chrome the mockups hardcoded. Every value is a multiple of 4.
      *
      * --badge-h stays at 20: it is on the 4px grid, and 16 clips a 12px label
@@ -238,6 +254,33 @@
      * keeps the ladder monotonic across the three surfaces and adds 2px a side
      * to a compact control. */
     --pad-x: 12px;
+}
+
+/*
+ * Email, in a dark client. The one place this product has a dark palette.
+ *
+ * `DESIGN.md` says dark mode is deliberately not implemented, and that stands
+ * for the app: there is one design, it is light, and a second palette would be
+ * a second design to keep correct. Email is not the app. Apple Mail and Outlook
+ * repaint a message for dark mode whether or not we have an opinion, and an
+ * auto-inverted warm-paper email comes back muddy blue-grey with the ink action
+ * flipped to near-white on near-white. Specifying beats being repainted.
+ *
+ * These are the same roles, not a second design: a sunk page, a raised sheet, a
+ * hairline, primary and secondary ink. They live here rather than inline in
+ * `mail/layout.blade.php` for the same reason every other colour does — so
+ * there is one file that knows what this product looks like.
+ *
+ * Not in `:root`: `check:design` asserts the mockups carry every `:root` token,
+ * and a mockup of the dashboard has no business restating an email's dark
+ * palette. `App\Support\DesignTokens::block()` reads this selector.
+ */
+[data-scheme='mail-dark'] {
+    --mail-dark-paper: #171614;
+    --mail-dark-sheet: #201f1c;
+    --mail-dark-rule: #35332e;
+    --mail-dark-ink: #f4f2ee;
+    --mail-dark-ink-2: #a8a49b;
 }
 
 /* The public booking page. A stranger on a phone, once, on bad signal. */

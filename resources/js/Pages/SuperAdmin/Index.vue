@@ -1,69 +1,259 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import Callout from '@/Components/ui/Callout.vue';
+import ConfirmDialog from '@/Components/ui/ConfirmDialog.vue';
+import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import SlideOver from '@/Components/ui/SlideOver.vue';
+import Table, { type Column } from '@/Components/ui/Table.vue';
+import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-defineProps<{
-    tenants: Array<{
-        id: number;
-        name: string;
-        slug: string;
-        plan: string;
-        status: string;
-        trial_ends_at: string | null;
-        is_comped: boolean;
-        booking_page_live: boolean;
-        bookings_this_month: number;
-        last_activity_at: string | null;
-        preview_url: string | null;
-        feature_flags: Record<string, boolean>;
-    }>;
-}>();
+/**
+ * Every tenant on the platform. Our screen, at 2am.
+ *
+ * It does not have to seduce anybody, so it does not: dense is the right answer
+ * here and `data-density="console"` — set on the admin surface's root in
+ * `app.blade.php`, and never set anywhere before this phase — is what makes the
+ * rows 28px instead of 34px. Dense is not the same as sloppy, and what it was
+ * was sloppy: a hand-rolled `<table>` with six unlabelled `<th>`s, five bare
+ * underlined `<button>`s per row, two placeholder-only `<input>`s with no
+ * labels at all, and a `plan status comped` cell that concatenated three
+ * different facts into one string with spaces.
+ *
+ * The one idea: **this screen answers "who is in trouble" before it answers
+ * anything else.** Sorted by name it answered nothing — a hundred salons in
+ * alphabetical order is a directory, not a console. The default sort is now
+ * whichever tenants need looking at, and the state that puts them there is
+ * spelled out in words in its own column rather than inferred from three
+ * booleans in a string.
+ *
+ * Impersonation is the dangerous one and it is treated as such: it is not a
+ * link in a row of five identical links, it is behind a confirm that names the
+ * salon and the person whose session is about to be borrowed. See below.
+ */
+type Tenant = {
+    id: number;
+    name: string;
+    slug: string;
+    plan: string;
+    status: string;
+    trial_ends_at: string | null;
+    trial_days_left: number | null;
+    is_comped: boolean;
+    booking_page_live: boolean;
+    bookings_this_month: number;
+    last_activity_at: string | null;
+    last_seen_label: string;
+    owner_name: string | null;
+    state: string;
+    needs_attention: boolean;
+    preview_url: string | null;
+    feature_flags: Record<string, boolean>;
+};
 
+const props = defineProps<{ tenants: Tenant[] }>();
+
+const columns: Column[] = [
+    { key: 'name', label: 'Salon', sortable: true, narrow: 'title' },
+    { key: 'state', label: 'State', sortable: true, width: 'status', narrow: 'line' },
+    { key: 'plan', label: 'Plan', sortable: true, width: 'staff', secondary: true },
+    { key: 'live', label: 'Page', width: 'staff', secondary: true },
+    {
+        key: 'bookings_this_month',
+        label: 'Bookings',
+        sortable: true,
+        align: 'right',
+        numeric: true,
+        width: 'amount',
+        narrow: 'meta',
+    },
+    { key: 'last_seen_label', label: 'Last seen', sortable: true, width: 'when', secondary: true },
+];
+
+/*
+ * Trouble first, then quiet, then everybody else — and alphabetical inside each
+ * band so the list is still findable by eye. `Table` sorts itself once a column
+ * header is clicked; this is only what it opens on.
+ */
+const rows = computed(() =>
+    [...props.tenants].sort((a, b) => {
+        if (a.needs_attention !== b.needs_attention) return a.needs_attention ? -1 : 1;
+
+        return a.name.localeCompare(b.name);
+    }),
+);
+
+const attention = computed(() => props.tenants.filter((tenant) => tenant.needs_attention).length);
+
+/* ----------------------------------------------------------- impersonation */
+
+/**
+ * The dangerous action on this surface, and the only one behind a confirm.
+ *
+ * Everything else here is reversible and ours: extending a trial, comping an
+ * account, publishing a booking page. Impersonation is neither — it puts us
+ * inside a real business's real diary as its owner, where every write is theirs
+ * and not ours, and the audit row it leaves has that owner's name on it.
+ *
+ * So it is not a fifth underlined word in a row of five. It is `danger` in the
+ * row menu, it names the salon *and the person* before it happens, and its
+ * confirm button says what it is about to do rather than "Confirm".
+ */
+const impersonating = ref<Tenant | null>(null);
+
+const startImpersonating = () => {
+    const tenant = impersonating.value;
+    if (!tenant) return;
+
+    impersonating.value = null;
+    router.post(route('super-admin.impersonate', tenant.id));
+};
+
+/* ------------------------------------------------------------ copy a setup */
+
+const cloneOpen = ref(false);
 const clone = useForm({ from_tenant_id: '', to_tenant_id: '' });
+
+const submitClone = () =>
+    clone.post(route('super-admin.clone'), {
+        onSuccess: () => {
+            clone.reset();
+            cloneOpen.value = false;
+        },
+    });
+
+const tenantById = (id: string) => props.tenants.find((tenant) => String(tenant.id) === id.trim());
+
+const cloneFrom = computed(() => tenantById(clone.from_tenant_id));
+const cloneTo = computed(() => tenantById(clone.to_tenant_id));
 </script>
 
 <template>
     <AppLayout>
         <Head title="Tenants" />
-        <PageHeader title="Tenants" description="Platform view. Writes are audited." />
-        <table class="w-full text-left text-13">
-            <thead>
-                <tr class="border-b border-rule text-ink-2">
-                    <th class="py-2">Name</th>
-                    <th>Plan</th>
-                    <th>Trial</th>
-                    <th>Bookings</th>
-                    <th>Last seen</th>
-                    <th />
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="tenant in tenants" :key="tenant.id" class="border-b border-rule">
-                    <td class="py-2">{{ tenant.name }}</td>
-                    <td>{{ tenant.plan }} {{ tenant.status }} {{ tenant.is_comped ? 'comped' : '' }}</td>
-                    <td>{{ tenant.trial_ends_at }}</td>
-                    <td>{{ tenant.bookings_this_month }}</td>
-                    <td>{{ tenant.last_activity_at || '—' }}</td>
-                    <td class="space-x-2">
-                        <button type="button" class="underline" @click="router.post(route('super-admin.impersonate', tenant.id))">Impersonate</button>
-                        <button type="button" class="underline" @click="router.post(route('super-admin.extend-trial', tenant.id))">Extend trial</button>
-                        <button type="button" class="underline" @click="router.post(route('super-admin.comp', tenant.id))">Comp</button>
-                        <button type="button" class="underline" @click="router.post(route('super-admin.go-live', tenant.id))">Go live</button>
-                        <button type="button" class="underline" @click="router.post(route('super-admin.preview', tenant.id))">Preview link</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <form class="mt-8 flex gap-3 text-13" @submit.prevent="clone.post(route('super-admin.clone'))">
-            <input v-model="clone.from_tenant_id" placeholder="From tenant id" />
-            <input v-model="clone.to_tenant_id" placeholder="To tenant id" />
-            <button type="submit" class="underline">Copy setup</button>
-        </form>
-        <p class="mt-4 text-13">
-            <a :href="route('super-admin.messages')" class="underline">Send log</a>
-            ·
-            <a :href="route('super-admin.failures')" class="underline">Failed jobs</a>
-        </p>
+
+        <PageHeader
+            title="Tenants"
+            :description="`${tenants.length} on the platform. Every write on this screen is audited.`"
+        >
+            <Button variant="secondary" @click="cloneOpen = true">Copy a setup</Button>
+        </PageHeader>
+
+        <!--
+            The one thing worth saying before the table. Not a stat band: this is
+            a console, and a figure that is usually zero should be absent when it
+            is zero rather than reserving space to say so.
+        -->
+        <Callout v-if="attention > 0" tone="danger" class="mb-4">
+            {{ attention }} {{ attention === 1 ? 'salon needs' : 'salons need' }} looking at — expired trials,
+            failed payments and lapsed subscriptions are at the top of the list.
+        </Callout>
+
+        <Table
+            :columns="columns"
+            :rows="rows"
+            label="Tenants"
+            empty-title="No tenants yet"
+            empty-description="The first salon to sign up appears here."
+            :row-label="(row) => `Actions for ${row.name}`"
+        >
+            <template #cell:name="{ row }">
+                <span class="text-ink">{{ row.name }}</span>
+                <span class="ml-2 font-mono text-12 text-ink-2">{{ row.slug }}</span>
+            </template>
+
+            <!--
+                The state in words. It used to be `plan + status + comped` — three facts joined by spaces,
+                so "trial past_due" and "pro active comped" were both one cell
+                you had to parse. `Badge` carries its own label, so the meaning
+                is never in the colour.
+            -->
+            <template #cell:state="{ row }">
+                <Badge :tone="row.needs_attention ? 'cancelled' : row.state === 'Trial' ? 'pending' : 'confirmed'">
+                    {{ row.state }}
+                </Badge>
+            </template>
+
+            <template #cell:plan="{ row }">
+                <span class="text-ink-2">{{ row.plan }}</span>
+                <span v-if="row.is_comped" class="ml-1 text-ink">· comped</span>
+            </template>
+
+            <template #cell:live="{ row }">
+                <span :class="row.booking_page_live ? 'text-ink' : 'text-ink-2'">
+                    {{ row.booking_page_live ? 'Live' : 'Dark' }}
+                </span>
+            </template>
+
+            <template #cell:last_seen_label="{ row }">
+                <span class="text-ink-2">{{ row.last_seen_label }}</span>
+            </template>
+
+            <template #actions="{ row }">
+                <MenuItem @click="router.post(route('super-admin.extend-trial', row.id))">
+                    Extend trial by 14 days
+                </MenuItem>
+                <MenuItem v-if="!row.is_comped" @click="router.post(route('super-admin.comp', row.id))">
+                    Comp this account
+                </MenuItem>
+                <MenuItem v-if="!row.booking_page_live" @click="router.post(route('super-admin.go-live', row.id))">
+                    Publish the booking page
+                </MenuItem>
+                <MenuItem @click="router.post(route('super-admin.preview', row.id))">Make a preview link</MenuItem>
+                <MenuItem danger @click="impersonating = row">Sign in as the owner…</MenuItem>
+            </template>
+        </Table>
+
+        <!--
+            Names the salon and the person. "Are you sure?" would be the wrong
+            question: the thing worth checking is *whose* diary, and there are a
+            hundred rows in that table.
+        -->
+        <ConfirmDialog
+            :show="impersonating !== null"
+            title="Sign in as this salon's owner"
+            :confirm-label="`Sign in as ${impersonating?.owner_name ?? 'the owner'}`"
+            cancel-label="Stay here"
+            tone="danger"
+            @close="impersonating = null"
+            @confirm="startImpersonating"
+        >
+            You will be inside <span class="text-ink">{{ impersonating?.name }}</span> as
+            <span class="text-ink">{{ impersonating?.owner_name ?? 'its owner' }}</span
+            >, and anything you do there is recorded against them, not you. Both the start and the end are written to
+            the audit log. Their app will say you are impersonating, on every screen, until you stop.
+        </ConfirmDialog>
+
+        <SlideOver :show="cloneOpen" title="Copy a setup" @close="cloneOpen = false">
+            <form class="space-y-4" @submit.prevent="submitClone">
+                <p class="text-13 text-ink-2">
+                    Copies services, staff and opening hours from one salon onto another. It does not copy customers or
+                    bookings. The destination keeps anything it already has.
+                </p>
+                <TextInput
+                    v-model="clone.from_tenant_id"
+                    label="Copy from"
+                    hint="Tenant id."
+                    mono
+                    :error="clone.errors.from_tenant_id"
+                />
+                <p v-if="cloneFrom" class="-mt-2 text-12 text-ink">{{ cloneFrom.name }}</p>
+                <TextInput
+                    v-model="clone.to_tenant_id"
+                    label="Copy to"
+                    hint="Tenant id."
+                    mono
+                    :error="clone.errors.to_tenant_id"
+                />
+                <p v-if="cloneTo" class="-mt-2 text-12 text-ink">{{ cloneTo.name }}</p>
+                <Button type="submit" :loading="clone.processing" :disabled="!cloneFrom || !cloneTo">
+                    Copy the setup
+                </Button>
+            </form>
+        </SlideOver>
     </AppLayout>
 </template>

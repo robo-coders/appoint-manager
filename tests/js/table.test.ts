@@ -228,3 +228,118 @@ describe('loading', () => {
         expect(wrapper.text()).not.toContain('Showing 1–6 of 12');
     });
 });
+
+/**
+ * The narrow state — below md, where the table becomes a list.
+ *
+ * A table is a grid because comparing down a column is the point, and on a
+ * 375px screen there is no column to compare down: the amount and the row menu
+ * sat off the right-hand edge behind a horizontal scroll nobody discovers, and
+ * names broke over two and three lines so the rows went ragged. What a salon
+ * owner does on a phone is find one person and act on them, which is a list.
+ *
+ * jsdom has no viewport, so what is asserted here is the *structure* and the
+ * classes that switch between the two — not which one a 375px browser paints.
+ * The 375px painting is covered by `tests/e2e/screens.spec.ts`.
+ */
+describe('the narrow state', () => {
+    const narrow: Column[] = [
+        { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'line' },
+        { key: 'customer', label: 'Customer', sortable: true, narrow: 'title' },
+        { key: 'staff', label: 'Staff', width: 'staff', secondary: true, narrow: 'line' },
+        {
+            key: 'amount',
+            label: 'Amount',
+            width: 'amount',
+            align: 'right',
+            numeric: true,
+            sortable: true,
+            narrow: 'meta',
+        },
+    ];
+
+    /*
+     * Opt-in, and this is the property that makes it safe to land on one screen
+     * at a time: a table whose columns say nothing about a narrow viewport is
+     * left exactly as it was rather than silently given a layout nobody
+     * designed.
+     */
+    it('is not rendered at all unless a column asks for it', () => {
+        const wrapper = mount(Table, { props: { columns, rows, label: 'Bookings' } });
+
+        expect(wrapper.find('ul').exists()).toBe(false);
+        expect(wrapper.find('table').classes()).not.toContain('hidden');
+    });
+
+    it('renders a list beside the table, each hidden at the other one’s width', () => {
+        const wrapper = mount(Table, { props: { columns: narrow, rows, label: 'Bookings' } });
+
+        const list = wrapper.find('ul');
+        expect(list.exists()).toBe(true);
+        expect(list.attributes('aria-label')).toBe('Bookings');
+
+        // One list item per row, and the table is still there for a desk.
+        expect(wrapper.findAll('ul > li')).toHaveLength(3);
+        expect(wrapper.findAll('tbody tr')).toHaveLength(3);
+
+        // The switch is a class on each container, so there is one DOM and no
+        // JavaScript deciding which layout a viewport gets.
+        expect(list.element.parentElement?.className).toContain('md:hidden');
+        expect(wrapper.find('table').element.parentElement?.className).toContain('hidden');
+        expect(wrapper.find('table').element.parentElement?.className).toContain('md:block');
+    });
+
+    it('puts the title column first and the meta column with the row menu', () => {
+        const wrapper = mount(Table, {
+            props: { columns: narrow, rows, label: 'Bookings' },
+            slots: { actions: () => h('span', 'act') },
+        });
+
+        const first = wrapper.findAll('ul > li')[0];
+
+        // The headline is the title column, on its own line.
+        expect(first.find('p').text()).toBe('Ruth Kowalczyk');
+        // The line columns follow, as one sentence rather than as more columns.
+        expect(first.findAll('p')[1].text()).toContain('2026-03-11 09:00');
+        expect(first.findAll('p')[1].text()).toContain('Ana');
+        // And the meta value is in the same block as the menu.
+        expect(first.text()).toContain('5200');
+        expect(first.find('button[aria-haspopup="menu"]').exists()).toBe(true);
+    });
+
+    /*
+     * `secondary` hides a column below md *in the table*. In the list it means
+     * nothing — a column that has asked to be part of the second line has said
+     * where it goes on a phone, which is the more specific instruction.
+     */
+    it('shows a secondary column in the list even though the table hides it', () => {
+        const wrapper = mount(Table, { props: { columns: narrow, rows, label: 'Bookings' } });
+
+        const staffCell = wrapper.findAll('tbody tr')[0].findAll('td')[2];
+        expect(staffCell.classes()).toContain('hidden');
+
+        expect(wrapper.findAll('ul > li')[0].text()).toContain('Ana');
+    });
+
+    it('uses the same cell slots as the table, so a screen styles a value once', () => {
+        const wrapper = mount(Table, {
+            props: { columns: narrow, rows, label: 'Bookings' },
+            slots: { 'cell:amount': (p: { value: number }) => h('span', `£${(p.value / 100).toFixed(2)}`) },
+        });
+
+        expect(wrapper.findAll('ul > li')[0].text()).toContain('£52.00');
+        expect(wrapper.findAll('tbody tr')[0].text()).toContain('£52.00');
+    });
+
+    it('carries the empty state and the skeleton into the list as well', () => {
+        const empty = mount(Table, {
+            props: { columns: narrow, rows: [], label: 'Bookings', emptyTitle: 'No bookings yet' },
+        });
+        // Once in the list and once in the table, never neither.
+        expect(empty.text()).toContain('No bookings yet');
+        expect(empty.find('ul > li').exists()).toBe(false);
+
+        const loading = mount(Table, { props: { columns: narrow, rows: [], label: 'Bookings', loading: true } });
+        expect(loading.findAll('ul > li').length).toBeGreaterThan(0);
+    });
+});

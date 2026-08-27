@@ -96,6 +96,9 @@ export default {
                 skeleton: 'var(--skeleton-h)',
                 topbar: 'var(--topbar)',
             },
+            flexBasis: {
+                'auth-col': 'var(--auth-col)',
+            },
             width: {
                 rail: 'var(--rail)',
                 // Square marks and dots that must match a badge's height.
@@ -118,6 +121,8 @@ export default {
             maxWidth: {
                 measure: 'var(--measure)',
                 booking: 'var(--booking-w)',
+                // The auth surface. See tokens.css.
+                'auth-form': 'var(--auth-form)',
                 // A name that truncates caps at its column rather than filling it.
                 'col-when': 'var(--col-when)',
                 'col-staff': 'var(--col-staff)',

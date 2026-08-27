@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProposalHeading from '@/Components/Public/ProposalHeading.vue';
+import ServiceChoiceList from '@/Components/Public/ServiceChoiceList.vue';
 import SlotPicker, { type Slot } from '@/Components/Public/SlotPicker.vue';
 import Button from '@/Components/ui/Button.vue';
 import ChoiceRow from '@/Components/ui/ChoiceRow.vue';
@@ -7,6 +8,7 @@ import QuietAction from '@/Components/ui/QuietAction.vue';
 import Select from '@/Components/ui/Select.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
+import { sentenceCase } from '@/lib/copy';
 import axios from 'axios';
 import { computed, nextTick, reactive, ref } from 'vue';
 
@@ -57,6 +59,8 @@ type ProposalPayload = {
     deposit: Money;
     staff_id: number;
     staff_name: string;
+    /** "Ana" — how the salon names its staff to a customer. Built server-side. */
+    staff_first_name: string;
     staff_ids: number[];
     subject_id: number | null;
     subject_name: string | null;
@@ -114,6 +118,7 @@ const context = ref(props.suggestion.context ?? '');
 
 const pickerOpen = ref(false);
 const detailsOpen = ref(false);
+const servicesOpen = ref(false);
 const waitlistSaved = ref(false);
 
 const error = ref('');
@@ -258,6 +263,37 @@ const pickSlot = (slot: Slot) => {
  */
 const switchService = (id: number) => {
     window.location.href = `${props.urls.page}?service=${id}`;
+};
+
+/**
+ * "with Ana instead of Maya", or nothing.
+ *
+ * `AppointmentSuggester` ranks *appointments*, and an appointment is a time and
+ * a person. So an alternative at a time the proposed groomer cannot work is an
+ * alternative with somebody else — and until now the page said so only by
+ * putting a different first name in the muted column, three rows below a context
+ * line naming the groomer being proposed. A customer scanning four rows that all
+ * look alike had to hold "Maya" in their head and compare. Most did not, which
+ * makes this the page hiding a substitution rather than offering one.
+ *
+ * The booking behaviour is unchanged and deliberately so — `resolveStaff()`
+ * reassigning silently is a product question recorded in DECISIONS.md, not a
+ * rendering one. What changes is that the page stops being quiet about it.
+ *
+ * Composed here rather than in `ProposalPayload` because the comparison is
+ * against the appointment *currently* on offer, which is client state: accepting
+ * an alternative makes it the proposal and pushes the old proposal back into
+ * this list, at which point a note baked in server-side would be describing a
+ * groomer nobody is being offered any more. The names themselves are still
+ * formatted server-side — `staff_first_name` — so the rule that customer-facing
+ * strings are built in PHP holds where it was actually about formatting.
+ */
+const staffChange = (alternative: ProposalPayload): string | undefined => {
+    const current = proposal.value;
+
+    if (!current || alternative.staff_id === current.staff_id) return undefined;
+
+    return `with ${alternative.staff_first_name} instead of ${current.staff_first_name}`;
 };
 
 const acceptAlternative = (alternative: ProposalPayload) => {
@@ -542,24 +578,22 @@ const joinWaitlist = async () => {
                 />
 
                 <!--
-                    Changing the service lives in here rather than beside the
-                    proposal. The proposal view is nine elements and a tenth
-                    would be a tenth; a customer who has already opened the
-                    picker is a customer who is browsing, and this is where
-                    browsing belongs.
+                    A customer who has opened the picker is a customer who is
+                    browsing, so the price list belongs here too — at the foot of
+                    it, under the week, because they came here for a time.
+
+                    The proposal view has its own way in now (see "A different
+                    service" below); this is the same list from the same
+                    component, not a second copy of it.
                 -->
-                <template v-if="services.length > 1">
-                    <h3 class="caption mt-8 border-b border-b-rule pb-2">Something else</h3>
-                    <ul class="mt-2">
-                        <li v-for="service in services" :key="service.id">
-                            <ChoiceRow
-                                :label="service.name"
-                                :meta="`${service.duration_minutes} min · ${service.price.formatted}`"
-                                @pick="switchService(service.id)"
-                            />
-                        </li>
-                    </ul>
-                </template>
+                <ServiceChoiceList
+                    v-if="services.length > 1"
+                    class="mt-8"
+                    heading="Something else"
+                    :services="services"
+                    :current-id="proposal.service_id"
+                    @pick="switchService"
+                />
 
                 <p class="mt-6 text-center">
                     <QuietAction @click="pickerOpen = false">
@@ -617,7 +651,7 @@ const joinWaitlist = async () => {
                     />
                     <TextInput
                         v-model="details.subject_name"
-                        :label="`${vertical.subject_singular} name`"
+                        :label="`${sentenceCase(vertical.subject_singular)} name`"
                         :error="fieldErrors.subject_name"
                     />
                     <template v-for="field in vertical.subject_fields" :key="field.key">
@@ -666,6 +700,7 @@ const joinWaitlist = async () => {
                             -->
                             <ChoiceRow
                                 :label="alternative.reason"
+                                :note="staffChange(alternative)"
                                 :meta="alternative.meta"
                                 @pick="acceptAlternative(alternative)"
                             />
@@ -673,9 +708,59 @@ const joinWaitlist = async () => {
                     </ul>
                 </template>
 
-                <!-- ---- the quietest thing on the page ---- -->
-                <p class="mt-6 text-center">
+                <!--
+                    ---- a different service, revealed in place ----
+
+                    The page had no visible way to change service at all. It
+                    picks one — the customer's usual, or the salon's first — and
+                    the only route to the other eight was to open the day picker
+                    and scroll past a week grid to a list headed "Something
+                    else". A customer whose dog needs a hand strip could not find
+                    that, and the page was quietly answering a question it had
+                    not asked.
+
+                    So: a list, not a form, and not a select. Nine appointments
+                    at nine prices is exactly what the alternatives below are —
+                    complete choices on hairline rows — and reusing that row is
+                    what keeps this from reading as a control panel bolted to a
+                    proposal.
+
+                    It stays shut by default and it is opened from the quietest
+                    line on the page, so the proposal is still the only thing
+                    competing for attention when the page loads. Choosing one
+                    hands the decision back to `AppointmentSuggester` rather than
+                    re-ranking anything here — see `switchService`.
+                -->
+                <ServiceChoiceList
+                    v-if="servicesOpen && services.length > 1"
+                    id="service-list"
+                    class="appear mt-8"
+                    heading="A different service"
+                    :services="services"
+                    :current-id="proposal.service_id"
+                    @pick="switchService"
+                />
+
+                <!--
+                    ---- the quietest things on the page ----
+
+                    Two controls on one line rather than two stacked lines. Both
+                    are ways of saying "not this one", they are the last thing
+                    down the page, and giving each its own row would make the
+                    bottom of the page as tall as the alternatives above it.
+                -->
+                <p class="mt-6 flex flex-wrap items-center justify-center">
                     <QuietAction @click="openPicker">Pick another day</QuietAction>
+                    <template v-if="services.length > 1">
+                        <span class="text-13 text-ink-2" aria-hidden="true">·</span>
+                        <QuietAction
+                            aria-controls="service-list"
+                            :aria-expanded="servicesOpen"
+                            @click="servicesOpen = !servicesOpen"
+                        >
+                            A different service
+                        </QuietAction>
+                    </template>
                 </p>
             </template>
         </template>

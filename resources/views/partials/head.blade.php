@@ -1,17 +1,23 @@
 {{--
     Shared <head> assets: icons and typefaces.
 
-    fonts.bunny.net is the only font host allowed by the CSP in
-    App\Http\Middleware\SecurityHeaders. Söhne and Inter Display are the
-    preferred display faces but neither is licensable through a free
-    self-hosted CDN.
+    **The typefaces are self-hosted.** Geist and Geist Mono live in
+    resources/fonts/ as three woff2 files and are declared by the @font-face
+    block at the top of resources/css/base.css, which both bundles import. There
+    is no font host any more: no `preconnect`, no third-party stylesheet, and
+    `font-src` in App\Http\Middleware\SecurityHeaders no longer names one.
 
-    All three faces named by --font-sans and --font-mono are actually loaded.
-    Inter was previously named as the fallback and never requested, so a browser
-    that failed to fetch Geist fell all the way through to the system face and
-    the type looked nothing like the design.
+    Both sans weights are preloaded, and only those two. They are what the *first*
+    paint needs — body text at 400 and every heading, button and active nav item
+    at 500 — so they are the two the browser would otherwise discover only after
+    it had parsed the stylesheet that names them. Geist Mono is deliberately not
+    preloaded: it sets figures, which are never the first thing on screen, and a
+    third preload competes with the two that are.
 
-    Only the two weights the design system uses (400 and 500) are requested.
+    `Vite::asset()` rather than a hardcoded path, because the built filenames
+    carry a content hash. It resolves through the manifest in production and
+    through the dev server while `npm run dev` is running, so the preload can
+    never point at a file that has been rebuilt out from under it.
 --}}
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png">
@@ -20,8 +26,11 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#FCFBF9"> {{-- design-tokens-ignore: an HTML meta value cannot hold a CSS variable; mirrors --paper --}}
 
-<link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-<link
-    rel="stylesheet"
-    href="https://fonts.bunny.net/css?family=geist:400,500|geist-mono:400,500|inter:400,500&display=swap"
->
+{{--
+    `crossorigin` is not optional here even though these are same-origin in
+    production. Fonts are always fetched in CORS mode, so a preload without it
+    is a *different* request from the one @font-face makes, and the browser
+    downloads each file twice — which makes the preload slower than no preload.
+--}}
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('resources/fonts/Geist-Regular.woff2') }}">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('resources/fonts/Geist-Medium.woff2') }}">

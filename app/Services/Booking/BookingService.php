@@ -8,6 +8,7 @@ use App\Enums\DepositStatus;
 use App\Enums\SlotOfferStatus;
 use App\Exceptions\OfferUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
+use App\Exceptions\PaymentsNotConfiguredException;
 use App\Exceptions\SlotUnavailableException;
 use App\Models\Booking;
 use App\Models\Customer;
@@ -32,14 +33,44 @@ final class BookingService
 {
     private ?Closure $afterLock = null;
 
+    private ?string $lastClientSecret = null;
+
+    /**
+     * `StripeGateway` is deliberately not a constructor dependency.
+     *
+     * Its binding refuses to resolve without Stripe credentials (AUDIT C1: the
+     * alternative is a fake gateway that accepts forged webhook signatures, so
+     * refusing is correct). Type-hinting it here made that refusal happen at
+     * *container resolution* — so `PublicBookingController::store` died before
+     * a line of its own code ran, for every tenant on the page, whether or not
+     * the booking involved money at all. A salon that takes no deposits got a
+     * stack trace out of a code path that never needed a gateway.
+     *
+     * So it is resolved at the point of use instead, inside the two places that
+     * already know what to do when payments cannot be reached. See `gateway()`.
+     */
     public function __construct(
         private AvailabilityEngine $engine,
-        private StripeGateway $stripe,
         private Notifier $notifier,
         private WaitlistOfferer $waitlist,
     ) {}
 
-    private ?string $lastClientSecret = null;
+    /**
+     * Resolve the gateway, late.
+     *
+     * Late enough that a booking with no deposit never asks for one, and that a
+     * platform with no credentials is a `PaymentsNotConfiguredException` the
+     * caller can catch rather than a container failure nobody can. C1 is
+     * untouched either way: this asks the same binding the same question and
+     * gets the same refusal — it just asks it somewhere an answer is possible.
+     *
+     * Not memoised: the binding is a singleton, so this is a container lookup,
+     * and reading it fresh is what lets a test swap the gateway underneath.
+     */
+    private function gateway(): StripeGateway
+    {
+        return app(StripeGateway::class);
+    }
 
     public function lastClientSecret(): ?string
     {
@@ -136,7 +167,12 @@ final class BookingService
     private function attachPaymentIntent(Tenant $tenant, Booking $booking): void
     {
         try {
-            $intent = $this->stripe->createPaymentIntent($tenant, $booking);
+            $intent = $this->gateway()->createPaymentIntent($tenant, $booking);
+        } catch (PaymentsNotConfiguredException $exception) {
+            report($exception);
+            $this->releaseUnpayable($booking, $tenant);
+
+            throw PaymentSetupFailedException::notConfigured($exception);
         } catch (Throwable $exception) {
             report($exception);
             $this->releaseUnpayable($booking, $tenant);
@@ -250,7 +286,7 @@ final class BookingService
         }
 
         try {
-            $this->stripe->refundPaymentIntent(
+            $this->gateway()->refundPaymentIntent(
                 (string) $booking->stripe_payment_intent_id,
                 (string) $tenant->stripe_account_id,
             );

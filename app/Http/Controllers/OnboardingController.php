@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BookingSource;
 use App\Enums\UserRole;
 use App\Enums\Weekday;
+use App\Exceptions\SlotUnavailableException;
 use App\Http\Requests\Onboarding\UpdateBusinessDetailsRequest;
 use App\Http\Requests\Onboarding\UpdateOpeningHoursRequest;
 use App\Http\Requests\Onboarding\UpdateServicesRequest;
 use App\Http\Requests\Onboarding\UpdateStaffRequest;
 use App\Models\AvailabilityRule;
+use App\Models\Customer;
 use App\Models\Service;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Booking\BookingService;
+use App\Support\SetupSteps;
 use App\Support\Timezones;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +47,7 @@ class OnboardingController extends Controller
 
         $completed = $tenant->onboardingCompletedSteps();
         $step = $request->string('step')->toString();
-        $allowed = ['business', 'services', 'staff', 'hours'];
+        $allowed = SetupSteps::ONBOARDING;
 
         if (! in_array($step, $allowed, true)) {
             $step = $this->firstIncompleteStep($completed);
@@ -75,7 +82,15 @@ class OnboardingController extends Controller
 
         return Inertia::render('Onboarding/Index', [
             'step' => $step,
-            'completedSteps' => $completed,
+            /*
+             * `account` is complete by definition here: this screen is behind
+             * `auth`, so the person looking at it registered. Without it the
+             * rail would show step one as still to do while the person reading
+             * it is signed in — which is the sort of small lie that makes a
+             * progress indicator worth ignoring.
+             */
+            'completedSteps' => array_values(array_unique(['account', ...$completed])),
+            'steps' => SetupSteps::all(),
             'timezones' => Timezones::identifiers(),
             'business' => [
                 'timezone' => $tenant->timezone,
@@ -94,6 +109,16 @@ class OnboardingController extends Controller
                 'is_owner' => $user->isOwner(),
             ])->all(),
             'hours' => $hours,
+            /*
+             * Tomorrow at nine, in the salon's own timezone, formatted the way
+             * `datetime-local` wants it. Built here rather than in the browser
+             * because the browser's clock is the person's clock and the salon's
+             * clock is the tenant's — and they are the same only by luck.
+             */
+            'firstBookingDefault' => CarbonImmutable::now($tenant->timezone)
+                ->addDay()
+                ->setTime(9, 0)
+                ->format('Y-m-d\\TH:i'),
         ]);
     }
 
@@ -182,9 +207,60 @@ class OnboardingController extends Controller
             }
         });
 
-        current_tenant()?->markOnboardingStep('hours');
+        $tenant = current_tenant();
+        $tenant?->markOnboardingStep('hours');
+
+        /*
+         * The optional first appointment. It is written *after* the hours,
+         * deliberately — `BookingService` checks the slot against availability,
+         * so writing it first would refuse every booking for a salon that has
+         * not stated its hours yet, which at this exact moment is every salon.
+         */
+        $first = $request->validated('first_booking');
+
+        if ($tenant !== null && $first !== null) {
+            try {
+                $booking = $this->createFirstBooking($tenant, $first);
+            } catch (SlotUnavailableException $exception) {
+                return back()->withErrors(['first_booking' => $exception->getMessage()]);
+            }
+
+            return redirect()->route('diary.index', [
+                'date' => $booking->starts_at->timezone($tenant->timezone)->toDateString(),
+            ])->with('toast', 'You’re open. Here is your diary, with your first appointment in it.');
+        }
 
         return redirect()->route('diary.index')->with('toast', 'You’re set up. This is your diary.');
+    }
+
+    /**
+     * One line out of the paper book, so the diary is not empty on day one.
+     *
+     * A real `Customer` rather than a name on a booking: the person exists,
+     * they will come back, and a booking with no customer behind it is a row
+     * the rest of the product cannot do anything with.
+     *
+     * The email is asked for rather than invented. `customers.email` is NOT NULL
+     * and unique per tenant, so there is no such thing here as a client who is
+     * only a name — and filling that column with a placeholder to get past it
+     * would put an address nobody owns on a confirmation email.
+     *
+     * @param  array{customer_name: string, customer_email: string, service_id: int, staff_id: int, starts_at: string}  $first
+     */
+    private function createFirstBooking(Tenant $tenant, array $first)
+    {
+        $customer = Customer::query()->firstOrNew(['email' => $first['customer_email']]);
+        $customer->fill(['name' => $first['customer_name'], 'email' => $first['customer_email']]);
+        $customer->save();
+
+        return app(BookingService::class)->create(
+            $tenant,
+            Service::query()->findOrFail($first['service_id']),
+            User::query()->findOrFail($first['staff_id']),
+            $customer,
+            CarbonImmutable::parse($first['starts_at'], $tenant->timezone)->utc(),
+            BookingSource::Manual,
+        );
     }
 
     /**
@@ -192,7 +268,7 @@ class OnboardingController extends Controller
      */
     private function firstIncompleteStep(array $completed): string
     {
-        foreach (['business', 'services', 'staff', 'hours'] as $step) {
+        foreach (SetupSteps::ONBOARDING as $step) {
             if (! in_array($step, $completed, true)) {
                 return $step;
             }

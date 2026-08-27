@@ -2,12 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
-use App\Models\Booking;
-use App\Models\Customer;
-use App\Models\Service;
-use App\Models\Tenant;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 
 /**
  * The diary filtered cancelled bookings out of its query, which meant the one
@@ -15,37 +10,9 @@ use Carbon\CarbonImmutable;
  * not draw. These cover the four outcomes: freed, refilled, past, and a plain
  * cancellation whose deposit was kept.
  *
- * @return array{tenant: Tenant, user: User, staff: User, service: Service, customer: Customer}
+ * `aDiarySalon()` and `aDiaryBooking()` used to be declared here and used from
+ * `DiaryGapsTest` as well. See tests/Pest.php for why they are not.
  */
-function aDiarySalon(): array
-{
-    test()->travelTo(CarbonImmutable::parse('2026-08-19 13:00:00', 'Europe/London'));
-
-    $tenant = Tenant::factory()->create(['timezone' => 'Europe/London']);
-
-    return [
-        'tenant' => $tenant,
-        'user' => User::factory()->create(['tenant_id' => $tenant->id]),
-        'staff' => User::factory()->create(['tenant_id' => $tenant->id, 'is_bookable' => true]),
-        'service' => Service::factory()->create(['tenant_id' => $tenant->id, 'duration_minutes' => 90]),
-        'customer' => Customer::factory()->create(['tenant_id' => $tenant->id]),
-    ];
-}
-
-/** @param  array<string, mixed>  $overrides */
-function aDiaryBooking(array $salon, string $from, string $to, array $overrides = []): Booking
-{
-    return Booking::factory()->create(array_merge([
-        'tenant_id' => $salon['tenant']->id,
-        'staff_id' => $salon['staff']->id,
-        'service_id' => $salon['service']->id,
-        'customer_id' => $salon['customer']->id,
-        'starts_at' => CarbonImmutable::parse($from, 'Europe/London')->utc(),
-        'ends_at' => CarbonImmutable::parse($to, 'Europe/London')->utc(),
-        'status' => BookingStatus::Confirmed,
-    ], $overrides));
-}
-
 it('draws a cancelled booking that left a gap as a freed slot', function () {
     $salon = aDiarySalon();
     $freed = aDiaryBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', [

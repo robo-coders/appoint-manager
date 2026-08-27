@@ -34,7 +34,13 @@ test('registration creates a tenant and owner atomically and redirects to onboar
         ->and($tenant->currency)->toBe('GBP')
         ->and($tenant->onboarding_completed_at)->toBeNull();
 
-    $owner = User::query()->where('email', 'maya@example.com')->first();
+    // No tenant context out here — the assertion is a background process, and
+    // `User` fails closed like every other model now. It says which tenant it
+    // means rather than reading across all of them.
+    $owner = User::withoutGlobalScopes()
+        ->where('tenant_id', $tenant->id)
+        ->where('email', 'maya@example.com')
+        ->first();
     expect($owner)->not->toBeNull()
         ->and($owner->tenant_id)->toBe($tenant->id)
         ->and($owner->name)->toBe('Maya Chen')

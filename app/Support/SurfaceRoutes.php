@@ -28,6 +28,7 @@ final class SurfaceRoutes
         Route::middleware('web')->group(__DIR__.'/../../routes/machine.php');
 
         self::gallery();
+        self::errorPreviews();
     }
 
     /**
@@ -46,6 +47,40 @@ final class SurfaceRoutes
         }
 
         $route->group($file);
+    }
+
+    /**
+     * Every error page, reachable, outside production.
+     *
+     * The same shape and the same gate as the component gallery above, for the
+     * same reason: a state you cannot open is a state nobody looks at, and the
+     * error pages are six screens that by definition never appear when you want
+     * them to. `/dev/errors/503` is how they get reviewed at three widths, and
+     * how the screenshot suite covers them at all.
+     *
+     * It aborts rather than rendering the view directly, so what you see is the
+     * whole real path — the exception handler, `renderHttpException`, the
+     * namespaced `errors::{status}` lookup and the view composer — rather than
+     * a template rendered in isolation. That distinction is not academic: the
+     * composer was registered for `errors.*` only, which matches by hand and
+     * never through the handler, and a preview that skipped the handler would
+     * have shown a perfect page while every browser got the stock one.
+     */
+    private static function errorPreviews(): void
+    {
+        if (app()->environment('production')) {
+            return;
+        }
+
+        $route = Route::middleware('web');
+
+        if (Surface::routingBySubdomain() && Surface::App->host() !== null) {
+            $route = $route->domain(Surface::App->host());
+        }
+
+        $route->get('/dev/errors/{status}', function (string $status) {
+            abort(in_array((int) $status, [403, 404, 419, 429, 500, 503], true) ? (int) $status : 404);
+        })->name('dev.errors');
     }
 
     /**

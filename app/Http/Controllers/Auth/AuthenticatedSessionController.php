@@ -22,6 +22,14 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            /*
+             * The trial length, as a sentence rather than as a number the page
+             * would have to know how to word. It is `config('billing.trial_days')`
+             * in three other places already; a literal "30 days" in a template is
+             * the fourth, and the one nobody updates.
+             */
+            'trialInvitation' => 'It takes about five minutes, and the first '
+                .config('billing.trial_days').' days are free.',
         ]);
     }
 

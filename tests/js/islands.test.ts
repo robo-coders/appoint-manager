@@ -30,6 +30,7 @@ const proposal = (over: Record<string, unknown> = {}) => ({
     deposit: money(1500, '£15.00'),
     staff_id: 1,
     staff_name: 'Ana Duarte',
+    staff_first_name: 'Ana',
     staff_ids: [1],
     subject_id: null,
     subject_name: null,
@@ -57,7 +58,23 @@ const bookingProps = (over: Record<string, unknown> = {}) => ({
         primary: proposal(),
         alternatives: [
             proposal({ reason: 'Tuesday, later', time: '11:30', meta: '11:30 · Ana', starts_at: '2026-03-10T11:30:00+00:00' }),
-            proposal({ reason: 'Wednesday morning', time: '09:15', meta: '09:15 · Marek', starts_at: '2026-03-11T09:15:00+00:00' }),
+            /*
+             * A different groomer, and the fields now agree that it is one.
+             * This row already read "09:15 · Marek" while carrying Ana's
+             * `staff_id` and `staff_name` — the fixture said two things at once,
+             * and the page could not have told the difference either way because
+             * nothing looked at the id. Something does now.
+             */
+            proposal({
+                reason: 'Wednesday morning',
+                time: '09:15',
+                meta: '09:15 · Marek',
+                starts_at: '2026-03-11T09:15:00+00:00',
+                staff_id: 2,
+                staff_name: 'Marek Kowalski',
+                staff_first_name: 'Marek',
+                staff_ids: [2],
+            }),
             proposal({ reason: 'Thursday afternoon', time: '14:00', meta: '14:00 · Ana', starts_at: '2026-03-12T14:00:00+00:00' }),
         ],
         returning: false,
@@ -146,6 +163,111 @@ describe('BookingIsland — the proposal', () => {
 
             expect(label).toContain(row.text().split('\n')[0].trim());
         }
+    });
+
+    /*
+     * `AppointmentSuggester` ranks appointments, and an appointment is a time
+     * *and* a person — so an alternative at a time the proposed groomer cannot
+     * work is an alternative with somebody else. The page used to say so only by
+     * putting a different first name in the muted column, three rows under a
+     * context line naming the groomer being proposed, and a customer scanning
+     * four near-identical rows had to hold "Ana" in their head and compare.
+     *
+     * That is the `resolveStaff()` silent-reassignment behaviour recorded in
+     * DECISIONS.md becoming visible in the UI. The booking behaviour is
+     * deliberately unchanged; what is tested here is that the page stops being
+     * quiet about it.
+     */
+    it('says when an alternative is with a different groomer, and who', () => {
+        const wrapper = mount(BookingIsland, { props: bookingProps() });
+
+        const rows = wrapper.findAll('li button');
+
+        expect(rows[1].text()).toContain('with Marek instead of Ana');
+    });
+
+    it('says nothing extra about an alternative that keeps the proposed groomer', () => {
+        const wrapper = mount(BookingIsland, { props: bookingProps() });
+
+        const rows = wrapper.findAll('li button');
+
+        expect(rows[0].text()).not.toContain('instead of');
+        expect(rows[2].text()).not.toContain('instead of');
+    });
+
+    /*
+     * The reason this phrase is composed in the island rather than in
+     * `ProposalPayload`, stated as a test.
+     *
+     * Accepting an alternative makes it the proposal and pushes the old proposal
+     * back into this list, so "different from what is proposed" changes meaning
+     * on a click. Built server-side, the notes would still be describing the
+     * groomer from the first render — and after accepting Marek the two Ana rows
+     * would carry no note at all, which is precisely backwards.
+     */
+    it('re-points the groomer note when an alternative is accepted', async () => {
+        const wrapper = mount(BookingIsland, { props: bookingProps() });
+
+        const marek = wrapper.findAll('li button').find((row) => row.text().includes('Wednesday morning'));
+        await marek!.trigger('click');
+
+        // Marek is the proposal now, so the rows that stayed with Ana are the
+        // ones that change the groomer.
+        const rows = wrapper.findAll('li button');
+        expect(rows.some((row) => row.text().includes('with Ana instead of Marek'))).toBe(true);
+        expect(rows.every((row) => !row.text().includes('instead of Ana'))).toBe(true);
+    });
+
+    /*
+     * The page picks a service — the customer's usual, or the salon's first —
+     * and nine were reachable only by opening the day picker and scrolling past
+     * a week grid. A customer whose dog needs a hand strip could not find that.
+     */
+    it('offers a way to change service without opening the picker', async () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                services: [
+                    { id: 1, name: 'Full groom', duration_minutes: 90, price: money(4500, '£45.00'), deposit_amount: money(1500, '£15.00') },
+                    { id: 2, name: 'Nail clip', duration_minutes: 15, price: money(1200, '£12.00'), deposit_amount: money(0, '£0.00') },
+                ],
+            }),
+        });
+
+        const open = wrapper.findAll('button').find((b) => b.text() === 'A different service');
+        expect(open).toBeDefined();
+        // A disclosure, so it says whether it is open — and it starts shut, so
+        // the proposal is the only thing competing for attention on load.
+        expect(open!.attributes('aria-expanded')).toBe('false');
+        expect(wrapper.text()).not.toContain('Nail clip');
+
+        await open!.trigger('click');
+
+        expect(open!.attributes('aria-expanded')).toBe('true');
+        expect(wrapper.text()).toContain('Nail clip');
+        // Still a list, not a form, and no calendar has appeared.
+        expect(wrapper.find('select').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Pick a day');
+    });
+
+    /** The one service already on offer is marked, not silently dropped. */
+    it('marks the service being proposed in the list of the others', async () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                services: [
+                    { id: 1, name: 'Full groom', duration_minutes: 90, price: money(4500, '£45.00'), deposit_amount: money(1500, '£15.00') },
+                    { id: 2, name: 'Nail clip', duration_minutes: 15, price: money(1200, '£12.00'), deposit_amount: money(0, '£0.00') },
+                ],
+            }),
+        });
+
+        await wrapper.findAll('button').find((b) => b.text() === 'A different service')!.trigger('click');
+
+        const rows = wrapper.findAll('li button');
+        const fullGroom = rows.find((row) => row.text().includes('Full groom'));
+        const nailClip = rows.find((row) => row.text().includes('Nail clip'));
+
+        expect(fullGroom!.text()).toContain('The one on offer above');
+        expect(nailClip!.text()).not.toContain('The one on offer above');
     });
 
     it('has no calendar on it', () => {

@@ -85,6 +85,50 @@ it('refuses to confirm another tenant booking named in attacker-controlled metad
         ->and($booking->fresh()->deposit_status)->toBe(DepositStatus::Required);
 });
 
+/*
+ * The case above is blocked by two guards at once — wrong account *and* a
+ * one-penny amount — so on its own it cannot tell you which one is doing the
+ * work. This is the attack with the amount check taken out of the argument: the
+ * attacker pays the full deposit, correctly, in the right currency, on their
+ * own connected account, and names a competitor's booking in metadata. Ten
+ * pounds to confirm somebody else's appointment is a price an attacker will
+ * pay, so the account check has to be the thing that stops it.
+ */
+it('refuses a correctly paid event that names a booking on another account', function () {
+    $victim = aConnectedSalon(1000, 'acct_victim2');
+    aConnectedSalon(1000, 'acct_attacker2');
+    $booking = pendingBooking($victim, 'pi_victim2', 1000);
+
+    postWebhook(paymentEvent([
+        'id' => 'pi_attacker2',
+        'amount_received' => 1000,
+        'currency' => 'gbp',
+        'metadata' => ['booking_id' => (string) $booking->id],
+    ], 'evt_attack2', 'acct_attacker2'));
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::Pending)
+        ->and($booking->fresh()->deposit_status)->toBe(DepositStatus::Required);
+});
+
+/*
+ * And a platform event — one with no `account` at all — can never speak for a
+ * tenant's booking. Direct charges always carry the connected account, so an
+ * event without one either is not a Connect event or has been made up.
+ */
+it('refuses an event that names no connected account', function () {
+    $salon = aConnectedSalon(1000, 'acct_none');
+    $booking = pendingBooking($salon, 'pi_none', 1000);
+
+    postWebhook(paymentEvent([
+        'id' => 'pi_none',
+        'amount_received' => 1000,
+        'currency' => 'gbp',
+        'metadata' => ['booking_id' => (string) $booking->id],
+    ], 'evt_none', account: null));
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::Pending);
+});
+
 it('refuses to confirm when the amount received is short of the deposit', function () {
     $salon = aConnectedSalon(1000, 'acct_short');
     $booking = pendingBooking($salon, 'pi_short', 1000);

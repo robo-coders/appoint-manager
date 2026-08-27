@@ -50,8 +50,16 @@
         text — a stranger, on a phone, once, possibly outdoors. No component on
         this page takes a size prop; they all read this one attribute.
     --}}
+    {{--
+        A column, not a page with a column on it.
+
+        `flex min-h-screen flex-col` makes the body a two-row stack — header, then
+        a `<main>` that takes whatever is left — which is what lets the content
+        sit in the middle of the viewport rather than at the top of it. See the
+        note on `<main>` below for why that mattered.
+    --}}
     <body
-        class="min-h-screen bg-paper font-sans text-ink antialiased"
+        class="flex min-h-screen flex-col bg-paper font-sans text-ink antialiased"
         data-density="roomy"
         @if($brand) style="--brand: {{ $brand }}" @endif
     >
@@ -86,9 +94,33 @@
             </div>
         </header>
 
-        {{-- 440px, centred, one thumb wide and never wider. --}}
-        <main class="mx-auto w-full max-w-booking px-4 py-6">
-            <div id="{{ $mount }}"></div>
+        {{--
+            440px, centred both ways, one thumb wide and never wider.
+
+            **Vertically centred, and `my-auto` is how.** On a phone the content
+            fills the screen and this changes nothing. On a desktop it is a 440px
+            column in a viewport four or five times its height, and pinned to the
+            top it read as a page that had failed to finish loading — worst at
+            2400px, where the content occupied the top quarter and the remaining
+            three quarters of paper looked like an accident rather than a choice.
+            Centred, the same emptiness reads as margin.
+
+            `my-auto` rather than `items-center` or `justify-center` on the flex
+            parent, and that is the whole trick: an auto margin resolves to zero
+            once the item is taller than the space it is in, so a tall state — the
+            picker open at 375, the details form revealed, the nine-service list —
+            scrolls from its own top edge as normal. Centring with `align-items`
+            instead pushes the overflow *both* ways and clips the top of it
+            beyond the reach of any scrollbar, which is a well-known flexbox trap
+            and would have hidden the heading on exactly the smallest screen.
+
+            The vertical padding is a floor under that centring: it is what stops
+            a just-slightly-too-tall column from touching the header hairline.
+        --}}
+        <main class="flex flex-1 flex-col px-4 py-6 md:py-12">
+            <div class="mx-auto my-auto w-full max-w-booking">
+                <div id="{{ $mount }}"></div>
+            </div>
         </main>
         <script type="application/json" id="{{ $propsId }}">{!! safe_json($props) !!}</script>
     </body>

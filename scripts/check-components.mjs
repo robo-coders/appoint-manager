@@ -40,8 +40,6 @@ const PENDING = {
      */
     'resources/views/marketing/partials/cta.blade.php': 'phase 11 — marketing',
 
-    'resources/js/Pages/SuperAdmin/Index.vue': 'phase 9 — super admin',
-    'resources/js/Pages/Auth/Login.vue': 'phase 8 — auth',
 };
 
 /*
@@ -67,8 +65,23 @@ const PENDING = {
  * those phase numbers were wrong: super admin is phase 9 and the auth rewrite
  * is phase 8 in the numbering actually in use. Fixed here rather than left as
  * two entries pointing at phases that have been and gone.
+ *
+ * 3 -> 2: the auth rewrite. `Auth/Login.vue` was on this list for one control —
+ * a raw `<input type="checkbox">` wearing `rounded border-rule` by hand, which
+ * is a different radius and a different border from every other checkbox in the
+ * product. It is `ui/Checkbox` now, and the rest of the auth surface came off
+ * `GuestLayout`'s centred card with it.
+ *
+ * 2 -> 1: super admin. `SuperAdmin/Index.vue` was a hand-rolled `<table>`, five
+ * bare `<button>`s per row and two placeholder-only `<input>`s; it is `ui/Table`
+ * with the row actions in one `ui/Menu` and the clone form in a `ui/SlideOver`
+ * now. `Messages` and `Failures` were not on the list because they hand-rolled
+ * nothing — they simply had no design at all, which this check cannot see and
+ * phase 9 fixed anyway.
+ *
+ * One left, and it belongs to marketing.
  */
-const MAX_PENDING = 3;
+const MAX_PENDING = 1;
 
 // The library itself is where these elements are allowed to exist.
 const ALLOWED_DIRS = ['resources/js/Components/ui/'];
@@ -101,20 +114,56 @@ const RULES = [
 ];
 
 /*
- * Vue and Blade. `resources/views/**` covers marketing, the public shells and
- * the mail templates; the last of those is in scope deliberately rather than
- * exempted, so a table-based email is a decision somebody makes on purpose.
+ * Vue and Blade. `resources/views/**` covers marketing, the public shells, the
+ * error pages and the mail templates.
+ *
+ * The `table` rule does not apply to `views/mail/`, and that is a scope
+ * decision rather than an exemption. The rule's premise is that there is one
+ * implementation of a table and it lives in `Components/ui/` — which is a Vue
+ * component, in a medium that cannot run JavaScript at all. Outlook on Windows
+ * renders with Word's engine: no flexbox, no grid, no `max-width` on a `div`.
+ * Nested `<table>` is not a hand-rolled control there, it is the only layout
+ * that exists, and a rule that forbids it would be a rule that forbids email.
+ *
+ * Every other rule still applies to the mail tree, including `copied-control` —
+ * a button in an email is still allowed to be exactly one shape.
  */
+const MAIL = 'resources/views/mail/';
+
 const files = [...globSync('resources/js/**/*.vue'), ...globSync('resources/views/**/*.blade.php')]
     .filter((f) => !ALLOWED_DIRS.some((d) => f.startsWith(d)))
     .sort();
+
+const rulesFor = (file) => (file.startsWith(MAIL) ? RULES.filter((r) => r.id !== 'table') : RULES);
+
+/*
+ * Prose is not code.
+ *
+ * These rules look for tag names in raw source, and a comment explaining *why*
+ * a screen must not hand-roll a control has to name the control to say anything
+ * — `ui/ServiceChoiceList` documents itself with "never a <select>" and was
+ * reported as containing one. `check-design-tokens.mjs` has stripped comments
+ * since it started reading stylesheets, for the same reason and in the same
+ * words; this one had never needed to until a comment said the quiet part.
+ *
+ * Stripping is safe as well as necessary: a control inside a comment is a
+ * control that does not render, so there is nothing here to hide.
+ */
+const stripComments = (src) =>
+    src
+        .replace(/\{\{--[\s\S]*?--\}\}/g, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 let failures = 0;
 const stillPending = new Set(Object.keys(PENDING));
 
 for (const file of files) {
-    const src = readFileSync(file, 'utf8');
-    const hits = RULES.map((r) => ({ r, n: (src.match(r.re) ?? []).length })).filter((h) => h.n > 0);
+    const src = stripComments(readFileSync(file, 'utf8'));
+    const hits = rulesFor(file)
+        .map((r) => ({ r, n: (src.match(r.re) ?? []).length }))
+        .filter((h) => h.n > 0);
 
     if (hits.length === 0) {
         stillPending.delete(file);

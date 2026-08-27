@@ -23,6 +23,26 @@ class EnsureSubscriptionWrite
             return $next($request);
         }
 
+        /*
+         * A super admin is not subject to a tenant's billing lock — unless they
+         * are impersonating, in which case they are.
+         *
+         * The stated reason for the second half is "I want to see exactly what
+         * she sees": a lock that a super admin can walk through while wearing an
+         * owner's session is a lock nobody can reproduce a support ticket
+         * against. Outside impersonation the lock is meaningless in the other
+         * direction — it exists to stop an unpaid salon writing to its own
+         * diary, and we are not that salon.
+         *
+         * `impersonator_id` is the session key `ImpersonationController::start`
+         * sets, and it is the only thing that distinguishes the two cases: the
+         * authenticated user while impersonating *is* the owner, so
+         * `is_super_admin` is false either way.
+         */
+        if ($request->user()?->is_super_admin && ! $request->session()->has('impersonator_id')) {
+            return $next($request);
+        }
+
         if ($request->routeIs('billing.*', 'logout', 'impersonation.stop')) {
             return $next($request);
         }

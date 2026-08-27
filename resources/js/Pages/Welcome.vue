@@ -13,15 +13,9 @@ const page = usePage();
 <template>
     <Head title="Welcome" />
 
-    <GuestLayout>
-        <div class="space-y-4">
-            <h1 class="font-display text-20 tracking-20 text-ink">
-                {{ page.props.appName }}
-            </h1>
-            <p class="text-14 text-ink-2">
-                Booking software for {{ page.props.vertical.label.toLowerCase() }} businesses.
-            </p>
-            <div v-if="canLogin" class="flex gap-4 text-14">
+    <GuestLayout :title="page.props.appName" lede="Appointment software for businesses that lose money when people do not turn up.">
+        <div>
+            <div v-if="canLogin" class="flex flex-wrap gap-4 text-14">
                 <Link
                     v-if="page.props.auth.user"
                     :href="route('diary.index')"

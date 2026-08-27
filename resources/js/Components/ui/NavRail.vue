@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLogo from '@/Components/AppLogo.vue';
 import KeyHint from '@/Components/ui/KeyHint.vue';
 import RailUserMenu from '@/Components/ui/RailUserMenu.vue';
 import { navIconFor } from '@/lib/navIcons';
@@ -95,28 +96,19 @@ const iconFor = (link: NavLink) => navIconFor(link.label);
         aria-label="Sidebar"
     >
         <!--
-            The mark, and the wordmark on two lines.
-
-            "Appoint Manager" is fifteen characters. Inside a 148px rail with
-            `px-4`, a 20px mark and an 8px gap there are 88px left, and the name
-            set on one line at 13px measures ~96px — it truncates to "Appoint
-            Manage…", which is worse than every alternative. Stacking it keeps
-            the whole name and keeps 13px, which is on the type scale; shrinking
-            to 12px would have made the product's own name the smallest text on
-            the screen. See DECISIONS.md for the options that were rejected.
+            The mark and wordmark, from `AppLogo` — which owns both shapes of
+            the lockup now. This block used to hand-roll its own SVG and its own
+            two-line span, which meant the product name was drawn by two files
+            that could disagree. The measurement that forces the stack is
+            recorded there, next to the markup it forces.
         -->
         <Link :href="homeHref" class="flex items-center gap-2 px-4 py-4 text-ink" aria-label="Appoint Manager">
-            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" class="shrink-0">
-                <path fill="currentColor" d="M0 0h16.66L4.66 24H0Z" />
-                <path fill="currentColor" d="M19.34 0H24v24H7.34Z" />
-            </svg>
-            <span
-                class="text-13 font-medium leading-none"
-                :class="collapsed && !drawerOpen ? 'md:hidden' : ''"
-                aria-hidden="true"
-            >
-                Appoint<br />Manager
-            </span>
+            <AppLogo
+                :size="20"
+                label=""
+                :variant="collapsed && !drawerOpen ? 'mark' : 'lockup'"
+                stacked
+            />
         </Link>
 
         <nav class="mt-2 flex-1 overflow-y-auto px-2" aria-label="Main">

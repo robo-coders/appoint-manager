@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebhookFailure;
 use App\Services\Onboarding\TenantCloner;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,23 @@ class SuperAdminController extends Controller
 {
     public function index(): Response
     {
+        $monthStart = now()->startOfMonth();
+
+        /*
+         * Owners in one query rather than one per row. The screen names the
+         * person before it borrows their session, so it needs them — and a
+         * hundred salons is a hundred round trips if this is done in the map.
+         */
+        $owners = User::withoutGlobalScopes()
+            ->where('role', 'owner')
+            ->get()
+            ->keyBy('tenant_id');
+
         $tenants = Tenant::query()
             ->orderBy('name')
             ->get()
-            ->map(function (Tenant $tenant) {
-                $monthStart = now()->startOfMonth();
+            ->map(function (Tenant $tenant) use ($monthStart, $owners) {
+                $trialEnds = $tenant->trial_ends_at;
 
                 return [
                     'id' => $tenant->id,
@@ -34,7 +47,8 @@ class SuperAdminController extends Controller
                     'slug' => $tenant->slug,
                     'plan' => $tenant->plan ?? 'trial',
                     'status' => $tenant->subscription_status,
-                    'trial_ends_at' => $tenant->trial_ends_at?->toDateString(),
+                    'trial_ends_at' => $trialEnds?->toDateString(),
+                    'trial_days_left' => $trialEnds ? (int) now()->startOfDay()->diffInDays($trialEnds->startOfDay(), false) : null,
                     'is_comped' => $tenant->is_comped,
                     'booking_page_live' => $tenant->booking_page_live,
                     'bookings_this_month' => Booking::withoutGlobalScopes()
@@ -42,6 +56,10 @@ class SuperAdminController extends Controller
                         ->where('starts_at', '>=', $monthStart)
                         ->count(),
                     'last_activity_at' => $tenant->last_activity_at?->toIso8601String(),
+                    'last_seen_label' => $this->lastSeen($tenant),
+                    'owner_name' => $owners->get($tenant->id)?->name,
+                    'state' => $this->state($tenant),
+                    'needs_attention' => $this->needsAttention($tenant),
                     'feature_flags' => $tenant->feature_flags ?? [],
                     'preview_url' => $tenant->preview_token
                         ? book_url(null, 'preview/'.$tenant->preview_token)
@@ -52,6 +70,60 @@ class SuperAdminController extends Controller
         return Inertia::render('SuperAdmin/Index', [
             'tenants' => $tenants,
         ]);
+    }
+
+    /**
+     * What this salon's billing actually is, as a phrase.
+     *
+     * The screen used to render `plan`, `subscription_status` and `is_comped`
+     * side by side separated by spaces, so "trial past_due" was a cell you had
+     * to parse rather than read. These are the states, in the order they matter,
+     * and the phrase is built here because it is customer-facing copy — even
+     * when the customer is us.
+     */
+    private function state(Tenant $tenant): string
+    {
+        $trialEnds = $tenant->trial_ends_at;
+
+        return match (true) {
+            $tenant->is_comped => 'Comped',
+            $tenant->subscription_status === 'past_due' => 'Payment failed',
+            $tenant->subscription_status === 'canceled' => 'Cancelled',
+            $tenant->subscription_status === 'paused' => 'Paused',
+            $tenant->subscription_status === 'active' => 'Subscribed',
+            $trialEnds !== null && $trialEnds->isPast() => 'Trial over',
+            $trialEnds !== null => 'Trial',
+            default => 'No plan',
+        };
+    }
+
+    /**
+     * Is this one of the salons worth looking at first?
+     *
+     * The screen opens sorted on this rather than alphabetically. A hundred
+     * salons in name order is a directory; the question at 2am is which of them
+     * is broken.
+     */
+    private function needsAttention(Tenant $tenant): bool
+    {
+        if ($tenant->is_comped || $tenant->subscription_status === 'active') {
+            return false;
+        }
+
+        return in_array($tenant->subscription_status, ['past_due', 'canceled'], true)
+            || ($tenant->trial_ends_at !== null && $tenant->trial_ends_at->isPast());
+    }
+
+    /**
+     * "3 days ago", not an ISO 8601 string.
+     *
+     * The column was rendering `2026-08-24T09:12:00+01:00` — thirty characters
+     * of which two are the answer. A salon that has not opened the app in a
+     * fortnight is the fact; the timestamp is not.
+     */
+    private function lastSeen(Tenant $tenant): string
+    {
+        return $tenant->last_activity_at?->diffForHumans(['short' => true]) ?? 'Never';
     }
 
     public function messages(): Response
@@ -69,6 +141,12 @@ class SuperAdminController extends Controller
                 'status' => $message->status instanceof \BackedEnum ? $message->status->value : $message->status,
                 'body' => $message->body,
                 'created_at' => $message->created_at?->toIso8601String(),
+                /*
+                 * "3h ago", not thirty characters of ISO 8601 of which two are
+                 * the answer. The exact instant is still on the row as
+                 * `created_at` for anything that needs to sort or parse it.
+                 */
+                'sent_label' => $message->created_at?->diffForHumans(['short' => true]) ?? '—',
             ]);
 
         return Inertia::render('SuperAdmin/Messages', ['messages' => $messages]);
@@ -76,9 +154,51 @@ class SuperAdminController extends Controller
 
     public function failures(): Response
     {
+        /*
+         * The columns a person actually reads, pulled out of the payload here
+         * rather than dumped into a `<pre>` on the page.
+         *
+         * `failed_jobs.payload` is a serialised job — several hundred lines of
+         * escaped closure — and `exception` is the full stack trace. Neither is
+         * what you want at 2am: you want the class, the message, and the name of
+         * the job, and then you go and read the code. The full trace is still in
+         * the table for anyone who needs it.
+         */
+        $jobs = DB::table('failed_jobs')
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get()
+            ->map(function (object $row): array {
+                $payload = json_decode((string) $row->payload, true);
+                $exception = (string) $row->exception;
+                $failedAt = CarbonImmutable::parse($row->failed_at);
+
+                return [
+                    'id' => $row->id,
+                    'queue' => $row->queue,
+                    'job_name' => $payload['displayName'] ?? ($payload['job'] ?? 'Unknown job'),
+                    'exception_class' => Str::before($exception, ':') ?: 'Throwable',
+                    // The first line only. The rest is the stack.
+                    'exception_message' => Str::limit(trim(Str::after(Str::before($exception, "\n"), ':')), 200),
+                    'failed_label' => $failedAt->diffForHumans(['short' => true]),
+                ];
+            });
+
+        $hooks = WebhookFailure::query()
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get()
+            ->map(fn (WebhookFailure $failure): array => [
+                'id' => $failure->id,
+                'source' => $failure->source,
+                'type' => $failure->type,
+                'message' => $failure->message,
+                'received_label' => $failure->created_at?->diffForHumans(['short' => true]) ?? '—',
+            ]);
+
         return Inertia::render('SuperAdmin/Failures', [
-            'failed_jobs' => DB::table('failed_jobs')->orderByDesc('id')->limit(100)->get(),
-            'webhook_failures' => WebhookFailure::query()->orderByDesc('id')->limit(100)->get(),
+            'failed_jobs' => $jobs,
+            'webhook_failures' => $hooks,
         ]);
     }
 

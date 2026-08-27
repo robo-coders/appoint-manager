@@ -49,6 +49,22 @@ class HandleInertiaRequests extends Middleware
              * it must never build a cross-surface link from a bare path, and an
              * Inertia <Link> cannot cross a hostname at all.
              */
+            /*
+             * The one sentence the auth surface's quiet column carries.
+             *
+             * Here rather than in `GuestLayout.vue` because it is customer-facing
+             * copy and this product builds those in PHP — and because it is the
+             * product's own definition of itself out of DESIGN.md, which should
+             * exist once. It is shared with every request rather than passed per
+             * screen: six auth screens all show the same panel, and six copies of
+             * one sentence is five chances for them to disagree.
+             */
+            'auth_panel' => [
+                'headline' => 'The diary, the deposits, and the people who did not turn up.',
+                'body' => config('app.name').' is appointment software for small businesses '
+                    .'that lose money when clients do not arrive. One diary, one place, and a '
+                    .'deposit taken before the appointment rather than chased after it.',
+            ],
             'urls' => [
                 'marketing' => marketing_url(),
                 'app' => app_url(),

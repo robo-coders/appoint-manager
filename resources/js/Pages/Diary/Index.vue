@@ -9,6 +9,7 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Select from '@/Components/ui/Select.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
+import { sentenceCase } from '@/lib/copy';
 import { toast } from '@/lib/toast';
 import type { Money } from '@/types/models';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
@@ -398,7 +399,7 @@ watch(
                 <TextInput v-model="form.customer_name" label="Client name" :error="form.errors.customer_name" />
                 <TextInput v-model="form.customer_email" type="email" label="Email" :error="form.errors.customer_email" />
                 <TextInput v-model="form.customer_phone" label="Phone" :error="form.errors.customer_phone" />
-                <TextInput v-model="form.subject_name" :label="page.props.vertical.subject_singular + ' name'" />
+                <TextInput v-model="form.subject_name" :label="sentenceCase(page.props.vertical.subject_singular) + ' name'" />
                 <Button type="submit" :loading="form.processing">Save booking</Button>
             </form>
         </SlideOver>

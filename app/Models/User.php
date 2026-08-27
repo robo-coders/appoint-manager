@@ -40,15 +40,6 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Identity lookups (login, password reset) run without a tenant context.
-     * Staff listings still scope when ResolveTenant has set one.
-     */
-    protected static function tenantScopeFailClosed(): bool
-    {
-        return false;
-    }
-
-    /**
      * @return array<string, string>
      */
     protected function casts(): array

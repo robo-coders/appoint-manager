@@ -62,8 +62,16 @@ return [
     */
 
     'providers' => [
+        /*
+         * Not 'eloquent'. `User` is tenant-scoped and fails closed like every
+         * other model, so the stock provider would find nobody at login — the
+         * tenant context is derived from the user it has not found yet.
+         * `eloquent-identity` is the stock provider with the tenant scope lifted,
+         * and it is the only place in the application where that happens.
+         * Registered in AppServiceProvider; see App\Auth\IdentityUserProvider.
+         */
         'users' => [
-            'driver' => 'eloquent',
+            'driver' => 'eloquent-identity',
             'model' => env('AUTH_MODEL', User::class),
         ],
 

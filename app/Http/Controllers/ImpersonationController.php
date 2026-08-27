@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * Impersonation across the surface boundary.
@@ -73,8 +75,26 @@ class ImpersonationController extends Controller
      * End impersonation. The app session is destroyed; the console session on
      * admin.{domain} was never touched and is still valid, so the super admin
      * simply lands back on it.
+     *
+     * `Inertia::location`, not `redirect()->away` — and this was logged in
+     * DECISIONS.md as broken before it was fixed here.
+     *
+     * The control that calls this is inside the tenant's app, so the request is
+     * an Inertia visit followed by XHR. A plain redirect is followed by the
+     * Inertia client, which then receives an HTML document for a **different
+     * origin** that it has no page component for. In subdomain mode that is a
+     * cross-origin XHR the browser refuses outright; without subdomains it
+     * paints the console *inside* the salon's shell, so the rail of the tenant
+     * you have just stopped impersonating stays on screen. Either way the one
+     * escape hatch from someone else's session did not work.
+     *
+     * `Inertia::location` answers 409 with `X-Inertia-Location`, which the
+     * client turns into a real `window.location` visit — a full page load, which
+     * is also what we want after destroying a session. Exactly the fix
+     * `AuthenticatedSessionController::destroy` documents for logout, which is
+     * the same bug on the same seam.
      */
-    public function stop(Request $request): RedirectResponse
+    public function stop(Request $request): HttpResponse
     {
         $actorId = $request->session()->get('impersonator_id');
 
@@ -91,7 +111,7 @@ class ImpersonationController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->away(Surface::Admin->to());
+        return Inertia::location(Surface::Admin->to());
     }
 
     private static function cacheKey(string $nonce): string

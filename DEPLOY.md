@@ -106,6 +106,17 @@ served from `APP_URL` on the path prefix it used before the split:
 `php artisan serve` and `php artisan test` work with no further setup. This is
 the mode CI runs in.
 
+**The suite runs in parallel.** `composer test` and `npm run test:php` both pass
+`--parallel`; on eight cores that is 5.3s against 14.8s serial, and the gap only
+widens. Serial (`vendor/bin/pest`) still works and is the better mode for
+reading a failure, because parallel interleaves output from eight workers.
+
+The two modes have to agree, and they did not used to: a helper declared in one
+test file and called from another exists only after that file is loaded, which
+is always true serially and is a fatal in whichever worker did not get it.
+Shared fixtures live in `tests/Pest.php`, and `TestHelperScopeTest` fails the
+build if one ever moves out again.
+
 **Optional: subdomains locally.** Add to `/etc/hosts`:
 
 ```
@@ -129,6 +140,148 @@ APP_URL_ADMIN=http://admin.appoint-manager.test
 
 Both modes are covered by tests: `tests/Feature/Surfaces/SurfaceRoutingTest.php`
 runs with subdomains on, `PathFallbackTest.php` with them off.
+
+---
+
+## Demo deposits on test keys
+
+Deposit capture is what this product sells, so the demo tenant has to take one
+end to end — card form, confirmation, the booking flipping to `confirmed` off
+the webhook. Doing that needs four things, and `demo:seed` refuses to run with
+deposits on until all four are present. There is no fake-gateway shortcut:
+`FakeStripeGateway` binds under `testing` and nowhere else (AUDIT C1), so local
+development uses real Stripe **test-mode** keys or it uses `--no-deposits`.
+
+Everything below is test mode. No real card is ever charged and no real money
+moves; test-mode keys cannot touch live data even by mistake.
+
+### 1. The two API keys
+
+<https://dashboard.stripe.com/test/apikeys> — make sure the **Test mode** toggle
+is on, top right. Copy both into `.env`:
+
+```
+STRIPE_KEY=pk_test_…      # publishable. The card form on the booking page mounts with this.
+STRIPE_SECRET=sk_test_…   # secret. PaymentIntents, refunds and the Connect account are created with this.
+```
+
+`pk_test_` and `sk_test_` are the prefixes to check for. Anything starting
+`pk_live_` or `sk_live_` is the wrong pair and must never be in a local `.env`.
+
+### 2. The webhook signing secret
+
+The browser never confirms a paid booking — only `payment_intent.succeeded`
+does (DECISIONS.md, "Stripe"). So a deposit that is paid but whose webhook never
+arrives stays `pending` and is released after fifteen minutes. Locally, Stripe
+reaches you through the CLI:
+
+```bash
+brew install stripe/stripe-cli/stripe    # once
+stripe login                             # once, opens the browser
+stripe listen --forward-to http://localhost:8000/stripe/webhook
+```
+
+Leave that running. It prints the signing secret on the first line:
+
+```
+STRIPE_WEBHOOK_SECRET=whsec_…
+```
+
+The port must match `APP_URL`. If you run subdomains locally, forward to the
+**booking** host — `/stripe/webhook` is registered in `routes/machine.php` with
+no host constraint, so any of the four works, but use the one you are browsing.
+
+Platform billing has its own endpoint and its own secret. Only set these if you
+are working on the subscription flow rather than on deposits:
+
+```bash
+stripe listen --forward-to http://localhost:8000/stripe/billing/webhook
+# STRIPE_BILLING_WEBHOOK_SECRET=whsec_…
+# STRIPE_PRICE_MONTHLY=price_…   from https://dashboard.stripe.com/test/products
+```
+
+### 3. A test-mode connected account
+
+Salon deposits are **direct charges on the connected account**, so the demo
+tenant needs a connected account that Stripe has actually heard of. The seeded
+placeholder — `acct_demo_not_a_real_account` — is not one, and
+`StripeConnectGateway` rejects it.
+
+Create one once, with the keys from step 1 already in `.env`:
+
+```bash
+php artisan tinker --execute="
+  \$stripe = new Stripe\StripeClient(config('services.stripe.secret'));
+  \$account = \$stripe->accounts->create([
+      'type' => 'express',
+      'country' => 'GB',
+      'email' => 'demo@example.com',
+      'capabilities' => ['card_payments' => ['requested' => true], 'transfers' => ['requested' => true]],
+  ]);
+  echo \$account->id, PHP_EOL;
+"
+```
+
+That prints `acct_…`. A freshly created Express account has `charges_enabled =
+false` until its onboarding is finished, and an account that cannot take charges
+cannot take a deposit. Finish it in the hosted flow:
+
+```bash
+php artisan tinker --execute="
+  \$stripe = new Stripe\StripeClient(config('services.stripe.secret'));
+  echo \$stripe->accountLinks->create([
+      'account' => 'acct_…',
+      'type' => 'account_onboarding',
+      'refresh_url' => 'http://localhost:8000/settings/payments',
+      'return_url' => 'http://localhost:8000/settings/payments',
+  ])->url, PHP_EOL;
+"
+```
+
+Open that URL and walk through it. In test mode every field takes a test value —
+Stripe offers to prefill the whole form, and the test phone code is `000000`.
+Sort code `10-88-00`, account number `00012345` for the GB bank details.
+
+Check it took:
+
+```bash
+php artisan tinker --execute="
+  echo (new Stripe\StripeClient(config('services.stripe.secret')))
+      ->accounts->retrieve('acct_…')->charges_enabled ? 'ready' : 'not ready yet';
+"
+```
+
+Keep that `acct_…` somewhere. It is reusable forever and creating a second one
+does nothing useful.
+
+### 4. Seed the tenant against it
+
+```bash
+php artisan demo:seed willow-street-grooming --stripe-account=acct_…
+```
+
+With anything missing this fails before it writes a row and prints exactly what
+is absent. `--no-deposits` is the deliberate way to skip all of the above —
+`scripts/e2e-setup.sh` uses it, because that suite books through the public page
+against obvious fake keys and a tenant asking for a deposit would 503 where the
+slot-race spec expects a 201.
+
+### Walking it
+
+Open the booking page, pick a service with a deposit, and confirm. The page
+should show `£35.00 total, £10.00 deposit due today`, then a card field.
+
+| Card | Result |
+|---|---|
+| `4242 4242 4242 4242` | succeeds |
+| `4000 0025 0000 3155` | requires 3D Secure — use it to check the authentication step |
+| `4000 0000 0000 9995` | declined, insufficient funds |
+
+Any future expiry, any CVC, any postcode. Watch the `stripe listen` window: you
+want `payment_intent.succeeded` forwarded and answered `200`. The booking goes
+`pending → confirmed` on that event and not before, so if the CLI is not running
+the booking will sit pending and be released after fifteen minutes — which is
+correct behaviour and looks exactly like a bug.
 
 ---
 
@@ -186,3 +339,20 @@ Queue: two `supervisor` workers on `redis` (`default` + `notifications`),
 Ping `GET /health` on **each** hostname from a third-party monitor every 60s —
 a DNS or certificate problem on one surface will not show up on another. `/up`
 remains the framework liveness probe.
+
+## Maintenance mode
+
+`php artisan down`, and **not** `php artisan down --render=...`.
+
+`--render` pre-renders the view once, in the CLI, and serves that snapshot to
+everybody. It is faster per request and it is wrong here: the console has no
+request, so `App\Support\ErrorPage` resolves the surface as the operator app
+and every visitor gets the operator's wording — including a customer on the
+booking host, who is told the product "is being updated" rather than that
+calling the salon is faster than waiting.
+
+Plain `down` throws per request, so `errors::503` renders live and says the
+right thing to whoever is reading it. It costs one Blade render and no query:
+the page makes no database call, reads no Vite manifest and mounts no Inertia,
+which is verified in `tests/Feature/Errors/ErrorPageTest.php` and was checked by
+hand against a stopped MySQL.

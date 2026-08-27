@@ -133,10 +133,14 @@ chosen for her customers becomes noise as chrome.
 
 ## Type
 
-- **Text:** Geist, with Inter as the fallback. **Both are loaded**, at 400 and
-  500 only, from `fonts.bunny.net` — the one font host the CSP allows. Naming a
-  fallback face without requesting it means a failed fetch drops all the way to
-  the system face, which is what the mockups were rendering in.
+- **Text:** Geist, **self-hosted**, at 400 and 500 only. Three `woff2` files in
+  `resources/fonts/`, `@font-face`d with `font-display: swap` at the top of
+  `resources/css/base.css`, and the two sans weights preloaded in
+  `partials/head.blade.php`. There is no font host: no `preconnect`, no
+  third-party stylesheet, and `font-src` in `SecurityHeaders` no longer names
+  one. Inter has been dropped from the stack with it — it was there as a second
+  web font in case Geist failed to fetch from a CDN, and the fallback after
+  Geist is now the system grotesque.
 - **Weights: 400 and 500 only.** Never 600, never 700.
 - **Numbers:** Geist Mono with `font-variant-numeric: tabular-nums` — times,
   prices, durations, counts and IDs. **Never mono for prose.**

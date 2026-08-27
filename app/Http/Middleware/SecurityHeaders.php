@@ -29,7 +29,47 @@ class SecurityHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
+        $this->preventBackButtonPainting($request, $response);
+
         return $response;
+    }
+
+    /**
+     * Stop the back button repainting a signed-out screen.
+     *
+     * Laravel's default on an authenticated response is `no-cache, private`.
+     * The server side of that is correct — a real back-navigation revalidates
+     * and lands on the login — but `no-cache` does not disable the browser's
+     * **back/forward cache**, which restores a page from memory without asking
+     * anybody. So after logging out, the back button could still *paint* the
+     * last screen of somebody's diary, with their clients' names on it, until
+     * something on the page happened to make a request.
+     *
+     * `no-store` is what disqualifies a response from bfcache. It is set only
+     * where it earns its cost — a response carrying a session, i.e. a signed-in
+     * page — because it also forbids ordinary caching, and the booking page and
+     * the marketing site are the two things here that most want to be cached.
+     *
+     * Recorded in DECISIONS.md as an error-states item, on the grounds that it
+     * is a behaviour change on every response. It is not: it is a behaviour
+     * change on authenticated HTML, which is the only place the bug existed.
+     */
+    private function preventBackButtonPainting(Request $request, Response $response): void
+    {
+        if (! $request->hasSession() || ! $request->user()) {
+            return;
+        }
+
+        // Only documents. A `no-store` on a hashed asset would defeat the
+        // fingerprinting that makes it cacheable forever in the first place.
+        $type = (string) $response->headers->get('Content-Type', '');
+
+        if (! str_contains($type, 'text/html')) {
+            return;
+        }
+
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        $response->headers->set('Pragma', 'no-cache');
     }
 
     /**
@@ -53,8 +93,21 @@ class SecurityHeaders
             "frame-ancestors 'none'",
             "form-action 'self' {$self}",
             "img-src 'self' data: https:",
-            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net{$dev}",
-            "font-src 'self' https://fonts.bunny.net",
+            "style-src 'self' 'unsafe-inline'{$dev}",
+            /*
+             * No font host. Geist and Geist Mono are self-hosted woff2 —
+             * resources/fonts/, declared in resources/css/base.css — so the
+             * fonts.bunny.net carve-out that used to sit in both of these
+             * directives is gone from both.
+             *
+             * `{$dev}` is here and not only on style-src: while `npm run dev` is
+             * running, the stylesheet is served from the Vite origin and so are
+             * the `url()` targets inside it, which makes every font file
+             * cross-origin. Without this the type silently falls back to the
+             * system face in development only — the exact failure the
+             * self-hosting was meant to end.
+             */
+            "font-src 'self'{$dev}",
         ];
 
         if ($surface === Surface::Book) {

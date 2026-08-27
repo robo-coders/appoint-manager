@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { FROZEN_NOW } from '../../playwright.config';
 import { DEMO } from './support';
 
 /**
@@ -40,9 +41,14 @@ const WIDTHS = [
  * never reaches `load` and every spec times out at sixty seconds looking like a
  * pixel diff. `setFixedTime` freezes what `Date.now()` reports and leaves timers
  * running, which is the half of it these snapshots need.
+ *
+ * The value is `FROZEN_NOW`, shared with the server — which is frozen to the
+ * same instant by `FREEZE_NOW`, and seeded at it. Freezing only the browser was
+ * the old arrangement and it fixed nothing, because everything in these frames
+ * that moves is computed in PHP.
  */
 async function freezeTime(page: Page): Promise<void> {
-    await page.clock.setFixedTime(new Date('2026-08-26T13:34:00Z'));
+    await page.clock.setFixedTime(new Date(FROZEN_NOW));
 }
 
 /**
@@ -106,6 +112,50 @@ test.describe('the operator app', () => {
             await expect(page).toHaveScreenshot(`bookings-${size.name}.png`, { mask: volatileRegions(page) });
         });
     }
+});
+
+/*
+ * Customers at 375, and only at 375.
+ *
+ * This screen had never been looked at on a phone. At 375px the names broke over
+ * two lines ("Ade / Oyelaran"), the rows went ragged as some wrapped and some
+ * did not, and email and phone — both `secondary`, so both hidden below md —
+ * were gone with no way to reach either. It is a list of rows there now rather
+ * than a squeezed table: name, email under it, the number hard right as a `tel:`
+ * link. See `ui/Table`, "the narrow state".
+ *
+ * One width because there is one thing here a snapshot can catch that the other
+ * screens do not already cover: whether the narrow layout is still the narrow
+ * layout. The wide table is the same component the bookings snapshots exercise
+ * at 768 and 1280, and three baselines for one screen is three files to
+ * regenerate every time a row gains a pixel.
+ *
+ * Not `fullPage`: 72 customers is a property of the seed, not of the design. The
+ * viewport holds the header, the search field and enough rows to see that they
+ * are all the same height — which is the thing that was wrong.
+ */
+test('customers at 375, where it is a list and not a table', async ({ page }) => {
+    await freezeTime(page);
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto('/customers');
+    await expect(page.getByRole('heading', { name: 'Customers' })).toBeVisible();
+    await settled(page);
+
+    /*
+     * Assertions as well as a picture, because a snapshot cannot tell you *why*
+     * it changed. If the narrow layout is ever dropped, these say so in one line
+     * instead of as a pixel diff somebody has to open.
+     */
+    const first = page.locator('ul[aria-label="Customers"] > li').first();
+    await expect(first).toBeVisible();
+    // One tap to ring them, not a menu and a second screen.
+    await expect(first.locator('a[href^="tel:"]')).toBeVisible();
+    // The table itself is hidden at this width rather than scrolling sideways.
+    await expect(page.locator('table[aria-label="Customers"]')).toBeHidden();
+    // And the page does not scroll sideways, which is the failure this replaces.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await expect(page).toHaveScreenshot('customers-375.png', { mask: volatileRegions(page) });
 });
 
 test.describe('the booking page', () => {

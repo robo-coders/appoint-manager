@@ -1,4 +1,45 @@
-import { expect, type Browser, type Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
+
+/**
+ * The surface tokens, as the browser reports them.
+ *
+ * These exist because a screenshot cannot tell them apart. Playwright compares
+ * pixels in YIQ space against `35215 * threshold²`; `--paper` and `--white` are
+ * a delta of **8.3**, which is under the maxDelta of every threshold value that
+ * still tolerates font rasterisation on another machine. An input could stop
+ * being white, a card could become a page, and the snapshot gate would report
+ * clean — this is not a hypothetical, the auth layout's whole quiet column
+ * vanished at 768 and `--update-snapshots` wrote nothing.
+ *
+ * So the surfaces are asserted rather than photographed. See
+ * `playwright.config.ts` for the arithmetic.
+ */
+export const SURFACE = {
+    paper: 'rgb(252, 251, 249)',
+    paperSunk: 'rgb(244, 242, 238)',
+    white: 'rgb(255, 255, 255)',
+} as const;
+
+/**
+ * Assert that a region is painted on the surface it is supposed to be.
+ *
+ * `getComputedStyle` rather than a pixel, so it is exact and identical on every
+ * machine. Pass the token name; the failure message says which surface was
+ * found, which is the thing you want to read at the point it breaks.
+ */
+export async function expectSurface(
+    locator: Locator,
+    token: keyof typeof SURFACE,
+    what: string,
+): Promise<void> {
+    const actual = await locator.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const found = (Object.keys(SURFACE) as Array<keyof typeof SURFACE>).find((key) => SURFACE[key] === actual);
+
+    expect(
+        actual,
+        `${what} should be on --${token} but is ${found ? `--${found}` : actual}`,
+    ).toBe(SURFACE[token]);
+}
 
 /**
  * The demo tenant, and how to reach it.
@@ -9,6 +50,19 @@ import { expect, type Browser, type Page } from '@playwright/test';
  */
 /** Where `auth.setup.ts` leaves the signed-in session for every other spec. */
 export const AUTH_STATE = 'tests/e2e/.auth/owner.json';
+
+/** The console's own session, from `console.setup.ts`. See that file for why. */
+export const CONSOLE_STATE = 'tests/e2e/.auth/console.json';
+
+/**
+ * The console account, from `SuperAdminSeeder`, which `scripts/e2e-setup.sh`
+ * runs. It refuses to run outside `local` — the e2e server is `local` — and it
+ * creates an account with a known password on purpose.
+ */
+export const CONSOLE = {
+    email: 'admin@gmail.com',
+    password: 'admin@1234',
+} as const;
 
 export const DEMO = {
     slug: 'paw',
@@ -74,7 +128,11 @@ export async function fillDetails(page: Page, name: string, email: string): Prom
     await page.getByLabel('Your name').fill(name);
     await page.getByLabel('Email').fill(email);
     await page.getByLabel('Mobile').fill('07700900000');
-    await page.getByLabel('dog name').fill('Bramble');
+    // "Dog name", sentence case: the vertical's own word for its subject is
+    // lower case in config/verticals.php because most of its uses are
+    // mid-sentence, and it is sentence-cased where it becomes a label. See
+    // `lib/copy`.
+    await page.getByLabel('Dog name').fill('Bramble');
     await page.getByLabel('Breed').fill('Labrador');
     await page.getByLabel('Size').selectOption('medium');
 }

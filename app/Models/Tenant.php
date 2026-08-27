@@ -55,6 +55,43 @@ class Tenant extends Model
     ];
 
     /**
+     * Every tenant is born on a trial, whichever door it came through.
+     *
+     * `subscription_status` defaults to `trial` in the schema and
+     * `trial_ends_at` defaults to NULL, and `hasAdminWriteAccess()` reads the
+     * *date* rather than the status. So a tenant created any way other than
+     * through `RegisteredUserController` — the demo seeder, a tinker
+     * `firstOrCreate`, a support script, an import — arrived with write access
+     * already lapsed, and its owner's first login was a read-only diary behind
+     * "Admin is read-only until billing is up to date". Not a hypothetical:
+     * `DemoTenantSeeder` and `scripts/e2e-setup.sh` both make tenants this way,
+     * and both were being repaired by hand afterwards.
+     *
+     * **Why here and not a column default.** The trial length is
+     * `config('billing.trial_days')`, and a database cannot read the config.
+     * MySQL will not accept an expression default on a `TIMESTAMP` beyond
+     * `CURRENT_TIMESTAMP` either, so a column default could say "now" but never
+     * "now plus thirty days" — and "now" is an expired trial, which is the bug.
+     * A `creating` hook is the one place that runs for every Eloquent write, in
+     * every environment, with the config loaded. It fills only when the caller
+     * has left the value null, so `TenantFactory`, the registration flow and
+     * `DemoDataSeeder::billing()` all keep the last word on a value they set on
+     * purpose.
+     *
+     * What this does not cover is a raw `DB::table('tenants')->insert()`.
+     * Nothing does one, and a raw insert also skips the slug, the uuid and
+     * every cast, so it is not a path anybody reaches by accident.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Tenant $tenant): void {
+            if ($tenant->trial_ends_at === null) {
+                $tenant->trial_ends_at = now()->addDays((int) config('billing.trial_days'));
+            }
+        });
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

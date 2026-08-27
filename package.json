@@ -13,6 +13,7 @@
         "check:php": "vendor/bin/pint --test",
         "dev": "vite",
         "test:e2e": "./scripts/e2e-setup.sh && playwright test",
+        "test:php": "vendor/bin/pest --parallel",
         "test:unit": "vitest run",
         "test:unit:watch": "vitest"
     },

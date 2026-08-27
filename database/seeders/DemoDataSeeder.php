@@ -102,7 +102,12 @@ class DemoDataSeeder extends Seeder
         return $tenant;
     }
 
-    public function forTenant(Tenant $tenant): void
+    /**
+     * @param  bool  $deposits  Present the tenant as Stripe-connected, so the
+     *                          booking page shows the deposit line and the
+     *                          deposit path. See `deposits()`.
+     */
+    public function forTenant(Tenant $tenant, bool $deposits = true): void
     {
         $this->guardEnvironment();
 
@@ -139,7 +144,79 @@ class DemoDataSeeder extends Seeder
             app(TenantContext::class)->clear();
         }
 
+        /*
+         * A demo tenant that renders read-only is not a demo.
+         *
+         * `Tenant::booted()` now gives every newly created tenant a trial, so a
+         * demo tenant made today arrives writable and this line is no longer
+         * the thing that saves it. It stays for the tenant that already exists:
+         * the hook only fires on create, and a machine that made its demo salon
+         * before the hook landed still has `trial_ends_at = NULL` in its local
+         * database. Reseeding is what people do when a demo looks wrong, so
+         * reseeding is where the repair belongs.
+         *
+         * `demo:seed --plan=` still has the last word —
+         * the command applies it after this returns — which is what keeps
+         * `--plan=expired` able to show the read-only state on purpose.
+         */
+        self::billing($tenant, 'trial');
+        self::deposits($tenant, $deposits);
+
         $this->report($tenant);
+    }
+
+    // -----------------------------------------------------------------------
+    // Deposit presentation
+    // -----------------------------------------------------------------------
+    /**
+     * Make the tenant present as Stripe-connected, or not.
+     *
+     * Deposit capture is the thing this product sells, and the demo tenant had
+     * no connected account — so `Tenant::takesDeposits()` was false, the
+     * booking page fell back to "£35.00, pay on the day", and the feature was
+     * invisible on the one page a salon owner is actually shown.
+     *
+     * **This does not touch AUDIT C1 and does not need to.** `takesDeposits()`
+     * is two columns on the tenant, not a question about which gateway is
+     * bound: setting them changes what the page *says*, and it is the page that
+     * was lying about the product. `FakeStripeGateway` stays reachable in
+     * `testing` only.
+     *
+     * What that buys, and what it does not:
+     *
+     *   - The booking page shows "£35.00 total, £10.00 deposit due today", and
+     *     Reserve takes the deposit branch rather than confirming outright.
+     *     That is the demo.
+     *   - Actually *completing* a card needs Stripe test keys in `.env` and a
+     *     real test-mode connected account, because with a connected account id
+     *     Stripe has never heard of, `StripeConnectGateway` fails and the page
+     *     says so honestly (503, "nothing has been charged"). There is no third
+     *     option that does not involve making the fake gateway reachable
+     *     outside `testing`, which is exactly what C1 forbids.
+     *
+     * So `demo:seed` will not run with deposits on unless both are present —
+     * see `SeedDemoData::depositsCanComplete()`. The placeholder default below
+     * is now only reachable by calling this directly, which is what the test
+     * suite does: it asserts what the *page* says about deposits, and never
+     * reaches Stripe to say it.
+     *
+     * `$account` is deliberately not a realistic-looking default. An id that
+     * looks real is an id somebody eventually believes.
+     */
+    public static function deposits(Tenant $tenant, bool $connected, ?string $account = null): void
+    {
+        $tenant->forceFill($connected
+            ? [
+                'stripe_account_id' => $account ?: 'acct_demo_not_a_real_account',
+                'stripe_onboarding_complete' => true,
+            ]
+            : [
+                // Cleared, not left alone: the e2e suite books through this page
+                // against obvious fake keys, and a tenant that asks for a
+                // deposit there gets a 503 where the spec expects a 201.
+                'stripe_account_id' => null,
+                'stripe_onboarding_complete' => false,
+            ])->save();
     }
 
     /**

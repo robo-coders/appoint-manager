@@ -12,7 +12,26 @@
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased">
+    {{--
+        The console is denser than the operator app.
+
+        `tokens.css` has carried `[data-density='console']` since the density
+        pass — 32px controls, 28px rows, 13px fields — and nothing had ever set
+        it, so the one surface it was written for rendered at operator density.
+        Set once, on the surface's own root, which is the rule the token block
+        states: no component takes a size prop for this.
+
+        `Surface::current` rather than a route name, because every screen on the
+        console is the console including its login page, and a route list is a
+        thing that goes out of date. Not `Surface::fromHost`: that answers by
+        host, and with subdomain routing off every surface shares one host — so
+        it returns `App` for the console and this would have been dead code
+        locally, in CI, and anywhere `SUBDOMAIN_ROUTING` is not set.
+    --}}
+    <body
+        class="font-sans antialiased"
+        @if (App\Support\Surface::current(request()->getHost(), request()->path()) === App\Support\Surface::Admin) data-density="console" @endif
+    >
         @inertia
     </body>
 </html>

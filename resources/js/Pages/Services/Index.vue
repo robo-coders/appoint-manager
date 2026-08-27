@@ -127,13 +127,40 @@ const move = (id: number, direction: -1 | 1) => {
     router.patch(route('services.reorder'), { ids });
 };
 
+/*
+ * `narrow` is the phone layout. At 375px six columns left the status badge
+ * reading "On the boo…" and the row menu off the edge entirely, while a service
+ * name broke over three lines. On a phone this is a price list: the name, what
+ * it costs, and whether customers can book it. See `ui/Table`.
+ *
+ * `interval` is dropped from the narrow row rather than squeezed into it. "Due
+ * again in 42 d" is a thing you set once at a desk, not something you check
+ * between dogs, and the wide table still carries it.
+ */
 const columns: Column[] = [
-    { key: 'name', label: 'Name' },
-    { key: 'duration_minutes', label: 'Duration', width: 'staff', align: 'right', numeric: true },
+    { key: 'name', label: 'Name', narrow: 'title' },
+    { key: 'duration_minutes', label: 'Duration', width: 'staff', align: 'right', numeric: true, narrow: 'line' },
     { key: 'interval', label: 'Due again', width: 'staff', align: 'right', numeric: true, secondary: true },
-    { key: 'price_amount', label: 'Price', width: 'amount', align: 'right', numeric: true },
-    { key: 'deposit_amount_value', label: 'Deposit', width: 'amount', align: 'right', numeric: true, secondary: true },
-    { key: 'state', label: 'Status', width: 'status' },
+    { key: 'price_amount', label: 'Price', width: 'amount', align: 'right', numeric: true, narrow: 'meta' },
+    // Not in the narrow row. "60 min · £10.00" does not say which of the two
+    // numbers is the deposit, and the word that would say it does not fit.
+    {
+        key: 'deposit_amount_value',
+        label: 'Deposit',
+        width: 'amount',
+        align: 'right',
+        numeric: true,
+        secondary: true,
+    },
+    /*
+     * On the second line, not stacked on the right beside the price. "On the
+     * booking page" is a 145px badge, and as a right-hand meta it was the widest
+     * thing in the row — which left about 100px for the name and broke "Full
+     * groom — medium dog" over three lines. On the line after the duration it
+     * costs the row nothing and still reads as a sentence: "60 min · on the
+     * booking page".
+     */
+    { key: 'state', label: 'Status', width: 'status', narrow: 'line' },
 ];
 
 /*

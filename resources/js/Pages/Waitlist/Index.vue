@@ -4,6 +4,7 @@ import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import PhoneLink from '@/Components/ui/PhoneLink.vue';
 import Select from '@/Components/ui/Select.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
@@ -52,12 +53,27 @@ const submit = () =>
         },
     });
 
+/*
+ * `narrow` is the phone layout. At 375px "Full groom — medium dog" broke into
+ * four lines in the service column, which made every row four lines tall, and
+ * the status badge and the row menu were off the right-hand edge. See
+ * `ui/Table`. The name and its phone number stay the headline: this is the one
+ * list whose whole purpose is ringing somebody up.
+ */
 const columns: Column[] = [
-    { key: 'customer_name', label: 'Customer', sortable: true },
-    { key: 'service_name', label: 'Service', sortable: true },
-    { key: 'preference', label: 'Prefers', secondary: true },
-    { key: 'waited', label: 'Waiting', width: 'staff', align: 'right', numeric: true, sortable: true },
-    { key: 'state', label: 'Status', width: 'status' },
+    { key: 'customer_name', label: 'Customer', sortable: true, narrow: 'title' },
+    { key: 'service_name', label: 'Service', sortable: true, narrow: 'line' },
+    { key: 'preference', label: 'Prefers', secondary: true, narrow: 'line' },
+    {
+        key: 'waited',
+        label: 'Waiting',
+        width: 'staff',
+        align: 'right',
+        numeric: true,
+        sortable: true,
+        narrow: 'meta',
+    },
+    { key: 'state', label: 'Status', width: 'status', narrow: 'meta' },
 ];
 
 const DAYS = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -103,9 +119,20 @@ const rows = computed(() =>
             empty-title="Nobody is waiting"
             empty-description="When somebody cancels, this is the list the offer goes out to. An empty waitlist is a cancellation that costs you the whole slot."
         >
+            <!--
+                The number is a `tel:` link here for the same reason it is on
+                Customers, and more so: this list exists to ring people up when a
+                slot frees. `ui/PhoneLink`.
+            -->
             <template #cell:customer_name="{ row }">
                 {{ row.customer_name }}
-                <span v-if="row.phone" class="numeral text-ink-2">· {{ row.phone }}</span>
+                <template v-if="row.phone">
+                    <!-- `&nbsp;` because Vue's template compiler condenses a
+                         whitespace-only text node containing a newline, so the
+                         separator rendered as "Nia Oyelaran ·07653880591". -->
+                    <span aria-hidden="true" class="text-ink-2">·&nbsp;</span>
+                    <PhoneLink :phone="row.phone as string | null" />
+                </template>
             </template>
 
             <template #cell:waited="{ row }">

@@ -61,9 +61,32 @@ final class ProposalPayload
             'cost_line' => self::costLine($proposal, $tenant),
             'free_until' => self::freeUntil($proposal, $tenant),
             'action_label' => 'Reserve '.$local->format('l').' at '.$local->format('H:i'),
+            /*
+             * How the salon's staff are named to a customer: first name only.
+             *
+             * Sent as its own field rather than left for the island to slice out
+             * of `staff_name`, because the island needs it to build one sentence
+             * — "with Ana instead of Maya", when an alternative is with somebody
+             * other than the groomer being proposed — and a customer-facing name
+             * should be formatted in one place. It was already being derived
+             * twice in this class; now it is derived once.
+             */
+            'staff_first_name' => self::firstName($proposal->staff->name),
             // The muted right-hand meta on an alternative row.
-            'meta' => $local->format('H:i').' · '.explode(' ', trim($proposal->staff->name))[0],
+            'meta' => $local->format('H:i').' · '.self::firstName($proposal->staff->name),
         ];
+    }
+
+    /**
+     * A member of staff, as a customer is shown them.
+     *
+     * Never the surname. "12:00 · Ana Duarte" is a personnel record; "12:00 ·
+     * Ana" is how the salon would say it on the phone, and it is what fits the
+     * muted column on a 375px screen without wrapping.
+     */
+    private static function firstName(string $name): string
+    {
+        return explode(' ', trim($name))[0];
     }
 
     /**
@@ -116,7 +139,7 @@ final class ProposalPayload
         $proposal = $suggestion->primary;
         $service = mb_strtolower($proposal->service->name);
         $subject = $proposal->subject?->name;
-        $firstName = explode(' ', trim($proposal->staff->name))[0];
+        $firstName = self::firstName($proposal->staff->name);
 
         return implode(' · ', array_filter([
             $proposal->reason,

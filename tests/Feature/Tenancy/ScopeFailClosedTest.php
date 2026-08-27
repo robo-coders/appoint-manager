@@ -7,6 +7,7 @@ use App\Models\Service;
 use App\Models\SlotOffer;
 use App\Models\Subject;
 use App\Models\TimeOff;
+use App\Models\User;
 use App\Models\WaitlistEntry;
 use App\Support\TenantContext;
 
@@ -57,8 +58,16 @@ it('fails closed for every tenant-owned model', function () {
     $salon = aSalon();
     app(TenantContext::class)->clear();
 
+    /*
+     * `User` is in this list now. It used to be the one absentee: it overrode
+     * `tenantScopeFailClosed()` to false so that login could find a person
+     * before anyone knew their tenant, and that made every `User` read in the
+     * application a cross-tenant one. The exemption lives on the auth surface
+     * now — `App\Auth\IdentityUserProvider` — so the model itself is like all
+     * the others, and this is the assertion that says so.
+     */
     $models = [Booking::class, Customer::class, Message::class, Service::class,
-        SlotOffer::class, Subject::class, TimeOff::class, WaitlistEntry::class];
+        SlotOffer::class, Subject::class, TimeOff::class, User::class, WaitlistEntry::class];
 
     $counts = asBackgroundProcess(function () use ($models) {
         $out = [];

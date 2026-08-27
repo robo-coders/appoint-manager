@@ -38,6 +38,21 @@ type NavLink = { href: string; label: string; glyph: string; hint: string; count
 
 const counts = computed(() => (page.props.navCounts as Record<string, number> | null) ?? null);
 
+/**
+ * Which session this shell is signing out of.
+ *
+ * The rail hard-coded `route('logout')`, which is the *app* surface's route.
+ * The console runs the same shell on a different host with a different session
+ * cookie and a different route — `admin.logout` — so the one control that ends
+ * a super admin session pointed at a route that does not exist on the surface
+ * it was rendered on. DECISIONS.md recorded it as "the console has no logout
+ * control"; it had one, aimed at the wrong door.
+ *
+ * The console is the tenant-less shell, which is the same condition the rail's
+ * own link list already branches on.
+ */
+const logoutHref = computed(() => (page.props.tenant ? route('logout') : route('admin.logout')));
+
 const links = computed<NavLink[]>(() => {
     if (!page.props.tenant) {
         return [
@@ -217,7 +232,7 @@ onUnmounted(() => {
             :user-name="page.props.auth.user?.name ?? ''"
             :profile-href="route('profile.edit')"
             :billing-href="page.props.tenant ? route('billing.index') : undefined"
-            :logout-href="route('logout')"
+            :logout-href="logoutHref"
             :collapsed="collapsed"
             :drawer-open="drawerOpen"
             :impersonating="page.props.impersonating"

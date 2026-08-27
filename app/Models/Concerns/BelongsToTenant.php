@@ -44,8 +44,17 @@ trait BelongsToTenant
     }
 
     /**
-     * When true, queries without a tenant context return no rows in HTTP and tests.
-     * Artisan/queue stay unscoped so seeders can pass an explicit tenant_id.
+     * When true, a query with no tenant context returns no rows — everywhere,
+     * including artisan commands and queue workers. There is no console
+     * exemption any more (AUDIT C9); code that legitimately spans tenants says
+     * so with `withoutGlobalScopes()` and an explicit `tenant_id`.
+     *
+     * Nothing overrides this. `User` used to — login and password reset have to
+     * find a person before anyone knows their tenant — and that one override
+     * made `User` the only model a route could bind with no context and still
+     * find, which is how `/staff/{staff}` reached `StaffPolicy` holding another
+     * salon's row. The exemption now lives on the auth surface that needs it,
+     * in `App\Auth\IdentityUserProvider`, and nowhere else.
      */
     protected static function tenantScopeFailClosed(): bool
     {

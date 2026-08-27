@@ -105,6 +105,39 @@ enum Surface: string
         return self::App;
     }
 
+    /**
+     * Which surface this request is actually on, in either routing mode.
+     *
+     * `fromHost` answers the question only under subdomain routing — with
+     * routing by path it returns `App` for every host, because every surface
+     * *is* the same host. That is correct for what it is used for (naming the
+     * session cookie: one host, one cookie) and wrong for anything that has to
+     * know which surface is being rendered, which locally and in CI is every
+     * caller. `app.blade.php` asks this in order to set the console's density,
+     * and asking `fromHost` would have made that dead code everywhere except
+     * production.
+     *
+     * @param  string  $path  The request path, with or without a leading slash.
+     */
+    public static function current(?string $host, string $path): self
+    {
+        if (self::routingBySubdomain()) {
+            return self::fromHost($host);
+        }
+
+        $path = trim($path, '/');
+
+        foreach ([self::Admin, self::Book] as $surface) {
+            $prefix = $surface->pathPrefix();
+
+            if ($prefix !== '' && ($path === $prefix || str_starts_with($path, $prefix.'/'))) {
+                return $surface;
+            }
+        }
+
+        return self::App;
+    }
+
     public static function bookUrlFor(Tenant $tenant): string
     {
         return self::Book->to($tenant->slug);
