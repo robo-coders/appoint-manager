@@ -2397,6 +2397,14 @@ longer in `TenantScope`. The test now flips `env` to `local` so a
 reintroduced console exemption cannot hide behind `APP_ENV=testing`.
 `ScopeFailClosedTest` already covered this more thoroughly.
 
+## C1, C2 and C10 were already closed
+
+Re-read 2026-08-30 against the code. AUDIT.md described a production fake
+Stripe bind, a webhook that confirmed any `metadata.booking_id`, and an
+unauthenticated `customer-match` URL. None of those paths exist. The
+existing tests in `tests/Feature/Security/` already demonstrate the holes
+are shut. No production code was changed. AUDIT.md is updated to say so.
+
 ## Booking lock is the staff row
 
 `SELECT … FOR UPDATE` on overlapping bookings gap-locks an empty index

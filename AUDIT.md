@@ -20,6 +20,11 @@ The lock is still held across the network for other reasons — see C4.
 
 Data leak, money loss, or security hole. None of these should survive contact with a real customer.
 
+**Re-read 2026-08-30 against the code, not this document.** C1, C2 and C10
+are closed. The descriptions below are the original finding. Each now ends
+with what the code actually does and which tests hold the door shut. C3–C9
+were not re-audited.
+
 ### C1 — `FakeStripeGateway` activates silently in production, and its signature check is a string literal
 
 `app/Providers/AppServiceProvider.php:34-40`
@@ -63,6 +68,17 @@ every real deposit silently returns a fake `pi_fake_1` client secret and no card
 tests bind the fake explicitly. Add a `/health` check asserting `StripeGateway` resolves to
 `StripeConnectGateway` outside testing.
 
+**Status (2026-08-30) — closed.** The bind is `testing` only
+(`AppServiceProvider::shouldUseFakeGateways()`). Missing `STRIPE_SECRET` or
+`STRIPE_WEBHOOK_SECRET` throws `PaymentsNotConfiguredException` at resolve
+time; the fake is not substituted. The same pattern is on `BillingGateway`.
+`FakeStripeGateway::constructEvent()` and `createPaymentIntent()` call
+`refuseOutsideTesting()`, so even `new FakeStripeGateway` cannot accept
+`t=1,v1=test` outside the suite. The literal signature remains as the
+test-suite handshake; it is not reachable in production. `/health` does not
+assert the gateway class — that recommendation was not taken, and is not
+needed for the hole. Held by `tests/Feature/Security/GatewayBindingTest.php`.
+
 ---
 
 ### C2 — The Connect webhook trusts attacker-controllable `metadata.booking_id` with no tenant or account check
@@ -101,6 +117,15 @@ tenant assertion.
 `$object['amount_received'] >= $booking->deposit_at_booking->amount` and the currency matches.
 Delete the unconstrained branch — return early instead. Store the event `account` on `stripe_events`
 so this is auditable after the fact.
+
+**Status (2026-08-30) — closed.** `StripeEventProcessor::paymentSucceeded()`
+requires `booking_id > 0`, loads that booking, loads its tenant, and
+rejects unless `accountOwns()` (`hash_equals` on the event `account` and
+the tenant's `stripe_account_id`). Short amount and wrong currency are
+rejected. A blank metadata block does not `first()` an arbitrary booking.
+`chargeRefunded()` uses the same account check. `account.updated` may only
+speak for the account that sent it. `stripe_events.account_id` is stored.
+Held by `tests/Feature/Security/StripeWebhookIntegrityTest.php`.
 
 ---
 
@@ -417,6 +442,12 @@ returning customers use the `/b/{token}` link they already have, or return only
 `orWhere('phone')` — that widens the match. On booking, match on email but **never** overwrite
 `name`/`phone` on an existing customer from unauthenticated input; write the supplied values onto the
 booking instead and let the salon reconcile.
+
+**Status (2026-08-30) — closed.** `customerMatch` is gone. `GET
+/book/{slug}/customer-match` is 404 and the route name does not exist.
+Public booking matches on email only and returns an existing customer
+untouched — submitted name and phone are not written onto the CRM row.
+Held by `tests/Feature/Security/PublicCustomerPrivacyTest.php`.
 
 ---
 
@@ -1116,12 +1147,12 @@ isolation test per tenant-owned model, generated from a list.
 
 **Before any real customer touches this — non-negotiable:**
 
-1. **C1** — `FakeStripeGateway` in production + hardcoded webhook signature. One-line bind change plus deleting the fake's signature branch. Highest severity, lowest effort.
+1. **C1** — ~~`FakeStripeGateway` in production + hardcoded webhook signature.~~ **Closed 2026-08-30.** Bind is `testing` only; missing secrets throw; fake refuses to construct events outside the suite.
 2. **C7** — `JSON_HEX_TAG` on `public-shell.blade.php:35`. One line. Card-skimming vector on the payment page.
-3. **C2** — Bind the Connect webhook to the tenant's `stripe_account_id` and check the amount.
+3. **C2** — ~~Bind the Connect webhook to the tenant's `stripe_account_id` and check the amount.~~ **Closed 2026-08-30.** Account, amount and currency are checked; unconstrained `first()` is gone.
 4. **C6** — Return 500 (not 200) when the webhook can't be stored.
 5. **C8** — Change `bookings.staff_id` to `restrictOnDelete`; block last-owner self-deletion.
-6. **C10** — Neuter or remove `customer-match`; stop overwriting customer name/phone from public input.
+6. **C10** — ~~Neuter or remove `customer-match`; stop overwriting customer name/phone from public input.~~ **Closed 2026-08-30.** Route gone; existing customers are not overwritten from the public form.
 7. **C3** — Move the Stripe refund out of the cancel transaction.
 8. **C4** — Queue all mail and SMS; take notifications out of the booking transaction.
 9. **C5** — Let `createPaymentIntent` failure surface; never show "Almost there" with no way to pay.
@@ -1184,3 +1215,9 @@ including the MySQL and queue-worker tests that should have existed from the sta
 the suite once against real MySQL with a real worker, and I would be comfortable. Today, with an
 empty `STRIPE_SECRET` on a Forge box, the first person to POST a JSON body at `/stripe/webhook` owns
 every booking on the platform.
+
+**Correction 2026-08-30.** The three sentences above that name the fake
+gateway, metadata confirmation, and the customer-match URL describe the
+2026-08-22 tree. They are not true of this tree. C1, C2 and C10 are closed
+(see the status notes on those findings). C3–C9, the SQLite-era suite
+caveats, and the rest of this assessment were not re-opened here.
