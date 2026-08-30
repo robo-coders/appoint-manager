@@ -245,17 +245,22 @@ class OnboardingController extends Controller
      * they will come back, and a booking with no customer behind it is a row
      * the rest of the product cannot do anything with.
      *
-     * The email is asked for rather than invented. `customers.email` is NOT NULL
-     * and unique per tenant, so there is no such thing here as a client who is
-     * only a name — and filling that column with a placeholder to get past it
-     * would put an address nobody owns on a confirmation email.
+     * Email is optional. A walk-in is a name, and inventing an address so the
+     * row would save would put a confirmation on a mailbox nobody owns.
      *
-     * @param  array{customer_name: string, customer_email: string, service_id: int, staff_id: int, starts_at: string}  $first
+     * `firstOrNew` is only used when there is an address. Two walk-ins with no
+     * email must be two customers; matching on null would fold them into one.
+     *
+     * @param  array{customer_name: string, customer_email?: string|null, service_id: int, staff_id: int, starts_at: string}  $first
      */
     private function createFirstBooking(Tenant $tenant, array $first)
     {
-        $customer = Customer::query()->firstOrNew(['email' => $first['customer_email']]);
-        $customer->fill(['name' => $first['customer_name'], 'email' => $first['customer_email']]);
+        $email = filled($first['customer_email'] ?? null) ? $first['customer_email'] : null;
+
+        $customer = $email === null
+            ? new Customer
+            : Customer::query()->firstOrNew(['email' => $email]);
+        $customer->fill(['name' => $first['customer_name'], 'email' => $email]);
         $customer->save();
 
         return app(BookingService::class)->create(

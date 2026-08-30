@@ -112,3 +112,45 @@ it('creates a manual diary booking without a deposit', function () {
         ->and($booking->deposit_status->value)->toBe('none')
         ->and($booking->deposit_at_booking->amount)->toBe(0);
 });
+
+it('stores two walk-in bookings for clients who have no email', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
+
+    $tenant = Tenant::factory()->create(['timezone' => 'Europe/London']);
+    $owner = User::factory()->for($tenant)->owner()->create(['is_bookable' => true]);
+    $service = Service::factory()->for($tenant)->create(['duration_minutes' => 60, 'deposit_amount' => 0]);
+    $service->staff()->attach($owner->id);
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $owner->id,
+        'weekday' => Weekday::Tuesday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    $asOwner = actingAsTenant($owner);
+
+    $asOwner->post(route('bookings.store'), [
+        'service_id' => $service->id,
+        'staff_id' => $owner->id,
+        'starts_at' => '2026-03-10T11:00',
+        'customer_name' => 'Sam Lee',
+        'customer_phone' => '07700900001',
+        'subject_name' => 'Ash',
+    ])->assertRedirect();
+
+    $asOwner->post(route('bookings.store'), [
+        'service_id' => $service->id,
+        'staff_id' => $owner->id,
+        'starts_at' => '2026-03-10T13:00',
+        'customer_name' => 'Pat Cole',
+        'customer_phone' => '07700900002',
+        'subject_name' => 'Jet',
+    ])->assertRedirect();
+
+    $emails = Customer::query()->orderBy('name')->pluck('email')->all();
+
+    expect($emails)->toBe([null, null])
+        ->and(Customer::query()->count())->toBe(2)
+        ->and(Booking::query()->count())->toBe(2);
+});

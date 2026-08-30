@@ -1,9 +1,10 @@
-# Local MySQL 8 for a fresh clone.
+# Local MySQL 8.4 for a fresh clone.
 #
-# This machine's brew is pointed at a /opt/homebrew that does not exist, so
-# `brew install mysql` is not a path anybody can follow. Docker is. The official
-# image is MySQL 8.4 (current 8 LTS), which is what production and the test
-# suite both target — `lockForUpdate()`, FK cascades and CSRF all depend on it.
+# 8.4 is authoritative: production is MySQL 8, this file pins 8.4, and the
+# suite is written against that. A laptop running 9.x is a local deviation,
+# not a second target — see DEPLOY.md. `lockForUpdate()` and FK cascades are
+# why the suite is MySQL at all; CSRF is APP_ENV and is unrelated to the
+# engine.
 #
 # Three databases, created by docker/mysql/init.sql on first boot:
 #

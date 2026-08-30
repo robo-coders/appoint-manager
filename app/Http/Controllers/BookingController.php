@@ -141,7 +141,9 @@ class BookingController extends Controller
         $customer = new Customer;
         $customer->fill([
             'name' => $request->string('customer_name')->toString(),
-            'email' => $request->string('customer_email')->toString(),
+            'email' => $request->filled('customer_email')
+                ? $request->string('customer_email')->toString()
+                : null,
             'phone' => $request->input('customer_phone'),
         ]);
         $customer->save();

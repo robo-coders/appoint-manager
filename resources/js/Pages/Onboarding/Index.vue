@@ -417,7 +417,7 @@ const saveHours = () => {
                             v-model="firstBooking.customer_email"
                             type="email"
                             label="Their email"
-                            hint="So the confirmation and the reminder can reach them."
+                            hint="Optional. Confirmation and reminder go there if they have one."
                             :error="hoursForm.errors['first_booking.customer_email']"
                         />
                     </div>

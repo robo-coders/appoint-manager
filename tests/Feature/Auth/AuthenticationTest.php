@@ -10,6 +10,28 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
+/*
+ * CSRF fires on a real product route once the testing short-circuit is off.
+ *
+ * `ValidateCsrfToken` skips the check when APP_ENV=testing. The rest of the
+ * suite stays that way — every mutating request would 419 otherwise. This is
+ * the canary that the middleware is still wired, not suite-wide coverage.
+ * ErrorPageTest already proves the 419 page itself.
+ */
+test('login rejects a POST with no csrf token when the testing short-circuit is off', function () {
+    $original = app()['env'];
+    app()['env'] = 'local';
+
+    try {
+        $this->post('/login', [
+            'email' => 'a@example.com',
+            'password' => 'secret',
+        ])->assertStatus(419);
+    } finally {
+        app()['env'] = $original;
+    }
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

@@ -40,7 +40,7 @@ const props = defineProps<{
     customers: Array<{
         id: number;
         name: string;
-        email: string;
+        email: string | null;
         phone: string | null;
         subjects_count: number;
         bookings_count: number;
@@ -102,7 +102,7 @@ const rows = computed(() => {
 
     return props.customers
         .filter((customer) =>
-            [customer.name, customer.email, customer.phone ?? ''].some((field) =>
+            [customer.name, customer.email ?? '', customer.phone ?? ''].some((field) =>
                 field.toLowerCase().includes(needle),
             ),
         )

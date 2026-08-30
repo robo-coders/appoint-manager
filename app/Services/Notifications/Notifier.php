@@ -164,6 +164,10 @@ final class Notifier
 
     private function emailCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body, ?Subject $subject = null): void
     {
+        if (! $customer->email) {
+            return;
+        }
+
         Mail::to($customer->email)->queue($mail);
         $this->log($tenant, $customer, $booking, MessageChannel::Email, $type, $customer->email, $body, MessageStatus::Sent, null, 1, $subject);
     }

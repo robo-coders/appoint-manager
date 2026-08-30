@@ -188,3 +188,30 @@ it('suppresses SMS when the tenant setting is off but still sends email', functi
         ->and(Message::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('channel', MessageChannel::Sms)->count())->toBe(0)
         ->and(Message::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('type', MessageType::BookingConfirmed)->where('channel', MessageChannel::Email)->count())->toBeGreaterThan(0);
 });
+
+it('does not queue a confirmation email when the client has no address', function () {
+    Mail::fake();
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = notifySalon();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->id,
+        'email' => null,
+        'phone' => '+447700900000',
+    ]);
+    $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
+
+    app(BookingService::class)->create(
+        $tenant->fresh(),
+        $service,
+        $staff,
+        $customer,
+        $startsAt,
+        BookingSource::Manual,
+    );
+
+    Mail::assertNotQueued(BookingConfirmedMail::class);
+    expect(Message::withoutGlobalScopes()
+        ->where('tenant_id', $tenant->id)
+        ->where('type', MessageType::BookingConfirmed)
+        ->where('channel', MessageChannel::Email)
+        ->count())->toBe(0);
+});

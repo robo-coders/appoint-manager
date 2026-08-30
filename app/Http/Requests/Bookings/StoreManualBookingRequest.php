@@ -23,7 +23,7 @@ class StoreManualBookingRequest extends FormRequest
             'starts_at' => ['required', 'date'],
             'customer_id' => ['nullable', 'integer'],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
-            'customer_email' => ['required_without:customer_id', 'nullable', 'email', 'max:255'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:50'],
             'subject_id' => ['nullable', 'integer'],
             'subject_name' => ['nullable', 'string', 'max:255'],

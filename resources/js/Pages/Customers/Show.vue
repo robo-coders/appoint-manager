@@ -7,7 +7,7 @@ defineProps<{
     customer: {
         id: number;
         name: string;
-        email: string;
+        email: string | null;
         phone: string | null;
         notes: string | null;
         subjects: Array<{ id: number; name: string; attributes: Record<string, string> }>;
@@ -24,10 +24,11 @@ defineProps<{
 <template>
     <AppLayout>
         <Head :title="customer.name" />
-        <PageHeader :title="customer.name" :description="customer.email" />
+        <PageHeader :title="customer.name" :description="customer.email ?? undefined" />
         <div class="grid gap-6 md:grid-cols-2">
             <section class="rounded border border-rule bg-white p-6">
                 <h2 class="text-14 font-medium">Details</h2>
+                <p class="mt-2 text-14">{{ customer.email || 'No email' }}</p>
                 <p class="mt-2 text-14">{{ customer.phone || 'No phone' }}</p>
                 <ul class="mt-4 space-y-2 text-14">
                     <li v-for="subject in customer.subjects" :key="subject.id">{{ subject.name }}</li>

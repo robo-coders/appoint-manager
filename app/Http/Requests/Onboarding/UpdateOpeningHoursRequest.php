@@ -38,15 +38,14 @@ class UpdateOpeningHoursRequest extends FormRequest
              * tenant-scoped id in this app carries it — `exists` would accept
              * another salon's service.
              *
-             * The email is required because `customers.email` is NOT NULL with a
-             * unique index on (tenant_id, email), so this product has no way to
-             * hold a client who is only a name and a phone number. That is a
-             * real constraint rather than a choice made here, and the diary's own
-             * New booking form asks for the same thing. Recorded in DECISIONS.md.
+             * Email is optional. A walk-in is often a name and a phone number,
+             * and `customers.email` is nullable so that person can be stored
+             * without inventing an address. Public booking still requires one —
+             * an online booker has somewhere to send the manage link.
              */
             'first_booking' => ['nullable', 'array'],
             'first_booking.customer_name' => ['required_with:first_booking', 'string', 'max:255'],
-            'first_booking.customer_email' => ['required_with:first_booking', 'email', 'max:255'],
+            'first_booking.customer_email' => ['nullable', 'email', 'max:255'],
             'first_booking.service_id' => ['required_with:first_booking', 'integer', ExistsForTenant::of(Service::class)],
             'first_booking.staff_id' => ['required_with:first_booking', 'integer', ExistsForTenant::of(User::class)],
             'first_booking.starts_at' => ['required_with:first_booking', 'date'],

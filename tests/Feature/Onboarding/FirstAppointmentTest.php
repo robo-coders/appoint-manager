@@ -146,11 +146,25 @@ it('rejects a half-filled appointment instead of ignoring it', function () {
 
     finishSetup($salon, ['customer_name' => 'Naomi Ellery'])
         ->assertSessionHasErrors([
-            'first_booking.customer_email',
             'first_booking.service_id',
             'first_booking.staff_id',
             'first_booking.starts_at',
-        ]);
+        ])
+        ->assertSessionDoesntHaveErrors('first_booking.customer_email');
+});
+
+it('accepts a first appointment that is only a name', function () {
+    $salon = aSalonSettingUp();
+
+    finishSetup($salon, [
+        'customer_name' => 'Naomi Ellery',
+        'service_id' => $salon['service']->id,
+        'staff_id' => $salon['owner']->id,
+        'starts_at' => aMondayMorning()->format('Y-m-d\TH:i'),
+    ])->assertRedirect(route('diary.index', ['date' => '2026-09-07']));
+
+    expect(Customer::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole()->email)
+        ->toBeNull();
 });
 
 /*

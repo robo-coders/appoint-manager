@@ -96,7 +96,7 @@ it('does not put a stored value into the page without validating it', function (
     $tenant = Tenant::factory()->create();
 
     Tenant::query()->whereKey($tenant->id)->update([
-        'brand_colour' => 'x); background:url(//evil',
+        'brand_colour' => 'x);url(//evil',
     ]);
 
     $html = $this->get(route('public.booking.show', $tenant->slug))->assertOk()->getContent();

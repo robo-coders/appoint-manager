@@ -116,8 +116,8 @@ Parallel workers create `appoint_manager_test_test_1`, `_2`, … themselves.
 
 ## Test database
 
-The Pest suite is MySQL 8, same as local and production. It is **not** SQLite
-and it is **not** the development database. `phpunit.xml` forces:
+The Pest suite is MySQL 8.4, same as Docker and production. It is **not**
+SQLite and it is **not** the development database. `phpunit.xml` forces:
 
 ```
 DB_CONNECTION=mysql
@@ -176,6 +176,31 @@ agree — it forces those three values.
 
 Do not run the suite against `appoint_manager`. Do not run it against
 `appoint_manager_e2e`. Those are the local salon and the Playwright seed.
+
+### MySQL version
+
+**8.4 is authoritative.** `docker-compose.yml` pins `mysql:8.4`. Production is
+MySQL 8. The suite is written against that. A laptop whose brew or pkg
+install is 9.x is a local deviation, not a second target — do not retarget
+compose or production to match the laptop.
+
+If they diverge again, what breaks is anything that is 8-or-9 specific: a
+reserved word that appears in 9, an authentication plugin, a JSON or
+generated-column difference, or SQL that 9 accepts and 8 rejects. InnoDB
+gap locks and `lockForUpdate()` have been the same on both in practice; that
+is not a reason to treat them as interchangeable.
+
+### Leftover `kestrel` database
+
+The rename moved tables out of `kestrel` and recorded `DROP DATABASE kestrel`
+as the last step. If that database is still on a machine (empty, after the
+move), drop it:
+
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root -e "DROP DATABASE IF EXISTS kestrel;"
+```
+
+Do not drop `appoint_manager`, `appoint_manager_test`, or `appoint_manager_e2e`.
 
 ---
 

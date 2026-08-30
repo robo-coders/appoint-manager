@@ -2345,32 +2345,8 @@ covered in-process by `ScopeFailClosedTest`. Do not silently change it.
 
 ## Found broken, left alone
 
-The four items already recorded under phase 11 (hardcoded `£39` in
-`BillingController::index`, the dead annual plan in `config/billing.php`,
-`customers.email` NOT NULL, `.DS_Store` listed twice in `.gitignore`) stay
-recorded and untouched.
-
-- **`brand_colour` is `varchar(20)` and MySQL enforces it.**
-  `TenantAccentTest` writes `x); background:url(//evil` past the validator to
-  prove the page will not emit it. SQLite stored the 27 characters. MySQL
-  rejects the UPDATE with `SQLSTATE 22001`. The test is written against
-  SQLite's ignored length. The payload cannot exist on MySQL, so the
-  render-path assertion is unreachable. Assertion not changed.
-- **A `kestrel` database is still on this machine.** The rename recorded
-  `DROP DATABASE kestrel` as the last step of moving tables. It was never
-  dropped. Not touched.
-- **This machine is MySQL 9.5.0, not 8.** `docker-compose.yml` pins
-  `mysql:8.4` (current 8 LTS) for a fresh clone. Production is specified as
-  MySQL 8. The suite ran against 9.5 because Docker is not installed here and
-  brew is pointed at a `/opt/homebrew` that does not exist. InnoDB gap locks
-  and `lockForUpdate()` behave the same; this is recorded so nobody thinks
-  the suite proved 8.
-- **`composer.json` `post-create-project-cmd` still touches
-  `database/database.sqlite`.** Laravel's default. The product does not use
-  that file. Left alone.
-- **CSRF is still never verified in the suite.** `VerifyCsrfToken`
-  short-circuits when `APP_ENV=testing`. Switching the engine did not change
-  that. Separate task.
+Closed or moved in phase 12, section 5. The living list is **Left permanently**
+at the end of this file, so this heading stops growing as a backlog.
 
 ## What the concurrency tests now do
 
@@ -2893,3 +2869,65 @@ The quoted waitlist texts used "Willow Street Grooming" and labelled it
 illustrative. A name on a marketing page that is not a customer is invented.
 The prefix is now described (`the salon’s name`) rather than substituted. The
 invariant bodies are still the strings in `Notifier`.
+
+# Phase 12, section 5 — recorded debt
+
+Worked through the growing "Found broken, left alone" list. Closed what this
+pass could close. Survivors live under **Left permanently** so the heading
+stops looking like a backlog.
+
+## Closed here
+
+- **`.DS_Store` listed twice in `.gitignore`.** One line remains.
+- **`composer.json` `post-create-project-cmd` touched `database/database.sqlite`.**
+  Removed. We are MySQL everywhere; that file is not part of the product.
+- **Leftover `kestrel` database.** Empty (zero tables). Dropped on this
+  machine. The command is in `DEPLOY.md` for any other checkout that still
+  has it.
+- **MySQL version.** 8.4 is authoritative — docker-compose and production.
+  This laptop is 9.5; that is a local deviation, recorded in `DEPLOY.md`, not
+  a second target. What breaks if they diverge: reserved words, auth plugin,
+  JSON / generated-column differences, SQL that 9 accepts and 8 rejects.
+  InnoDB gap locks have matched in practice; that is not permission to treat
+  them as interchangeable.
+- **`customers.email` is nullable.** A walk-in is a name and often a phone
+  number. The unique index still holds for addresses that exist; MySQL allows
+  more than one NULL, so two clients without an email are two rows. Diary and
+  onboarding no longer require an address. Public booking and CSV import still
+  do — an online booker needs the manage link, and an import row without an
+  email is a different path. `Notifier` skips customer email when there is
+  nowhere to send it. Empty string is written as null, never as `''`, because
+  `''` would still collide on the unique index.
+- **`TenantAccentTest` payload is `x);url(//evil` (14 characters).** Fits
+  `varchar(20)`. The view still must not contain `evil`.
+
+## CSRF, assessed and left
+
+`ValidateCsrfToken` short-circuits when `APP_ENV=testing`. Enabling it
+suite-wide would 419 every mutating HTTP test that does not send `_token`.
+`FakeStripeGateway` also binds on that env, so flipping `APP_ENV` is not a
+one-line fix. ErrorPageTest already leaves testing and POSTs without a token
+to prove the 419 page. AuthenticationTest now does the same on `/login`.
+That is the canary. Suite-wide coverage would mean a `_token` (or `from()`)
+on every POST, PATCH and DELETE in the suite, plus keeping the Stripe fake
+bound some other way.
+
+# Left permanently
+
+Items that are not a backlog. Each has a one-line reason and what would close
+it. Do not re-open these as "found broken" unless the reason changes.
+
+- **CSRF is not verified on the rest of the suite.** Reason: `APP_ENV=testing`
+  short-circuits `ValidateCsrfToken`; enabling it turns every mutating HTTP
+  test red. What would close it: send `_token` on every POST/PATCH/DELETE and
+  bind the Stripe fake without relying on `testing`. Canaries exist
+  (`ErrorPageTest`, `AuthenticationTest`).
+- **This laptop runs MySQL 9.5.** Reason: brew/pkg on this machine, not a
+  product choice. Authoritative is 8.4. What would close it: point this
+  machine at the compose 8.4 instance, or install 8.4 locally. Not a code
+  change.
+- **`QUEUE_CONNECTION=sync` in the suite.** Reason: every notification test
+  asserts side effects that only happen because the job ran inside the
+  request. What would close it: rewrite those tests against a real queue, plus
+  a worker process with no tenant context (AUDIT C9). Recorded since phase 11.
+  Not this pass.
