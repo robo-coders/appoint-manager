@@ -129,7 +129,7 @@ export default defineConfig({
              */
             name: 'public',
             dependencies: ['operator'],
-            testMatch: /(slot-race|auth|errors)\.spec\.ts/,
+            testMatch: /(slot-race|auth|errors|marketing)\.spec\.ts/,
             use: { ...devices['Desktop Chrome'] },
         },
         {

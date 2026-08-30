@@ -27,20 +27,19 @@
  */
 import { readFileSync, globSync } from 'node:fs';
 
-// Screens not yet rebuilt, with the phase that will remove them from this list.
-const PENDING = {
-    /*
-     * Blade. The marketing site is not built on the component library at all —
-     * it restates the button in `cta.blade.php` and styles its links inline.
-     * Phase 11 rebuilds marketing; until then these are listed, not rewritten,
-     * and the rule that catches them is not weakened to let them through.
-     *
-     * `cta-quiet.blade.php` and `layout.blade.php` are NOT listed: their links
-     * are links, not controls wearing a link's tag, and they pass as they are.
-     */
-    'resources/views/marketing/partials/cta.blade.php': 'phase 11 — marketing',
-
-};
+/*
+ * Screens not yet rebuilt, with the phase that would remove them from this list.
+ *
+ * **It is empty.** Phase 11 rebuilt marketing and cleared the last entry, which
+ * was `marketing/partials/cta.blade.php` — an `<a>` wearing Button.vue's
+ * primary-variant utility classes, copied by hand, with a comment saying the
+ * classes were copied so the two would not drift. That is the drift the
+ * `copied-control` rule exists to catch, and a comment is not a mechanism. The
+ * marketing site has one button now, declared once in `resources/css/marketing.css`
+ * from the same tokens Button.vue reads, and `copied-control` passes over the
+ * whole tree without being weakened to let it through.
+ */
+const PENDING = {};
 
 /*
  * The ceiling. Every entry in PENDING is a screen that will be rebuilt in a
@@ -79,9 +78,10 @@ const PENDING = {
  * nothing — they simply had no design at all, which this check cannot see and
  * phase 9 fixed anyway.
  *
- * One left, and it belongs to marketing.
+ * 1 -> 0: marketing, in phase 11. The list is empty and the ceiling is zero,
+ * which means the next entry anybody wants to add has nowhere to go.
  */
-const MAX_PENDING = 1;
+const MAX_PENDING = 0;
 
 // The library itself is where these elements are allowed to exist.
 const ALLOWED_DIRS = ['resources/js/Components/ui/'];
@@ -117,24 +117,46 @@ const RULES = [
  * Vue and Blade. `resources/views/**` covers marketing, the public shells, the
  * error pages and the mail templates.
  *
- * The `table` rule does not apply to `views/mail/`, and that is a scope
+ * The `table` rule does not apply to two Blade trees, and that is a scope
  * decision rather than an exemption. The rule's premise is that there is one
- * implementation of a table and it lives in `Components/ui/` — which is a Vue
- * component, in a medium that cannot run JavaScript at all. Outlook on Windows
- * renders with Word's engine: no flexbox, no grid, no `max-width` on a `div`.
- * Nested `<table>` is not a hand-rolled control there, it is the only layout
- * that exists, and a rule that forbids it would be a rule that forbids email.
+ * implementation of a table and it lives in `Components/ui/` — and `ui/Table`
+ * is a **Vue** component. Where there is no Vue, the rule is not asking a screen
+ * to use the library, it is asking it not to have a table, which is a different
+ * and much worse rule.
  *
- * Every other rule still applies to the mail tree, including `copied-control` —
- * a button in an email is still allowed to be exactly one shape.
+ *   - `views/mail/` — Outlook on Windows renders with Word's engine: no
+ *     flexbox, no grid, no `max-width` on a `div`. Nested `<table>` is not a
+ *     hand-rolled control there, it is the only layout that exists, and a rule
+ *     forbidding it would be a rule forbidding email.
+ *   - `views/marketing/` — the marketing site is Blade and mounts no Vue at
+ *     all, deliberately, so that a vertical's copy never lands in the admin SPA
+ *     (REBUILD.md, phase 11). `ui/Table` is therefore unreachable from it by
+ *     construction, not by neglect. Three tables on the surface are genuinely
+ *     tabular figures — the pricing ledger's two columns, the home page's
+ *     recovered-revenue sum, and the trade page's seeded price list — and
+ *     DESIGN.md requires a real `<table>` for exactly that. The alternative
+ *     tried first was a CSS grid inside a `<dl>`, and it was worse in a way
+ *     that is worth recording: with `column-gap` between the label and the
+ *     figure, the total's rule was drawn as two separate borders with a visible
+ *     notch cut out of the middle of it.
+ *
+ * This is the narrower of the two ways to write it. Scoping by medium — "Blade
+ * cannot use a Vue component" — would exempt all of `resources/views/**`,
+ * including the error pages, which have no tables and should keep having none.
+ * The two directories are named so that adding a third is a visible decision.
+ *
+ * Every other rule still applies to both trees, including `copied-control` — a
+ * button in an email, and a button on the front page, are each still allowed to
+ * be exactly one shape.
  */
-const MAIL = 'resources/views/mail/';
+const NO_VUE_TABLE = ['resources/views/mail/', 'resources/views/marketing/'];
 
 const files = [...globSync('resources/js/**/*.vue'), ...globSync('resources/views/**/*.blade.php')]
     .filter((f) => !ALLOWED_DIRS.some((d) => f.startsWith(d)))
     .sort();
 
-const rulesFor = (file) => (file.startsWith(MAIL) ? RULES.filter((r) => r.id !== 'table') : RULES);
+const rulesFor = (file) =>
+    NO_VUE_TABLE.some((dir) => file.startsWith(dir)) ? RULES.filter((r) => r.id !== 'table') : RULES;
 
 /*
  * Prose is not code.

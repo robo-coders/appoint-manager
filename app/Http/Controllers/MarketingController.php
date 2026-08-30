@@ -2,31 +2,37 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\MarketingFigures;
 use Illuminate\View\View;
 
 class MarketingController extends Controller
 {
+    public function __construct(private MarketingFigures $figures) {}
+
     public function home(): View
     {
         return view('marketing.home', $this->meta(
-            'Stop losing money to no-shows',
-            'Take a small deposit when someone books. Keep the diary full. Thirty days free, no card needed.',
+            'One refilled slot covers the month',
+            'A client cancels, your waitlist gets a text, and the hour sells twice. '
+                .$this->figures->monthlyBare().' a month, '.$this->figures->trialDays().' days free, no card.',
         ));
     }
 
     public function pricing(): View
     {
         return view('marketing.pricing', $this->meta(
-            'One plan. £39 a month.',
-            'Or £390 a year. Thirty-day trial with no card. Cancel whenever you like.',
+            'Free is not free. It is billed to your clients.',
+            'One price, '.$this->figures->monthlyBare().' a month, paid by you and not by the people who book with you. '
+                .$this->figures->trialDays().'-day trial, no card.',
         ));
     }
 
     public function dogGrooming(): View
     {
         return view('marketing.dog-grooming', $this->meta(
-            'Stop empty tables on a Saturday',
-            'Dog grooming bookings with a deposit so a no-show does not wipe the morning.',
+            'Dog grooming: Saturday’s cancellation, sold twice',
+            'Grooming software with a waitlist that refills a cancelled slot by text, deposits that '
+                .'hold the hour, and a price list already set up for you.',
         ));
     }
 
@@ -57,7 +63,13 @@ class MarketingController extends Controller
     }
 
     /**
-     * @return array{title: string, description: string, url: string}
+     * The shell's variables, plus the figures every page is allowed to print.
+     *
+     * `figures` goes to all seven pages rather than only the three that use it
+     * today. It is one object with no query behind it, and the alternative is
+     * remembering to add it the first time a legal page needs to name the price.
+     *
+     * @return array{title: string, description: string, url: string, figures: MarketingFigures}
      */
     private function meta(string $title, string $description): array
     {
@@ -65,6 +77,7 @@ class MarketingController extends Controller
             'title' => $title,
             'description' => $description,
             'url' => url()->current(),
+            'figures' => $this->figures,
         ];
     }
 

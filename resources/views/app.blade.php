@@ -27,10 +27,20 @@
         host, and with subdomain routing off every surface shares one host — so
         it returns `App` for the console and this would have been dead code
         locally, in CI, and anywhere `SUBDOMAIN_ROUTING` is not set.
+
+        `data-surface` is the same idea one level up, and it is set on all four
+        surfaces so that the `[data-surface=…]` gate in `tokens.css` is a system
+        rather than something the marketing site does to itself. Neither of the
+        two surfaces this shell serves declares a page frame — both are
+        full-bleed beside `--rail` — so this attribute currently changes nothing
+        about how the app renders, which is deliberate: it is the hook, not a
+        restyle.
     --}}
+    @php($surface = App\Support\Surface::current(request()->getHost(), request()->path()))
     <body
         class="font-sans antialiased"
-        @if (App\Support\Surface::current(request()->getHost(), request()->path()) === App\Support\Surface::Admin) data-density="console" @endif
+        data-surface="{{ $surface->value }}"
+        @if ($surface === App\Support\Surface::Admin) data-density="console" @endif
     >
         @inertia
     </body>

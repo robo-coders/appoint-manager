@@ -58,8 +58,15 @@
         sit in the middle of the viewport rather than at the top of it. See the
         note on `<main>` below for why that mattered.
     --}}
+    {{--
+        `data-surface="book"` names the surface for the `[data-surface=…]` gate in
+        `tokens.css`, set on all four roots so the gate is uniform. This surface
+        declares no page frame there — its column is `--booking-w`, which it has
+        had since phase 5 — so the attribute changes nothing here on purpose.
+    --}}
     <body
         class="flex min-h-screen flex-col bg-paper font-sans text-ink antialiased"
+        data-surface="book"
         data-density="roomy"
         @if($brand) style="--brand: {{ $brand }}" @endif
     >

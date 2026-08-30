@@ -156,7 +156,7 @@ for (const mirror of MIRRORS) {
 }
 
 /*
- * The mockups in public/mockups/ carry a copy of the token block, because they
+ * The mockups in .design/mockups/ carry a copy of the token block, because they
  * are standalone files you open straight from disk with no build step. That
  * copy is the same hazard the brand presets were: a second set of values that
  * nobody notices has gone stale.
@@ -166,8 +166,21 @@ for (const mirror of MIRRORS) {
  * property that makes them useful as a reference — and a generated file that is
  * committed drifts the moment somebody edits it by hand anyway. A gate keeps
  * them static, openable, and honest.
+ *
+ * **This glob had stopped matching anything at all.** It was
+ * `public/mockups/*.html`, which was already non-recursive — DECISIONS.md
+ * recorded that the marketing explorations in `public/mockups/directions/` were
+ * therefore never checked — and then the mockups moved out of `public/`
+ * entirely, to `.design/`. From that move until now the gate globbed a
+ * directory that does not exist, found zero files, and printed "0 mockup token
+ * blocks verified" in the middle of a success message. A gate that reports
+ * clean over nothing is worse than no gate, because it is quoted.
+ *
+ * `**` rather than `*`, so a mockup in a subfolder is checked where the old
+ * glob would have skipped it. All five files pass as they stand; nothing in
+ * them was edited to make that true.
  */
-const MOCKUPS = globSync('public/mockups/*.html');
+const MOCKUPS = globSync('.design/mockups/**/*.html');
 
 // Whitespace and a leading zero are formatting, not value. The mockups are
 // written condensed; tokens.css is not.

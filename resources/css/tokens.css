@@ -301,6 +301,49 @@
     --pad-x: 8px;
 }
 
+/*
+ * ---- Surface chrome ------------------------------------------------------
+ *
+ * The page frame, gated on `data-surface`. Every other surface's chrome is
+ * already a named token — `--rail` for the operator app, `--booking-w` for
+ * public booking, `--auth-col` for auth — and marketing's was not: the
+ * approved direction declared `--page`, `--gutter` and `--arg` in a block of
+ * its own inside the mockup, which is the one place a layout width is not
+ * allowed to live. They are here now, beside the others.
+ *
+ * `data-surface` is set once on each of the four surfaces' roots, the same way
+ * `data-density` is, so the gate is a real system rather than a marketing
+ * private. See `marketing/layout.blade.php`, `public-shell.blade.php` and
+ * `app.blade.php`, which covers both the operator app and the console.
+ *
+ * NOT in `:root`, and that is the same decision as `[data-scheme='mail-dark']`
+ * above: `check:design` asserts that every mockup's `:root` carries every token
+ * `:root` has, and a mockup of the dashboard has no business restating the
+ * marketing site's page width.
+ *
+ * Only marketing declares values. `book` is a 440px column (`--booking-w`),
+ * and the operator app and the console are full-bleed beside `--rail` — none of
+ * the three has a centred page frame, and a token with no consumer is a dead
+ * token. Phase 2 deleted five components for exactly that. If a second surface
+ * ever grows one, it declares it here.
+ *
+ * --page 1152 is a multiple of 16 and on the 4px grid, and leaves a 40px margin
+ * either side at 1280.
+ * --arg bounds the narrow column the argument is set in, so a 34px headline
+ * wraps to two or three lines and reads as a mass of type rather than a banner.
+ */
+[data-surface='marketing'] {
+    --page: 1152px;
+    --gutter: var(--space-4);
+    --arg: 19ch;
+}
+
+@media (min-width: 768px) {
+    [data-surface='marketing'] {
+        --gutter: var(--space-8);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     :root {
         --duration-fast: 0ms;

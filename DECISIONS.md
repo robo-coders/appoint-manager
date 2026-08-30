@@ -2161,3 +2161,158 @@ comparison that cannot see the change will not fail.
 - **`.DS_Store` is not in `.gitignore`.** `public/mockups/.DS_Store` and
   `public/mockups/directions/.DS_Store` are both untracked, so any
   `git add public/mockups` commits them.
+
+# Phase 11 — the marketing site
+
+## The homepage argument, and why the ledger moved off it
+
+Direction A led with a ledger: a competitor's per-booking fee against our £39.
+It is a good table and it loses the sale. The fee only exceeds £39 above roughly
+32 appointments a month, and the groomer this product is for does twenty — so
+she reads a table we built, does the arithmetic we handed her, and correctly
+concludes we are the more expensive option. A page that supplies the calculator
+for its own rebuttal is worse than a page with no table on it.
+
+So the homepage leads with recovered revenue instead:
+
+> One cancelled slot refilled from the waitlist covers the month.
+
+Three things recommend it. It is true at twenty appointments and at eighty,
+because volume is not a term in it. It rests on our own number and a price the
+groomer sets herself, so no competitor can invalidate it by changing a setting.
+And it is the thing the free tools do not do — a free diary records the
+cancellation; it does not sell the hour again.
+
+The sum is built to be substituted into, not read off. `refill-sum.blade.php`
+states one slot at the seeded £45, subtracts £39, and shows £6 left; the
+footnote says to put your own slot price in the top line and that anything at or
+above £39 covers the month. No monthly volume appears in the claim or the
+working.
+
+## The ledger, on /pricing, as a positioning argument
+
+It answers one question — "why do you charge me when they are free" — and the
+answer is not a number:
+
+> Their software is paid for by your clients. Ours is paid for by you.
+
+That survives the competitor halving their fee, which the cost comparison does
+not. The final row of the table is `Who funds it → your clients | you`, in
+words rather than figures, because that is the row the argument actually turns
+on. The £1.25 is an illustration of the mechanism and the copy says so; if it
+changed to £0.60 tomorrow the page would still read.
+
+The competitor is not named anywhere on the surface, and `MarketingNavTest`
+asserts it on all seven pages rather than only the one with the table.
+
+## Every figure on the surface is read from the repo
+
+`app/Support/MarketingFigures.php`. £39 came from `config('billing.monthly_price_pence')`,
+30 days from `trial_days`, and £45, £10 and 60 minutes from the
+`Full groom — medium dog` row of `config('verticals.php')` — the same row
+`demo:seed` gives a new tenant. The £6 surplus is `slot - monthly`, computed,
+not typed. The waitlist's "5 people" and "30 minutes" are
+`config('booking.waitlist_offer_batch')` and `waitlist_offer_minutes`, the same
+two values `WaitlistOfferer` reads when it actually sends the texts.
+
+This clears the open item recorded twice in phase 10 — `marketing/pricing.blade.php`
+hardcoding `£39` and `£390` alongside `BillingController::index` — for the two
+marketing pages. `BillingController::index` still hardcodes `'£39'` and is still
+recorded below.
+
+## Open item — the seeded price of a medium full groom
+
+`config/verticals.php` seeds `Full groom — medium dog` at `4500` (£45.00).
+
+- **£45.00** — provenance: this repo, `config/verticals.php`, seeded to every
+  new tenant by `demo:seed` and `TenantSeeder`. Verifiable by reading the file.
+- **~£55** — provenance: stated as the 2026 UK average during phase 11 briefing.
+  Not sourced. No survey, dataset or sample named. **UNVERIFIED**; what would
+  verify it is a named 2026 UK grooming price survey with a sample size, or a
+  count of published price lists we gathered ourselves.
+
+Not changed in this phase, deliberately. It is the default price list every new
+tenant starts from, so moving it is a product decision about what a groomer sees
+on her first day, not a marketing one about what reads well — and the marketing
+argument does not need it. The pages use £45 and never call it a market average;
+`dog-grooming.blade.php` prints it as "the price list we set you up with", which
+is exactly what it is.
+
+If the £55 figure is ever sourced, the change is one integer in
+`config/verticals.php` and the marketing pages follow automatically, because
+none of them holds the number.
+
+## `--page`, `--gutter` and `--arg` are in tokens.css now
+
+Direction A declared them in a `[data-surface='marketing']` block inside the
+mockup, which is the one place a layout width may not live. They are in
+`tokens.css` beside the other three surfaces' chrome — `--rail`, `--booking-w`,
+`--auth-col` — gated on `data-surface`, which is now set on all four surface
+roots the same way `data-density` is.
+
+**`--clock` was not promoted.** The brief lists four tokens; direction A
+declares three. `--clock` is in `direction-b-thirty-seconds.html`, the rejected
+file, where it sizes a countdown this site does not have. Promoting it would
+have created a token with no consumer, which is what phase 2 deleted five
+components for.
+
+**Only marketing declares values.** `book` is a 440px column, and the operator
+app and console are full-bleed beside the rail; none has a centred page frame.
+The attribute is on all four roots so the gate is a real mechanism rather than a
+marketing private, but inventing `--page` for three surfaces that would not read
+it is the same dead-token mistake. If a second surface grows a page frame it
+declares it there.
+
+Not in `:root`, and for the reason `[data-scheme='mail-dark']` is not:
+`check:design` asserts every mockup's `:root` carries every token `:root` has,
+and a mockup of the diary has no business restating the marketing site's page
+width.
+
+Nothing shifted. Zero e2e baselines changed — `data-surface` is inert on the
+three surfaces where no rule reads it, and no app CSS was touched.
+
+## Found broken, left alone
+
+- **`BillingController::index` still hardcodes `'£39'`.** Carried from phase 8
+  and phase 10. The marketing surface no longer does, so the coincidence is
+  down from three places to two. Reading `config('billing.monthly_price_pence')`
+  there is a two-line change in a controller outside this phase's scope.
+- **`config/billing.php` still configures an annual plan.**
+  `yearly_price_pence` is `39000` and `STRIPE_PRICE_YEARLY` is a live config key,
+  while `/pricing` now sells one monthly price and `MarketingNavTest` asserts no
+  annual plan appears. The billing code still supports something the site does
+  not offer. Whether that is a plan being held back or dead config is a product
+  question; either way the two disagree and nothing says so.
+- **`customers.email` is still NOT NULL and unique per tenant.** Carried from
+  phase 8. `/dog-grooming` describes a client list keyed on breed, size, coat
+  and temperament and cannot mention that a client without an email cannot be
+  stored at all.
+- **`.DS_Store` is listed twice in `.gitignore`.** Harmless; both lines say the
+  same thing. The phase 10 entry saying `.DS_Store` is *not* in `.gitignore` has
+  since been fixed by somebody, and the fix was applied twice.
+
+## Fixed in this phase, outside the pages themselves
+
+- **`check:design` was checking zero mockups.** The phase 10 entry above records
+  the glob as `public/mockups/*.html` and non-recursive. The mockups have since
+  moved to `.design/mockups/`, so the glob matched *nothing at all* and the gate
+  that keeps a mockup's token block honest had gone silently green. Repointed to
+  `.design/mockups/**/*.html`, which both fixes the path and makes it recursive.
+  All five mockups were verified clean against `tokens.css` before the change
+  and the gate reports five blocks checked after it. This was already scoped as
+  safe by the phase 10 entry, and leaving it broken would have meant promoting
+  three tokens with the only check on that promotion switched off.
+- **The `table` rule no longer applies to `resources/views/marketing/`.** Same
+  scope decision the mail tree already carries, for the same reason: `ui/Table`
+  is a Vue component and this surface is deliberately Blade with no JavaScript.
+  Three tables on it are genuinely tabular — the refill sum, the ledger and the
+  grooming price list — and a rule forbidding `<table>` there is a rule
+  forbidding a table of prices. Every other rule still applies.
+- **The marketing footer floated mid-page on short documents.** `/about`,
+  `/contact`, `/privacy` and `/terms` are 370px of content, so the footer sat
+  where the content stopped with 350px of bare paper underneath it. The body is
+  a full-height flex column now with `<main>` taking the slack, which is what
+  `public-shell.blade.php` already did. Found by looking at the 900px-tall
+  screenshots, not by any assertion — the heights table showed four pages at
+  exactly 900 at all five widths, which is what "shorter than the viewport"
+  looks like in a number.

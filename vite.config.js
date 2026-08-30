@@ -50,6 +50,12 @@ export default defineConfig(({ mode }) => {
             laravel({
                 input: [
                     'resources/css/app.css',
+                    /*
+                     * The marketing site is Blade with no JavaScript entry of
+                     * its own, so its stylesheet is named here rather than
+                     * imported from a `.ts` file the way `booking.css` is.
+                     */
+                    'resources/css/marketing.css',
                     'resources/js/app.ts',
                     'resources/js/booking.ts',
                     'resources/js/manage.ts',

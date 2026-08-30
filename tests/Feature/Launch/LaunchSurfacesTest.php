@@ -32,12 +32,22 @@ it('gates super admin and logs impersonation', function () {
 });
 
 it('renders marketing pages without mentioning other verticals on dog grooming', function () {
-    $this->get('/')->assertOk()->assertSee('Stop losing money to no-shows');
+    // Headlines updated in phase 11: the home page leads with recovered revenue
+    // rather than no-shows, and the ledger it used to lead with is on /pricing.
+    // The point of this test is the vertical isolation below, not the wording.
+    $this->get('/')->assertOk()->assertSee('One refilled slot covers the month.');
     $this->get('/pricing')->assertOk()->assertSee('£39');
-    $this->get('/dog-grooming')
-        ->assertOk()
-        ->assertSee('Stop empty tables on a Saturday')
-        ->assertDontSee('dentist');
+
+    $grooming = $this->get('/dog-grooming')->assertOk();
+
+    $grooming->assertSee('cancellation, sold twice');
+
+    // The reason this surface is Blade and not Vue: a vertical's copy must not
+    // leak. Every other trade we might add, asserted rather than only dentists.
+    foreach (['dentist', 'physio', 'barber', 'tattoo', 'clinic', 'salon chair'] as $elsewhere) {
+        $grooming->assertDontSee($elsewhere);
+    }
+
     $this->get('/sitemap.xml')->assertOk();
     $this->get('/robots.txt')->assertOk();
     $this->get('/health')->assertOk();

@@ -1,5 +1,28 @@
+{{--
+    The marketing shell.
+
+    Converted from `.design/mockups/directions/direction-a-ledger.html`. What
+    the mockup holds in one file, this splits three ways: this shell, the
+    masthead and the footer. The split follows the seam the mockup itself draws
+    — everything outside `<main>` is chrome that every page carries identically,
+    and everything inside it is the page's argument.
+
+    `data-surface="marketing"` is the whole reason `--page`, `--gutter` and
+    `--arg` could move into `tokens.css`. It is set here, once, on the surface's
+    root, which is the same rule `data-density` follows.
+
+    No `data-density`. The three densities exist so one component library can
+    serve three surfaces at three sizes; this surface uses none of that library,
+    so setting one would be a value nothing reads.
+
+    The body is a full-height flex column with `<main>` taking the slack, which
+    is what `public-shell.blade.php` does and for the same reason: /about is
+    370px of content, and without it the footer sits where the content stops and
+    350px of bare paper hangs underneath it. Verified at five widths — the four
+    prose pages were the ones that showed it.
+--}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,56 +34,20 @@
     <meta property="og:type" content="website">
     <link rel="canonical" href="{{ $url }}">
     @include('partials.head')
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/marketing.css'])
     @if (config('services.plausible.domain'))
         <script defer data-domain="{{ config('services.plausible.domain') }}" src="https://plausible.io/js/script.js"></script>
     @endif
 </head>
-<body class="min-h-screen bg-paper font-sans text-14 text-ink antialiased">
-    <header class="border-b border-rule">
-        <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
-            <a
-                href="{{ route('marketing.home') }}"
-                class="font-display text-17 transition duration-fast ease-product hover:text-ink-2"
-            >{{ config('app.name') }}</a>
-            <nav class="flex items-center gap-6 text-13">
-                <a
-                    href="{{ route('marketing.pricing') }}"
-                    class="text-ink-2 transition duration-fast ease-product hover:text-ink"
-                >Pricing</a>
-                <a
-                    href="{{ route('marketing.dog-grooming') }}"
-                    class="text-ink-2 transition duration-fast ease-product hover:text-ink"
-                >Dog grooming</a>
-                {{--
-                    A returning owner needs a door too. Deliberately quieter than
-                    the trial link: same size, muted until hover, no underline.
+<body data-surface="marketing" class="flex min-h-screen flex-col bg-paper font-sans text-15 text-ink antialiased">
+    <a class="skip-link" href="#main">Skip to content</a>
 
-                    Kept identical for guests and signed-in visitors on purpose —
-                    these pages are served with `cache.headers:public`, so a
-                    shared cache could hand one visitor's header to another.
-                --}}
-                <a
-                    href="{{ app_url('login') }}"
-                    class="text-ink-2 transition duration-fast ease-product hover:text-ink"
-                >Log in</a>
-                <a
-                    href="{{ app_url('register') }}"
-                    class="underline decoration-rule underline-offset-4 transition duration-fast ease-product hover:decoration-ink"
-                >Start free trial</a>
-            </nav>
-        </div>
-    </header>
-    <main>
+    @include('marketing.partials.masthead')
+
+    <main id="main" class="flex-1">
         @yield('content')
     </main>
-    <footer class="mt-16 border-t border-rule">
-        <div class="mx-auto flex max-w-5xl flex-wrap gap-6 px-4 py-8 text-13 text-ink-2">
-            <a href="{{ route('marketing.about') }}" class="transition duration-fast ease-product hover:text-ink">About</a>
-            <a href="{{ route('marketing.contact') }}" class="transition duration-fast ease-product hover:text-ink">Contact</a>
-            <a href="{{ route('marketing.privacy') }}" class="transition duration-fast ease-product hover:text-ink">Privacy</a>
-            <a href="{{ route('marketing.terms') }}" class="transition duration-fast ease-product hover:text-ink">Terms</a>
-        </div>
-    </footer>
+
+    @include('marketing.partials.footer')
 </body>
 </html>
