@@ -103,13 +103,81 @@ served from `APP_URL` on the path prefix it used before the split:
 | public booking | `/book/{slug}` |
 | super admin | `/admin` |
 
-`php artisan serve` and `php artisan test` work with no further setup. This is
-the mode CI runs in.
+`php artisan serve` works with no further setup. `php artisan test` needs the
+test database below. This is the mode CI runs in.
 
 **The suite runs in parallel.** `composer test` and `npm run test:php` both pass
 `--parallel`; on eight cores that is 5.3s against 14.8s serial, and the gap only
 widens. Serial (`vendor/bin/pest`) still works and is the better mode for
 reading a failure, because parallel interleaves output from eight workers.
+Parallel workers create `appoint_manager_test_test_1`, `_2`, … themselves.
+
+---
+
+## Test database
+
+The Pest suite is MySQL 8, same as local and production. It is **not** SQLite
+and it is **not** the development database. `phpunit.xml` forces:
+
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=appoint_manager_test
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+`force="true"` so a shell that exported `DB_DATABASE=appoint_manager` cannot
+point `migrate:fresh` at the salon you are working on.
+
+### Fresh clone (Docker)
+
+`brew` is not a path this project documents — it is broken on at least one
+machine here. Docker is.
+
+```bash
+docker compose up -d
+./scripts/test-setup.sh
+./vendor/bin/pest
+```
+
+`docker compose up -d` starts MySQL 8.4 and creates three empty databases on
+first boot (`docker/mysql/init.sql`): `appoint_manager`, `appoint_manager_test`,
+`appoint_manager_e2e`. `scripts/test-setup.sh` is then a no-op on the CREATE
+and runs `php artisan migrate` against `appoint_manager_test` so a failed first
+test is a setup problem, not a red herring mid-suite. RefreshDatabase will
+`migrate:fresh` on its own after that.
+
+If port 3306 is already taken, change the left-hand port in `docker-compose.yml`
+and the `DB_PORT` values in `.env` **and** `phpunit.xml`. phpunit.xml wins.
+
+### Already running MySQL
+
+```bash
+mysqladmin -h 127.0.0.1 -P 3306 -u root ping
+./scripts/test-setup.sh
+./vendor/bin/pest
+```
+
+`scripts/test-setup.sh` is:
+
+```bash
+mysql -h 127.0.0.1 -P 3306 -u root \
+  -e "CREATE DATABASE IF NOT EXISTS appoint_manager_test
+      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+DB_CONNECTION=mysql DB_DATABASE=appoint_manager_test \
+  php artisan migrate --force
+```
+
+Override host / user / password with `TEST_DB_HOST`, `TEST_DB_USERNAME`,
+`TEST_DB_PASSWORD` if yours are not root / empty. phpunit.xml still has to
+agree — it forces those three values.
+
+Do not run the suite against `appoint_manager`. Do not run it against
+`appoint_manager_e2e`. Those are the local salon and the Playwright seed.
+
+---
 
 The two modes have to agree, and they did not used to: a helper declared in one
 test file and called from another exists only after that file is loaded, which

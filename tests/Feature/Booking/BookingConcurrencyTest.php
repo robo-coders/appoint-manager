@@ -12,12 +12,12 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Booking\BookingService;
 use Carbon\CarbonImmutable;
+use Tests\Support\Concurrent;
 
 function bookableSalon(): array
 {
     $tenant = Tenant::factory()->create([
         'timezone' => 'Europe/London',
-        'slug' => 'willow-street-grooming',
     ]);
     $staff = User::factory()->create([
         'tenant_id' => $tenant->id,
@@ -48,6 +48,10 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 });
 
+afterEach(function () {
+    Concurrent::afterEach();
+});
+
 it('creates an unconnected online booking as confirmed with no deposit', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->id]);
@@ -69,44 +73,50 @@ it('creates an unconnected online booking as confirmed with no deposit', functio
         ->and($booking->stripe_payment_intent_id)->toBeNull();
 });
 
-it('rejects a second booking for the same slot after a competing insert inside the lock', function () {
+/*
+ * These two used to be sequential. They now fork two PHP processes with their
+ * own PDO connections and release them from a barrier. That is what found the
+ * deadlock: `lockForUpdate()` on an empty bookings window gap-locks the index,
+ * both transactions then INSERT into the same gap, and InnoDB kills one with
+ * SQLSTATE 40001. The database ends with one row — the lock works — but the
+ * loser sees a 500, not a 409. Left failing on purpose. See DECISIONS.md.
+ */
+it('lets exactly one of two concurrent transactions take the same slot', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
-    $customer = Customer::factory()->create(['tenant_id' => $tenant->id]);
+    $first = Customer::factory()->create(['tenant_id' => $tenant->id]);
+    $second = Customer::factory()->create(['tenant_id' => $tenant->id]);
     $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
 
-    $bookings = app(BookingService::class)->withAfterLock(function () use ($tenant, $staff, $service, $startsAt) {
-        Booking::factory()->create([
-            'tenant_id' => $tenant->id,
-            'staff_id' => $staff->id,
-            'service_id' => $service->id,
-            'customer_id' => Customer::factory()->create(['tenant_id' => $tenant->id])->id,
-            'starts_at' => $startsAt,
-            'ends_at' => $startsAt->addHour(),
-            'status' => BookingStatus::Confirmed,
-            'source' => BookingSource::Manual,
-        ]);
-    });
-
-    expect(fn () => $bookings->create(
-        $tenant,
-        $service,
-        $staff,
-        $customer,
-        $startsAt,
-        BookingSource::Online,
-    ))->toThrow(SlotUnavailableException::class);
-});
-
-it('returns 409 when two public requests try to take the same slot', function () {
-    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
-    $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
-
-    $payload = [
+    $job = [
+        'type' => 'book',
+        'tenant_id' => $tenant->id,
         'service_id' => $service->id,
         'staff_id' => $staff->id,
         'starts_at' => $startsAt->toIso8601String(),
-        'name' => 'Alex Reed',
-        'email' => 'alex@example.com',
+    ];
+
+    $results = Concurrent::withoutWrappingTransaction(fn () => Concurrent::run([
+        [...$job, 'customer_id' => $first->id],
+        [...$job, 'customer_id' => $second->id],
+    ]));
+
+    $wins = array_values(array_filter($results, fn (array $r) => ($r['ok'] ?? false) === true));
+    $losses = array_values(array_filter($results, fn (array $r) => ($r['error'] ?? null) === SlotUnavailableException::class));
+    $bookings = Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
+
+    expect($wins)->toHaveCount(1, 'workers: '.json_encode($results))
+        ->and($losses)->toHaveCount(1, 'workers: '.json_encode($results))
+        ->and($bookings)->toBe(1);
+});
+
+it('returns 409 to exactly one of two concurrent public requests for the same slot', function () {
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
+    $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
+
+    $base = [
+        'service_id' => $service->id,
+        'staff_id' => $staff->id,
+        'starts_at' => $startsAt->toIso8601String(),
         'phone' => '07700900000',
         'subject_name' => 'Willow',
         'subject_attributes' => [
@@ -115,17 +125,16 @@ it('returns 409 when two public requests try to take the same slot', function ()
         ],
     ];
 
-    $this->postJson(route('public.booking.store', $tenant->slug), $payload)
-        ->assertCreated()
-        ->assertJsonPath('booking.status', 'confirmed')
-        ->assertJsonPath('booking.deposit_status', 'none')
-        ->assertJsonPath('payment', null);
+    $uri = route('public.booking.store', $tenant->slug, absolute: false);
 
-    $this->postJson(route('public.booking.store', $tenant->slug), [
-        ...$payload,
-        'email' => 'other@example.com',
-        'name' => 'Jamie Cole',
-    ])->assertStatus(409);
+    $results = Concurrent::withoutWrappingTransaction(fn () => Concurrent::run([
+        ['type' => 'http', 'method' => 'POST', 'uri' => $uri, 'payload' => [...$base, 'name' => 'Alex Reed', 'email' => 'alex@example.com']],
+        ['type' => 'http', 'method' => 'POST', 'uri' => $uri, 'payload' => [...$base, 'name' => 'Jamie Cole', 'email' => 'other@example.com']],
+    ]));
 
-    expect(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
+    $statuses = array_column($results, 'status');
+    sort($statuses);
+
+    expect($statuses)->toBe([201, 409], 'workers: '.json_encode($results))
+        ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
 });

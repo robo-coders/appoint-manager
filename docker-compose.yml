@@ -1,0 +1,49 @@
+# Local MySQL 8 for a fresh clone.
+#
+# This machine's brew is pointed at a /opt/homebrew that does not exist, so
+# `brew install mysql` is not a path anybody can follow. Docker is. The official
+# image is MySQL 8.4 (current 8 LTS), which is what production and the test
+# suite both target — `lockForUpdate()`, FK cascades and CSRF all depend on it.
+#
+# Three databases, created by docker/mysql/init.sql on first boot:
+#
+#   appoint_manager       — local development (matches .env.example)
+#   appoint_manager_test  — the Pest suite (matches phpunit.xml)
+#   appoint_manager_e2e   — the Playwright suite (matches scripts/e2e-setup.sh)
+#
+# Root / empty password matches .env.example and phpunit.xml. Do not use this
+# compose file as a production shape.
+#
+#   docker compose up -d
+#   ./scripts/test-setup.sh   # no-op if the databases already exist
+#   ./vendor/bin/pest
+#
+# If port 3306 is already taken by a local mysqld, either stop that daemon or
+# change the left-hand port below and set DB_PORT in .env and phpunit.xml to
+# match. phpunit.xml forces its own values, so a .env-only change is not enough.
+
+services:
+    mysql:
+        image: mysql:8.4
+        container_name: appoint-manager-mysql
+        restart: unless-stopped
+        ports:
+            - '3306:3306'
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+            MYSQL_ROOT_HOST: '%'
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            - --default-authentication-plugin=caching_sha2_password
+        volumes:
+            - appoint-manager-mysql:/var/lib/mysql
+            - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot']
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+volumes:
+    appoint-manager-mysql:

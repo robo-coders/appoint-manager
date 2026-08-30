@@ -23,10 +23,27 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <!--
+            The suite is MySQL, same as local and production. SQLite made
+            lockForUpdate() a no-op, hid FK cascade behaviour, and short-
+            circuited CSRF. force="true" so a shell that exported
+            DB_DATABASE=appoint_manager cannot point the suite at the
+            development database — migrate:fresh would wipe it.
+        -->
+        <env name="DB_CONNECTION" value="mysql" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1" force="true"/>
+        <env name="DB_PORT" value="3306" force="true"/>
+        <env name="DB_DATABASE" value="appoint_manager_test" force="true"/>
+        <env name="DB_USERNAME" value="root" force="true"/>
+        <env name="DB_PASSWORD" value="" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!--
+            Jobs still run inside the HTTP request. Changing this is a
+            separate task — see DECISIONS.md, phase 11 follow-up. Do not
+            silently flip it: every notification test currently asserts
+            side effects that only happen because the job ran inline.
+        -->
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

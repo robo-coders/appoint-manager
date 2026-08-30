@@ -15,6 +15,7 @@ use App\Models\WaitlistEntry;
 use App\Services\Booking\BookingService;
 use App\Services\Waitlist\WaitlistOfferer;
 use Carbon\CarbonImmutable;
+use Tests\Support\Concurrent;
 
 function waitlistSalon(): array
 {
@@ -62,6 +63,10 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 });
 
+afterEach(function () {
+    Concurrent::afterEach();
+});
+
 it('lets exactly one of two simultaneous claims win and returns 409 to the other', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = waitlistSalon();
     $starts = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
@@ -89,12 +94,24 @@ it('lets exactly one of two simultaneous claims win and returns 409 to the other
         'expires_at' => now()->addMinutes(30),
     ]);
 
-    $this->postJson(route('offer.claim', $first->token))->assertOk();
-    $this->postJson(route('offer.claim', $second->token))->assertStatus(409);
+    $results = Concurrent::withoutWrappingTransaction(fn () => Concurrent::run([
+        ['type' => 'http', 'method' => 'POST', 'uri' => route('offer.claim', $first->token, absolute: false), 'payload' => []],
+        ['type' => 'http', 'method' => 'POST', 'uri' => route('offer.claim', $second->token, absolute: false), 'payload' => []],
+    ]));
 
-    expect(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1)
-        ->and($first->fresh()->status)->toBe(SlotOfferStatus::Claimed)
-        ->and($second->fresh()->status)->toBe(SlotOfferStatus::Superseded);
+    $statuses = array_column($results, 'status');
+    sort($statuses);
+
+    expect($statuses)->toBe([200, 409], 'workers: '.json_encode($results))
+        ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
+
+    $states = [
+        $first->fresh()->status,
+        $second->fresh()->status,
+    ];
+
+    expect($states)->toContain(SlotOfferStatus::Claimed)
+        ->and($states)->toContain(SlotOfferStatus::Superseded);
 });
 
 it('expires sibling offers when one is claimed', function () {

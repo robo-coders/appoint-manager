@@ -2316,3 +2316,94 @@ three surfaces where no rule reads it, and no app CSS was touched.
   screenshots, not by any assertion — the heights table showed four pages at
   exactly 900 at all five widths, which is what "shorter than the viewport"
   looks like in a number.
+
+# The test suite is MySQL now
+
+Local, test and production are all MySQL. `phpunit.xml` no longer declares
+`DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:`. SQLite made three things
+untestable:
+
+- `lockForUpdate()` is a documented no-op, so no test exercised the booking
+  lock. Two customers could double-book and the suite stayed green.
+- FK cascades behave differently, so nothing could catch a profile deletion
+  wiping bookings.
+- `VerifyCsrfToken` short-circuits under `runningUnitTests()`, so CSRF was
+  never verified. That last one is still true — `APP_ENV=testing` still skips
+  the token check. Switching the engine does not change it. Recorded, not
+  fixed.
+
+The test database is `appoint_manager_test`, forced in `phpunit.xml` so a
+developer with `DB_DATABASE=appoint_manager` in their shell cannot
+`migrate:fresh` the salon they are working on. How to bring it up is in
+`DEPLOY.md`. Parallel Pest workers then create `appoint_manager_test_test_N`
+via Laravel's ParallelTesting.
+
+`QUEUE_CONNECTION=sync` is unchanged and that is a separate task. Every
+notification test currently asserts side effects that only happen because the
+job ran inside the HTTP request. Flipping it to `database` or `redis` without
+rewriting those tests would turn a hundred greens red for the wrong reason,
+and would not by itself catch fail-open scoping in workers — that needs a
+real worker process with no tenant context, which is AUDIT C9 and is already
+covered in-process by `ScopeFailClosedTest`. Do not silently change it.
+
+## Found broken, left alone
+
+The four items already recorded under phase 11 (hardcoded `£39` in
+`BillingController::index`, the dead annual plan in `config/billing.php`,
+`customers.email` NOT NULL, `.DS_Store` listed twice in `.gitignore`) stay
+recorded and untouched.
+
+- **The booking lock deadlocks instead of returning 409.**
+  `BookingService::lockStaffWindow()` does `SELECT … FOR UPDATE` on the
+  overlapping bookings window. When the window is empty — the first booking
+  of the day — InnoDB gap-locks the index. Two concurrent transactions both
+  take that gap lock, both try to INSERT into the same gap, and InnoDB kills
+  one with `SQLSTATE 40001` (Deadlock found when trying to get lock). The
+  database ends with one row, so the lock works. The loser sees a 500, not a
+  409. The three rewritten concurrency tests assert the contract (exactly one
+  winner, loser gets `SlotUnavailableException` / 409) and fail on the
+  deadlock. That is the suite telling the truth. The one-line bandage is
+  `DB::transaction($callback, 5)` so Laravel retries and the second attempt
+  throws 409; the real fix is to lock a row that exists (the staff user)
+  rather than a window that does not. Neither is done here.
+- **`brand_colour` is `varchar(20)` and MySQL enforces it.**
+  `TenantAccentTest` writes `x); background:url(//evil` past the validator to
+  prove the page will not emit it. SQLite stored the 27 characters. MySQL
+  rejects the UPDATE with `SQLSTATE 22001`. The test is written against
+  SQLite's ignored length. The payload cannot exist on MySQL, so the
+  render-path assertion is unreachable. Assertion not changed.
+- **A `kestrel` database is still on this machine.** The rename recorded
+  `DROP DATABASE kestrel` as the last step of moving tables. It was never
+  dropped. Not touched.
+- **This machine is MySQL 9.5.0, not 8.** `docker-compose.yml` pins
+  `mysql:8.4` (current 8 LTS) for a fresh clone. Production is specified as
+  MySQL 8. The suite ran against 9.5 because Docker is not installed here and
+  brew is pointed at a `/opt/homebrew` that does not exist. InnoDB gap locks
+  and `lockForUpdate()` behave the same; this is recorded so nobody thinks
+  the suite proved 8.
+- **`composer.json` `post-create-project-cmd` still touches
+  `database/database.sqlite`.** Laravel's default. The product does not use
+  that file. Left alone.
+- **CSRF is still never verified in the suite.** `VerifyCsrfToken`
+  short-circuits when `APP_ENV=testing`. Switching the engine did not change
+  that. Separate task.
+
+## What the concurrency tests now do
+
+`tests/Support/Concurrent` commits RefreshDatabase's wrapping transaction,
+forks two PHP processes (each with its own PDO, pointed at the same
+database the parent is using — including a ParallelTesting suffix), releases
+them from a barrier, and re-opens a transaction so the trait's rollback
+still has something to roll back.
+
+Fail-first, with `lockForUpdate()` removed from `lockStaffWindow`:
+
+- two transactions: both returned `ok: true` with `booking_id` 1 and 2
+- two public requests: `[201, 201]`
+- two waitlist claims: `[200, 200]`
+
+Restored, the same three fail on deadlock 500 instead of double-booking.
+`TenantIsolationTest` could not fail-first: `runningUnitTests()` is no
+longer in `TenantScope`. The test now flips `env` to `local` so a
+reintroduced console exemption cannot hide behind `APP_ENV=testing`.
+`ScopeFailClosedTest` already covered this more thoroughly.
