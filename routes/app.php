@@ -76,6 +76,7 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::post('/billing/top-up', [BillingController::class, 'topUp'])->name('billing.top-up');
     Route::post('/billing/pause', [BillingController::class, 'pause'])->name('billing.pause');
     Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
 

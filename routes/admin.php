@@ -32,6 +32,13 @@ Route::middleware(['auth', 'super-admin'])->group(function (): void {
     Route::get('/failures', [SuperAdminController::class, 'failures'])->name('super-admin.failures');
     Route::post('/tenants/{tenant}/impersonate', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
     Route::post('/tenants/{tenant}/extend-trial', [SuperAdminController::class, 'extendTrial'])->name('super-admin.extend-trial');
+    Route::post('/tenants/{tenant}/trial', [SuperAdminController::class, 'setTrial'])->name('super-admin.trial');
+    Route::post('/tenants/{tenant}/sms/allowance', [SuperAdminController::class, 'setAllowance'])->name('super-admin.sms.allowance');
+    Route::post('/tenants/{tenant}/sms/ceiling', [SuperAdminController::class, 'setCeiling'])->name('super-admin.sms.ceiling');
+    Route::post('/tenants/{tenant}/sms/kill', [SuperAdminController::class, 'killSms'])->name('super-admin.sms.kill');
+    Route::post('/tenants/{tenant}/sms/resume', [SuperAdminController::class, 'resumeSms'])->name('super-admin.sms.resume');
+    Route::post('/tenants/{tenant}/sms/grant', [SuperAdminController::class, 'grantSms'])->name('super-admin.sms.grant');
+    Route::post('/tenants/{tenant}/price', [SuperAdminController::class, 'setPrice'])->name('super-admin.price');
     Route::post('/tenants/{tenant}/comp', [SuperAdminController::class, 'comp'])->name('super-admin.comp');
     Route::post('/tenants/{tenant}/flags', [SuperAdminController::class, 'flags'])->name('super-admin.flags');
     Route::post('/tenants/{tenant}/go-live', [SuperAdminController::class, 'goLive'])->name('super-admin.go-live');

@@ -284,6 +284,35 @@ onUnmounted(() => {
                 <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
             </div>
 
+            <div
+                v-if="page.props.sms?.stopped === 'killed'"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
+            >
+                SMS is switched off for this salon. Email still goes out, and you can still ring people.
+            </div>
+            <div
+                v-else-if="page.props.sms?.stopped === 'ceiling'"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
+            >
+                SMS has reached this salon's send limit. Email still goes out. The overdue list still works.
+            </div>
+            <div
+                v-else-if="page.props.sms?.stopped === 'allowance'"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
+            >
+                This cycle’s texts are used up. Email still goes out.
+                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">
+                    Buy {{ page.props.sms.topup_size }} more for {{ page.props.sms.topup_price }}
+                </Link>
+            </div>
+            <div
+                v-else-if="page.props.sms?.warning === 80"
+                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
+            >
+                You have used {{ page.props.sms.used }} of {{ page.props.sms.included }} texts this cycle.
+                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
+            </div>
+
             <main class="px-4 py-6 md:px-8">
                 <slot />
             </main>

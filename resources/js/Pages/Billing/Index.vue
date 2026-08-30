@@ -36,18 +36,30 @@ const props = defineProps<{
         payment_method: string | null;
         invoices: Array<{ id: string; date: string; amount: string; status: string; url: string | null }>;
         monthly_price: string;
-        yearly_price: string;
+        list_price: string;
+        has_price_override: boolean;
+    };
+    sms: {
+        used: number;
+        included: number;
+        prepaid: number;
+        ceiling: number;
+        remaining: number;
+        percent: number;
+        can_send: boolean;
+        stopped: 'killed' | 'ceiling' | 'allowance' | null;
+        warning: number | null;
+        topup_price: string;
+        topup_size: number;
     };
 }>();
 
-const checkout = useForm({ interval: 'monthly' });
+const checkout = useForm({});
+const topUp = useForm({});
 const cancel = useForm({ reason: '' });
 const confirming = ref(false);
 
-const subscribe = (interval: 'monthly' | 'yearly') => {
-    checkout.interval = interval;
-    checkout.post(route('billing.checkout'));
-};
+const subscribe = () => checkout.post(route('billing.checkout'));
 
 const planLine = computed(() => {
     const b = props.billing;
@@ -96,11 +108,48 @@ const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...in
                 </p>
 
                 <div class="mt-4 flex flex-wrap gap-3">
-                    <Button :loading="checkout.processing" @click="subscribe('monthly')">
+                    <Button :loading="checkout.processing" @click="subscribe">
                         {{ billing.monthly_price }} a month
                     </Button>
-                    <Button variant="secondary" :loading="checkout.processing" @click="subscribe('yearly')">
-                        {{ billing.yearly_price }} a year
+                </div>
+                <p v-if="billing.has_price_override" class="mt-2 text-13 text-ink-2">
+                    Your rate. The list price is {{ billing.list_price }} a month.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="border-b border-b-rule pb-3 text-17">Texts</h2>
+                <p class="mt-3 text-14">
+                    <span class="numeral font-medium">{{ sms.used }}</span>
+                    of
+                    <span class="numeral">{{ sms.included }}</span>
+                    included this cycle
+                    <span v-if="sms.prepaid > 0">
+                        · <span class="numeral">{{ sms.prepaid }}</span> bought, still to use
+                    </span>
+                </p>
+                <p class="mt-1 text-13 text-ink-2">
+                    Email is not counted. A top-up is {{ sms.topup_price }} for
+                    <span class="numeral">{{ sms.topup_size }}</span> more, applied immediately, and it does not expire
+                    with the cycle.
+                </p>
+                <Callout v-if="sms.stopped === 'ceiling'" class="mt-4" tone="danger" title="Send limit reached">
+                    SMS has stopped. A top-up cannot lift this. Email still goes out, and you can still ring people.
+                </Callout>
+                <Callout v-else-if="sms.stopped === 'allowance'" class="mt-4" tone="accent" title="Included texts used up">
+                    SMS has stopped until you buy more or the cycle resets. Email still goes out.
+                </Callout>
+                <Callout v-else-if="sms.warning === 80" class="mt-4" title="Most of this cycle's texts are used">
+                    You have used {{ sms.used }} of {{ sms.included }}. Nothing has stopped yet.
+                </Callout>
+                <div class="mt-4">
+                    <Button
+                        variant="secondary"
+                        :loading="topUp.processing"
+                        :disabled="sms.stopped === 'ceiling' || sms.stopped === 'killed'"
+                        @click="topUp.post(route('billing.top-up'))"
+                    >
+                        Buy {{ sms.topup_size }} more for {{ sms.topup_price }}
                     </Button>
                 </div>
             </section>

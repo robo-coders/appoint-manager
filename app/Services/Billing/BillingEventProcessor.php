@@ -31,6 +31,12 @@ class BillingEventProcessor
             return;
         }
 
+        if (($object['metadata']['kind'] ?? '') === 'sms_topup') {
+            app(SmsAllowance::class)->applyTopUp($tenant);
+
+            return;
+        }
+
         $interval = (string) ($object['metadata']['interval'] ?? 'monthly');
         $tenant->forceFill([
             'stripe_customer_id' => $object['customer'] ?? $tenant->stripe_customer_id,
@@ -42,6 +48,8 @@ class BillingEventProcessor
             'paused_at' => null,
             'cancelled_at' => null,
         ])->save();
+
+        app(SmsAllowance::class)->resetCycle($tenant);
     }
 
     private function paymentSucceeded(BillingEvent $event): void
@@ -58,6 +66,14 @@ class BillingEventProcessor
             'dunning_started_at' => null,
             'dunning_emails_sent' => 0,
         ])->save();
+
+        $reason = (string) ($object['billing_reason'] ?? '');
+        $isSubscription = ($object['subscription'] ?? null) !== null
+            || str_starts_with($reason, 'subscription');
+
+        if ($isSubscription) {
+            app(SmsAllowance::class)->resetCycle($tenant);
+        }
     }
 
     private function paymentFailed(BillingEvent $event): void

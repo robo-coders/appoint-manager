@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Services\Billing\BillingGateway;
+use App\Services\Billing\SmsAllowance;
+use App\Support\BillingPrice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,7 +13,7 @@ use Inertia\Response;
 
 class BillingController extends Controller
 {
-    public function index(BillingGateway $billing): Response
+    public function index(BillingGateway $billing, SmsAllowance $sms): Response
     {
         $tenant = current_tenant();
         abort_unless($tenant, 403);
@@ -28,20 +30,28 @@ class BillingController extends Controller
                 'next_charge' => $billing->nextInvoiceAt($tenant),
                 'payment_method' => $billing->paymentMethodLabel($tenant),
                 'invoices' => $billing->invoices($tenant),
-                'monthly_price' => '£39',
-                'yearly_price' => '£390',
+                'monthly_price' => BillingPrice::formatPence(BillingPrice::forTenant($tenant)),
+                'list_price' => BillingPrice::formatPence(BillingPrice::listMonthlyPence()),
+                'has_price_override' => $tenant->monthly_price_override_pence !== null,
             ],
+            'sms' => $sms->snapshot($tenant),
         ]);
     }
 
-    public function checkout(Request $request, BillingGateway $billing): RedirectResponse
+    public function checkout(BillingGateway $billing): RedirectResponse
     {
         $tenant = current_tenant();
         abort_unless($tenant, 403);
 
-        $interval = $request->string('interval')->toString() === 'yearly' ? 'yearly' : 'monthly';
+        return redirect()->away($billing->checkoutUrl($tenant, 'monthly'));
+    }
 
-        return redirect()->away($billing->checkoutUrl($tenant, $interval));
+    public function topUp(BillingGateway $billing): RedirectResponse
+    {
+        $tenant = current_tenant();
+        abort_unless($tenant, 403);
+
+        return redirect()->away($billing->topUpCheckoutUrl($tenant));
     }
 
     public function pause(BillingGateway $billing): RedirectResponse

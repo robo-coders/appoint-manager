@@ -10,7 +10,9 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebhookFailure;
+use App\Services\Billing\SmsAllowance;
 use App\Services\Onboarding\TenantCloner;
+use App\Support\BillingPrice;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,6 +66,12 @@ class SuperAdminController extends Controller
                     'preview_url' => $tenant->preview_token
                         ? book_url(null, 'preview/'.$tenant->preview_token)
                         : null,
+                    'sms' => app(SmsAllowance::class)->snapshot($tenant),
+                    'monthly_price' => BillingPrice::formatPence(BillingPrice::forTenant($tenant)),
+                    'monthly_price_override_pence' => $tenant->monthly_price_override_pence,
+                    'sms_included_override' => $tenant->sms_included_override,
+                    'sms_ceiling_override' => $tenant->sms_ceiling_override,
+                    'sms_killed' => $tenant->sms_killed_at !== null,
                 ];
             });
 
@@ -89,6 +97,7 @@ class SuperAdminController extends Controller
             $tenant->is_comped => 'Comped',
             $tenant->subscription_status === 'past_due' => 'Payment failed',
             $tenant->subscription_status === 'canceled' => 'Cancelled',
+            $tenant->subscription_status === 'cancelled' => 'Cancelled',
             $tenant->subscription_status === 'paused' => 'Paused',
             $tenant->subscription_status === 'active' => 'Subscribed',
             $trialEnds !== null && $trialEnds->isPast() => 'Trial over',
@@ -110,7 +119,7 @@ class SuperAdminController extends Controller
             return false;
         }
 
-        return in_array($tenant->subscription_status, ['past_due', 'canceled'], true)
+        return in_array($tenant->subscription_status, ['past_due', 'canceled', 'cancelled'], true)
             || ($tenant->trial_ends_at !== null && $tenant->trial_ends_at->isPast());
     }
 
@@ -128,6 +137,8 @@ class SuperAdminController extends Controller
 
     public function messages(): Response
     {
+        $names = Tenant::query()->pluck('name', 'id');
+
         $messages = Message::withoutGlobalScopes()
             ->orderByDesc('id')
             ->limit(200)
@@ -135,6 +146,7 @@ class SuperAdminController extends Controller
             ->map(fn (Message $message) => [
                 'id' => $message->id,
                 'tenant_id' => $message->tenant_id,
+                'tenant_name' => $names->get($message->tenant_id),
                 'channel' => $message->channel instanceof \BackedEnum ? $message->channel->value : $message->channel,
                 'type' => $message->type instanceof \BackedEnum ? $message->type->value : $message->type,
                 'to' => $message->to,
@@ -230,6 +242,100 @@ class SuperAdminController extends Controller
         $this->audit($tenant, 'trial.extend', ['days' => $days]);
 
         return back()->with('toast', 'Trial extended.');
+    }
+
+    public function setTrial(Request $request, Tenant $tenant): RedirectResponse
+    {
+        if ($request->boolean('end')) {
+            $tenant->forceFill([
+                'trial_ends_at' => now()->subSecond(),
+                'subscription_status' => 'trial',
+            ])->save();
+            $this->audit($tenant, 'trial.end');
+
+            return back()->with('toast', 'Trial ended.');
+        }
+
+        if ($request->filled('ends_at')) {
+            $ends = CarbonImmutable::parse((string) $request->input('ends_at'))->endOfDay();
+            $tenant->forceFill([
+                'trial_ends_at' => $ends,
+                'subscription_status' => 'trial',
+            ])->save();
+            $this->audit($tenant, 'trial.set', ['ends_at' => $ends->toDateString()]);
+
+            return back()->with('toast', 'Trial set to '.$ends->toFormattedDateString().'.');
+        }
+
+        $days = $request->integer('days', 14);
+        $base = ($tenant->trial_ends_at && $tenant->trial_ends_at->isFuture())
+            ? $tenant->trial_ends_at
+            : now();
+        $tenant->forceFill([
+            'trial_ends_at' => $base->copy()->addDays($days),
+            'subscription_status' => 'trial',
+        ])->save();
+        $this->audit($tenant, 'trial.set', ['days' => $days]);
+
+        return back()->with('toast', $days < 0 ? 'Trial shortened.' : 'Trial extended.');
+    }
+
+    public function setAllowance(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $value = $request->filled('sms_included_override')
+            ? max(0, $request->integer('sms_included_override'))
+            : null;
+        $tenant->forceFill(['sms_included_override' => $value])->save();
+        $this->audit($tenant, 'sms.allowance', ['included' => $value]);
+
+        return back()->with('toast', 'Allowance updated.');
+    }
+
+    public function setCeiling(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $value = $request->filled('sms_ceiling_override')
+            ? max(0, $request->integer('sms_ceiling_override'))
+            : null;
+        $tenant->forceFill(['sms_ceiling_override' => $value])->save();
+        $this->audit($tenant, 'sms.ceiling', ['ceiling' => $value]);
+
+        return back()->with('toast', 'Ceiling updated.');
+    }
+
+    public function killSms(Tenant $tenant): RedirectResponse
+    {
+        $tenant->forceFill(['sms_killed_at' => now()])->save();
+        $this->audit($tenant, 'sms.kill');
+
+        return back()->with('toast', 'SMS stopped for this salon.');
+    }
+
+    public function resumeSms(Tenant $tenant): RedirectResponse
+    {
+        $tenant->forceFill(['sms_killed_at' => null])->save();
+        $this->audit($tenant, 'sms.resume');
+
+        return back()->with('toast', 'SMS allowed again.');
+    }
+
+    public function grantSms(Request $request, Tenant $tenant, SmsAllowance $sms): RedirectResponse
+    {
+        $credits = max(1, $request->integer('credits', (int) config('billing.sms_topup_size')));
+        $sms->grant($tenant, $credits);
+        $this->audit($tenant, 'sms.grant', ['credits' => $credits]);
+
+        return back()->with('toast', $credits.' texts granted. Stripe was not charged.');
+    }
+
+    public function setPrice(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $pence = $request->filled('monthly_price_override_pence')
+            ? max(0, $request->integer('monthly_price_override_pence'))
+            : null;
+        $tenant->forceFill(['monthly_price_override_pence' => $pence])->save();
+        $this->audit($tenant, 'billing.price_override', ['pence' => $pence]);
+
+        return back()->with('toast', $pence === null ? 'Price override cleared.' : 'Founding price set.');
     }
 
     public function comp(Tenant $tenant): RedirectResponse

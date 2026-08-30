@@ -2273,16 +2273,13 @@ three surfaces where no rule reads it, and no app CSS was touched.
 
 ## Found broken, left alone
 
-- **`BillingController::index` still hardcodes `'£39'`.** Carried from phase 8
-  and phase 10. The marketing surface no longer does, so the coincidence is
-  down from three places to two. Reading `config('billing.monthly_price_pence')`
-  there is a two-line change in a controller outside this phase's scope.
+- **`BillingController::index` still hardcodes `'£39'`.** Closed in the SMS
+  metering pass. The page reads `BillingPrice`, which reads config (or the
+  tenant override).
 - **`config/billing.php` still configures an annual plan.**
-  `yearly_price_pence` is `39000` and `STRIPE_PRICE_YEARLY` is a live config key,
-  while `/pricing` now sells one monthly price and `MarketingNavTest` asserts no
-  annual plan appears. The billing code still supports something the site does
-  not offer. Whether that is a plan being held back or dead config is a product
-  question; either way the two disagree and nothing says so.
+  Closed in the SMS metering pass: the yearly keys are removed from config
+  and the billing page. Marketing copy still mentions the old key; that
+  file was not touched.
 - **`customers.email` is still NOT NULL and unique per tenant.** Carried from
   phase 8. `/dog-grooming` describes a client list keyed on breed, size, coat
   and temperament and cannot mention that a client without an email cannot be
@@ -2457,3 +2454,42 @@ The checkout override is on the operator diary, not the public booking
 page. The groomer teaches the system; the client does not pick their
 own interval. Leave "Come back in" on The usual and nothing is written
 to the subject.
+
+## SMS metering
+
+Config keys in `config/billing.php`, defaults:
+
+- `sms_included` 200
+- `sms_topup_size` 200
+- `sms_topup_price_pence` 800
+- `sms_hard_ceiling` 600
+- `sms_warning_thresholds` `[80, 100]`
+- `owner_alert_email` from `BILLING_OWNER_EMAIL`, else `MAIL_FROM_ADDRESS`
+
+`yearly_price_pence` and `yearly_price_id` are gone. The site does not
+sell an annual plan. Existing yearly Stripe subscriptions, if any, still
+arrive as webhooks; we no longer create them. `STRIPE_PRICE_YEARLY` may
+still sit in `.env.example`. The marketing pricing comment still names
+the old key — left alone, marketing is out of scope.
+
+**Top-up rollover.** Purchased top-ups and granted credit roll over
+across billing cycles. The included 200 resets with the cycle. They paid
+£8 for 200 messages; those are prepaid inventory, not a monthly perk.
+Resetting them would charge twice. The included pack is the subscription
+and resets so unused included SMS do not accumulate forever.
+
+**Price truth.** `tenants.monthly_price_override_pence` is what we charge
+that salon. `config('billing.monthly_price_pence')` is the list price —
+register, marketing, the default checkout. The two may disagree. That is
+the founding-rate case. Checkout reads the tenant.
+
+Allowance is consumed in `SendSms` after the provider accepts the
+message. A failed send does not consume. Hitting the included allowance
+stops SMS and leaves email, the overdue list, and the phone. Hitting the
+hard ceiling stops SMS the same way and cannot be lifted by a top-up;
+the platform owner is emailed. The kill switch is `sms_killed_at` and is
+checked on the next send, including a job already queued.
+
+At 80% the operator sees a banner and gets an email. At 100% of included,
+SMS stops unless prepaid remains; banner and email say so. At the ceiling,
+SMS stops, a top-up will not restart it, and the owner is alerted.

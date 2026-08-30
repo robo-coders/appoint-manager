@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WaitlistEntry;
+use App\Services\Billing\SmsAllowance;
 use App\Services\Rebooking\OverdueSubjects;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -106,6 +107,7 @@ class HandleInertiaRequests extends Middleware
                 ? CarbonImmutable::now($tenant->timezone)->toDateString()
                 : CarbonImmutable::now()->toDateString(),
             'toast' => fn () => $request->session()->get('toast'),
+            'sms' => fn () => $tenant ? app(SmsAllowance::class)->snapshot($tenant) : null,
         ];
     }
 

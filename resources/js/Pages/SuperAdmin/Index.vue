@@ -53,6 +53,21 @@ type Tenant = {
     needs_attention: boolean;
     preview_url: string | null;
     feature_flags: Record<string, boolean>;
+    sms: {
+        used: number;
+        included: number;
+        prepaid: number;
+        ceiling: number;
+        remaining: number;
+        can_send: boolean;
+        stopped: string | null;
+        killed: boolean;
+    };
+    monthly_price: string;
+    monthly_price_override_pence: number | null;
+    sms_included_override: number | null;
+    sms_ceiling_override: number | null;
+    sms_killed: boolean;
 };
 
 const props = defineProps<{ tenants: Tenant[] }>();
@@ -71,6 +86,7 @@ const columns: Column[] = [
         width: 'amount',
         narrow: 'meta',
     },
+    { key: 'sms_label', label: 'SMS', sortable: true, width: 'when', numeric: true, secondary: true },
     { key: 'last_seen_label', label: 'Last seen', sortable: true, width: 'when', secondary: true },
 ];
 
@@ -80,11 +96,18 @@ const columns: Column[] = [
  * header is clicked; this is only what it opens on.
  */
 const rows = computed(() =>
-    [...props.tenants].sort((a, b) => {
-        if (a.needs_attention !== b.needs_attention) return a.needs_attention ? -1 : 1;
+    [...props.tenants]
+        .map((tenant) => ({
+            ...tenant,
+            sms_label: tenant.sms.killed
+                ? 'Off'
+                : `${tenant.sms.used} / ${tenant.sms.included}${tenant.sms.prepaid > 0 ? ` +${tenant.sms.prepaid}` : ''}`,
+        }))
+        .sort((a, b) => {
+            if (a.needs_attention !== b.needs_attention) return a.needs_attention ? -1 : 1;
 
-        return a.name.localeCompare(b.name);
-    }),
+            return a.name.localeCompare(b.name);
+        }),
 );
 
 const attention = computed(() => props.tenants.filter((tenant) => tenant.needs_attention).length);
@@ -125,6 +148,24 @@ const submitClone = () =>
             cloneOpen.value = false;
         },
     });
+
+const controlling = ref<Tenant | null>(null);
+const trialDays = ref('14');
+const trialEnds = ref('');
+const allowance = ref('');
+const ceiling = ref('');
+const credit = ref('200');
+const pricePence = ref('');
+
+const openControls = (tenant: Tenant) => {
+    controlling.value = tenant;
+    trialDays.value = '14';
+    trialEnds.value = tenant.trial_ends_at ?? '';
+    allowance.value = tenant.sms_included_override === null ? '' : String(tenant.sms_included_override);
+    ceiling.value = tenant.sms_ceiling_override === null ? '' : String(tenant.sms_ceiling_override);
+    credit.value = '200';
+    pricePence.value = tenant.monthly_price_override_pence === null ? '' : String(tenant.monthly_price_override_pence);
+};
 
 const tenantById = (id: string) => props.tenants.find((tenant) => String(tenant.id) === id.trim());
 
@@ -194,6 +235,7 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
             </template>
 
             <template #actions="{ row }">
+                <MenuItem @click="openControls(row)">SMS, trial and price</MenuItem>
                 <MenuItem @click="router.post(route('super-admin.extend-trial', row.id))">
                     Extend trial by 14 days
                 </MenuItem>
@@ -227,6 +269,115 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
             >, and anything you do there is recorded against them, not you. Both the start and the end are written to
             the audit log. Their app will say you are impersonating, on every screen, until you stop.
         </ConfirmDialog>
+
+        <SlideOver :show="controlling !== null" :title="controlling?.name ?? 'Salon'" @close="controlling = null">
+            <div v-if="controlling" class="space-y-6">
+                <section>
+                    <h2 class="border-b border-b-rule pb-3 text-17">Texts this cycle</h2>
+                    <p class="mt-3 text-14">
+                        <span class="numeral font-medium">{{ controlling.sms.used }}</span>
+                        of
+                        <span class="numeral">{{ controlling.sms.included }}</span>
+                        included
+                        <span v-if="controlling.sms.prepaid > 0">
+                            · <span class="numeral">{{ controlling.sms.prepaid }}</span> prepaid
+                        </span>
+                        · ceiling
+                        <span class="numeral">{{ controlling.sms.ceiling }}</span>
+                    </p>
+                    <p v-if="controlling.sms.stopped" class="mt-1 text-13 text-ink-2">
+                        SMS is stopped ({{ controlling.sms.stopped }}).
+                    </p>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="
+                            router.post(route('super-admin.sms.allowance', controlling.id), {
+                                sms_included_override: allowance === '' ? null : Number(allowance),
+                            })
+                        "
+                    >
+                        <TextInput v-model="allowance" label="Included allowance" hint="Blank uses the default." mono />
+                        <Button type="submit" variant="secondary">Set allowance</Button>
+                    </form>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="
+                            router.post(route('super-admin.sms.ceiling', controlling.id), {
+                                sms_ceiling_override: ceiling === '' ? null : Number(ceiling),
+                            })
+                        "
+                    >
+                        <TextInput v-model="ceiling" label="Hard ceiling" hint="Blank uses the default." mono />
+                        <Button type="submit" variant="secondary">Set ceiling</Button>
+                    </form>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="
+                            router.post(route('super-admin.sms.grant', controlling.id), { credits: Number(credit) })
+                        "
+                    >
+                        <TextInput v-model="credit" label="Grant texts" hint="Does not touch Stripe." mono />
+                        <Button type="submit" variant="secondary">Grant credit</Button>
+                    </form>
+                    <div class="mt-4">
+                        <Button
+                            v-if="!controlling.sms_killed"
+                            variant="danger"
+                            @click="router.post(route('super-admin.sms.kill', controlling.id))"
+                        >
+                            Stop SMS now
+                        </Button>
+                        <Button v-else variant="secondary" @click="router.post(route('super-admin.sms.resume', controlling.id))">
+                            Allow SMS again
+                        </Button>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="border-b border-b-rule pb-3 text-17">Trial</h2>
+                    <p class="mt-3 text-13 text-ink-2">
+                        Ends {{ controlling.trial_ends_at ?? 'never' }}.
+                    </p>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="router.post(route('super-admin.trial', controlling.id), { days: Number(trialDays) })"
+                    >
+                        <TextInput v-model="trialDays" label="Add or subtract days" hint="Negative shortens." mono />
+                        <Button type="submit" variant="secondary">Change trial</Button>
+                    </form>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="router.post(route('super-admin.trial', controlling.id), { ends_at: trialEnds })"
+                    >
+                        <TextInput v-model="trialEnds" type="date" label="Set the end date" />
+                        <Button type="submit" variant="secondary">Set date</Button>
+                    </form>
+                    <div class="mt-4">
+                        <Button variant="danger" @click="router.post(route('super-admin.trial', controlling.id), { end: true })">
+                            End the trial now
+                        </Button>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="border-b border-b-rule pb-3 text-17">Price</h2>
+                    <p class="mt-3 text-13 text-ink-2">
+                        Charged at {{ controlling.monthly_price }} a month. Blank clears a founding rate.
+                    </p>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="
+                            router.post(route('super-admin.price', controlling.id), {
+                                monthly_price_override_pence: pricePence === '' ? null : Number(pricePence),
+                            })
+                        "
+                    >
+                        <TextInput v-model="pricePence" label="Monthly price, pence" hint="2900 is £29." mono />
+                        <Button type="submit" variant="secondary">Set founding price</Button>
+                    </form>
+                </section>
+            </div>
+        </SlideOver>
 
         <SlideOver :show="cloneOpen" title="Copy a setup" @close="cloneOpen = false">
             <form class="space-y-4" @submit.prevent="submitClone">

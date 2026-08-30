@@ -21,6 +21,7 @@ defineProps<{
     messages: Array<{
         id: number;
         tenant_id: number;
+        tenant_name: string | null;
         channel: string;
         type: string;
         to: string;
@@ -47,7 +48,7 @@ const columns: Column[] = [
     { key: 'channel', label: 'Channel', width: 'staff', sortable: true, secondary: true },
     { key: 'to', label: 'To', width: 'when', sortable: true, narrow: 'title' },
     { key: 'body', label: 'Message', narrow: 'line' },
-    { key: 'tenant_id', label: 'Tenant', width: 'time', align: 'right', numeric: true, secondary: true },
+    { key: 'tenant_name', label: 'Salon', width: 'staff', sortable: true, secondary: true },
 ];
 
 /* Delivered is the boring answer and gets the quiet badge. Failure earns the

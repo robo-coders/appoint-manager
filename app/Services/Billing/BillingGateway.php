@@ -30,4 +30,9 @@ interface BillingGateway
     public function resume(Tenant $tenant): void;
 
     public function cancel(Tenant $tenant): void;
+
+    /**
+     * One-off Checkout for an SMS top-up. Applied on `checkout.session.completed`.
+     */
+    public function topUpCheckoutUrl(Tenant $tenant): string;
 }

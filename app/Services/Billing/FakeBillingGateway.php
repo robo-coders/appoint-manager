@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\Tenant;
+use App\Support\BillingPrice;
 use RuntimeException;
 
 class FakeBillingGateway implements BillingGateway
@@ -12,15 +13,30 @@ class FakeBillingGateway implements BillingGateway
 
     public static string $checkout = 'https://checkout.stripe.test/session';
 
+    public static ?int $lastCheckoutPence = null;
+
+    public static ?int $lastTopUpTenantId = null;
+
     public static function reset(): void
     {
         self::$events = [];
         self::$checkout = 'https://checkout.stripe.test/session';
+        self::$lastCheckoutPence = null;
+        self::$lastTopUpTenantId = null;
     }
 
     public function checkoutUrl(Tenant $tenant, string $interval): string
     {
-        return self::$checkout.'?interval='.$interval.'&tenant='.$tenant->id;
+        self::$lastCheckoutPence = BillingPrice::forTenant($tenant);
+
+        return self::$checkout.'?interval=monthly&tenant='.$tenant->id.'&pence='.self::$lastCheckoutPence;
+    }
+
+    public function topUpCheckoutUrl(Tenant $tenant): string
+    {
+        self::$lastTopUpTenantId = $tenant->id;
+
+        return self::$checkout.'?kind=sms_topup&tenant='.$tenant->id;
     }
 
     public function constructEvent(string $payload, string $signature): array
@@ -56,7 +72,7 @@ class FakeBillingGateway implements BillingGateway
         return [[
             'id' => 'in_test',
             'date' => now()->toDateString(),
-            'amount' => $tenant->plan === 'yearly' ? '£390.00' : '£39.00',
+            'amount' => BillingPrice::money(BillingPrice::forTenant($tenant))->formatted(),
             'status' => 'paid',
             'url' => null,
         ]];

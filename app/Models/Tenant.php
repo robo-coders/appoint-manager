@@ -52,6 +52,14 @@ class Tenant extends Model
         'preview_token',
         'last_activity_at',
         'feature_flags',
+        'sms_cycle_used',
+        'sms_prepaid',
+        'sms_included_override',
+        'sms_ceiling_override',
+        'sms_killed_at',
+        'sms_cycle_started_at',
+        'sms_warnings_sent',
+        'monthly_price_override_pence',
     ];
 
     /**
@@ -88,6 +96,10 @@ class Tenant extends Model
             if ($tenant->trial_ends_at === null) {
                 $tenant->trial_ends_at = now()->addDays((int) config('billing.trial_days'));
             }
+
+            if ($tenant->sms_cycle_started_at === null) {
+                $tenant->sms_cycle_started_at = now();
+            }
         });
     }
 
@@ -111,6 +123,14 @@ class Tenant extends Model
             'booking_page_live' => 'boolean',
             'dunning_emails_sent' => 'integer',
             'feature_flags' => 'array',
+            'sms_cycle_used' => 'integer',
+            'sms_prepaid' => 'integer',
+            'sms_included_override' => 'integer',
+            'sms_ceiling_override' => 'integer',
+            'sms_killed_at' => 'datetime',
+            'sms_cycle_started_at' => 'datetime',
+            'sms_warnings_sent' => 'array',
+            'monthly_price_override_pence' => 'integer',
         ];
     }
 

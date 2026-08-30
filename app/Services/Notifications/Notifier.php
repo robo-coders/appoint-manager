@@ -22,6 +22,7 @@ use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Billing\SmsAllowance;
 use App\Services\Sms\SmsGateway;
 use App\Support\TenantContext;
 use Illuminate\Mail\Mailable;
@@ -173,6 +174,10 @@ final class Notifier
     private function smsCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, string $body, MessageType $type): void
     {
         if (! $this->smsEnabled($tenant) || ! $customer->phone) {
+            return;
+        }
+
+        if (! app(SmsAllowance::class)->canSend($tenant)) {
             return;
         }
 

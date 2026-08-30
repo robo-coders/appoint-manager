@@ -285,7 +285,7 @@ it('draws no interface it does not own, and no test card', function (string $pat
 it('sells one price and no annual plan', function () {
     $html = $this->get('/pricing')->assertOk()->getContent();
 
-    // config('billing.yearly_price_pence') still exists and is deliberately not
+    // The yearly plan is no longer in config. Marketing must not sell one, and is deliberately not
     // offered here. See DECISIONS.md.
     foreach (['£390', 'a year', 'yearly', 'Yearly', 'annual', 'Annually', 'two months free', 'from £39'] as $banned) {
         expect($html)->not->toContain($banned);

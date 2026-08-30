@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\Tenant;
+use App\Support\BillingPrice;
 use RuntimeException;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Invoice;
@@ -15,24 +16,27 @@ class StripeBillingGateway implements BillingGateway
 
     public function checkoutUrl(Tenant $tenant, string $interval): string
     {
-        $price = $interval === 'yearly'
-            ? (string) config('billing.yearly_price_id')
-            : (string) config('billing.monthly_price_id');
+        $customerId = $this->ensureCustomer($tenant);
+        $pence = BillingPrice::forTenant($tenant);
+        $priceId = (string) config('billing.monthly_price_id');
 
-        if ($price === '') {
+        $lineItem = $tenant->monthly_price_override_pence !== null || $priceId === ''
+            ? [
+                'price_data' => [
+                    'currency' => 'gbp',
+                    'unit_amount' => $pence,
+                    'recurring' => ['interval' => 'month'],
+                    'product_data' => ['name' => config('app.name')],
+                ],
+                'quantity' => 1,
+            ]
+            : [
+                'price' => $priceId,
+                'quantity' => 1,
+            ];
+
+        if (($lineItem['price'] ?? '') === '' && ! isset($lineItem['price_data'])) {
             throw new RuntimeException('Stripe price ids are not configured.');
-        }
-
-        $customerId = $tenant->stripe_customer_id;
-
-        if ($customerId === null) {
-            $customer = $this->stripe->customers->create([
-                'email' => $tenant->email,
-                'name' => $tenant->name,
-                'metadata' => ['tenant_id' => (string) $tenant->id],
-            ]);
-            $customerId = $customer->id;
-            $tenant->forceFill(['stripe_customer_id' => $customerId])->save();
         }
 
         $session = $this->stripe->checkout->sessions->create([
@@ -40,13 +44,10 @@ class StripeBillingGateway implements BillingGateway
             'customer' => $customerId,
             'success_url' => route('billing.index').'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('billing.index'),
-            'line_items' => [[
-                'price' => $price,
-                'quantity' => 1,
-            ]],
+            'line_items' => [$lineItem],
             'metadata' => [
                 'tenant_id' => (string) $tenant->id,
-                'interval' => $interval,
+                'interval' => 'monthly',
             ],
             'subscription_data' => [
                 'metadata' => ['tenant_id' => (string) $tenant->id],
@@ -54,6 +55,51 @@ class StripeBillingGateway implements BillingGateway
         ]);
 
         return (string) $session->url;
+    }
+
+    public function topUpCheckoutUrl(Tenant $tenant): string
+    {
+        $customerId = $this->ensureCustomer($tenant);
+        $pence = BillingPrice::topUpPence();
+        $size = (int) config('billing.sms_topup_size');
+
+        $session = $this->stripe->checkout->sessions->create([
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'success_url' => route('billing.index').'?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => route('billing.index'),
+            'line_items' => [[
+                'price_data' => [
+                    'currency' => 'gbp',
+                    'unit_amount' => $pence,
+                    'product_data' => ['name' => $size.' extra texts'],
+                ],
+                'quantity' => 1,
+            ]],
+            'metadata' => [
+                'tenant_id' => (string) $tenant->id,
+                'kind' => 'sms_topup',
+            ],
+        ]);
+
+        return (string) $session->url;
+    }
+
+    private function ensureCustomer(Tenant $tenant): string
+    {
+        if ($tenant->stripe_customer_id) {
+            return $tenant->stripe_customer_id;
+        }
+
+        $customer = $this->stripe->customers->create([
+            'email' => $tenant->email,
+            'name' => $tenant->name,
+            'metadata' => ['tenant_id' => (string) $tenant->id],
+        ]);
+
+        $tenant->forceFill(['stripe_customer_id' => $customer->id])->save();
+
+        return $customer->id;
     }
 
     public function constructEvent(string $payload, string $signature): array

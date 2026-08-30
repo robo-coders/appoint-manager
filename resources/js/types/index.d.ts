@@ -55,6 +55,20 @@ export type PageProps<
     vertical: Vertical;
     today: string | null;
     toast: string | null;
+    sms: {
+        used: number;
+        included: number;
+        prepaid: number;
+        ceiling: number;
+        remaining: number;
+        percent: number;
+        can_send: boolean;
+        stopped: 'killed' | 'ceiling' | 'allowance' | null;
+        warning: number | null;
+        killed: boolean;
+        topup_price: string;
+        topup_size: number;
+    } | null;
     impersonating: boolean;
     urls: { marketing: string; app: string; admin: string };
     /** The one sentence the auth surface's quiet column carries. Built in PHP. */
