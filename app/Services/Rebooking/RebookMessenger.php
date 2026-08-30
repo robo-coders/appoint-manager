@@ -11,6 +11,7 @@ use App\Support\SendWindow;
 use App\Support\SmsSegments;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 
 /**
  * Automatic rebooking messages. Off until the operator confirms a dry run.
@@ -114,6 +115,13 @@ final class RebookMessenger
      * @param  list<int>  $onlySubjectIds  Restrict to these subjects. This is
      *                                     how `rebooking:send --subject=` sends
      *                                     exactly one real text.
+     * @param  bool  $ignoreEnabledGate  Send for a tenant that has not turned
+     *                                   automatic messages on. Only legitimate
+     *                                   alongside `$onlySubjectIds`, which the
+     *                                   command enforces: a deliberate one-off
+     *                                   test send to a named subject is not the
+     *                                   same act as switching the feature on for
+     *                                   a salon's whole client base.
      * @return int Messages queued
      */
     public function sendDue(
@@ -122,8 +130,15 @@ final class RebookMessenger
         ?CarbonImmutable $at = null,
         array $onlySubjectIds = [],
         bool $ignoreWindow = false,
+        bool $ignoreEnabledGate = false,
     ): int {
-        if (! $this->isEnabled($tenant)) {
+        if ($ignoreEnabledGate && $onlySubjectIds === []) {
+            throw new InvalidArgumentException(
+                'Bypassing the enabled gate is only allowed for named subjects.'
+            );
+        }
+
+        if (! $ignoreEnabledGate && ! $this->isEnabled($tenant)) {
             return 0;
         }
 

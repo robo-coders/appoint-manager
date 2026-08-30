@@ -353,6 +353,196 @@ correct behaviour and looks exactly like a bug.
 
 ---
 
+## Testing rebooking on a real phone
+
+The whole point of this section is that it ends with a text arriving on your own
+handset, and with the other twenty clients untouched.
+
+`demo:seed` fills a tenant with a diary, which means bookings in the *future*.
+Nothing in it is overdue, so the rebooking surface seeds empty. `demo:rebooking`
+builds the other half: a client base with a visit history spread across the past
+four months, deliberately uneven so the overdue list has something to sort.
+
+### 1. Seed it
+
+```bash
+php artisan demo:rebooking --phone=07700900123
+```
+
+Put your own mobile in `--phone`, in any UK format — it is normalised to E.164.
+Or set it once in `.env` and drop the flag:
+
+```
+REBOOKING_DEMO_PHONE=07700900123
+```
+
+The command is **idempotent**: run it as many times as you like while trying
+things out and it updates rather than doubles. It also resets the flags it owns,
+so a STOP you sent yourself last time does not silently suppress this run.
+
+It prints everything below, filled in with real ids. Local only; it refuses to
+run anywhere else.
+
+What you get:
+
+| | |
+|---|---|
+| Tenant | `rebooking-demo`, override with `--slug=` |
+| Services | The four rows from `config/verticals.php`, prices and intervals included — the same list a real new tenant starts with |
+| Clients | 22, each with two or three past visits |
+| Overdue | ~15, from one day over to eleven weeks over |
+| Not due | 4, so the list does not look like everybody is late |
+| Snoozed | Poppy, 21 days — off the list, in the Stopped-and-snoozed area |
+| Stopped | Gus — off the list, with "Start chasing again" |
+| Opted out | Nala — **on** the list, marked "no texts", because she can still be rung |
+| Long name | Zoë — an accented name, so the dry run shows the UCS-2 penalty |
+| Yours | Scout, on the number you passed |
+
+Every number except yours is on `+447700900xxx`, Ofcom's range reserved for
+drama and documentation. Nothing seeded here can ring a stranger.
+
+### 2. Sign in
+
+```
+http://localhost:8000/login
+owner@rebooking-demo.test
+password
+```
+
+The overdue list is at `http://localhost:8000/overdue`, and in the nav rail as
+**Overdue** with a count on it. The dashboard's band links to the same place.
+
+### 3. Dry run
+
+On the page: **Preview messages**. That is the gate — sending cannot be turned
+on without it, and a `POST` to enable without it is refused.
+
+Or from the shell, which prints more:
+
+```bash
+php artisan rebooking:send --tenant=rebooking-demo --dry-run
+```
+
+Either way nothing is sent. What to look at:
+
+- The exact body of every message, including `Reply STOP to opt out.`
+- A character count and a segment count per message. Zoë's is about 112
+  characters and **two segments**, because one accented character drops the
+  limit from 160 to 70. That is the warning working.
+- The send window, in the tenant's timezone, and whether it is open right now.
+- Who is on the list and will *not* be texted, with the reason.
+
+### 4. One real text, to you and nobody else
+
+Two things have to be true first.
+
+**A Twilio driver**, or nothing leaves the building:
+
+```
+SMS_DRIVER=twilio
+TWILIO_SID=AC…
+TWILIO_TOKEN=…
+TWILIO_FROM=+44…
+```
+
+With `SMS_DRIVER=log` — the default — the send is written to
+`storage/logs/laravel.log` and no text arrives. That is the safe default and it
+is also the commonest reason a manual test appears to do nothing.
+
+**A queue worker**, or the text is queued and never sent. `SendSms` is a queued
+job and `.env` ships `QUEUE_CONNECTION=database`:
+
+```bash
+php artisan queue:work
+```
+
+in another terminal. Or set `QUEUE_CONNECTION=sync` while testing, which sends
+inline. `demo:rebooking` warns about both of these if they are not set.
+
+Then, with the subject id the seeder printed:
+
+```bash
+php artisan rebooking:send --tenant=rebooking-demo --subject=22 --ignore-window --force
+```
+
+That sends **exactly one message**, to Scout, on your number. The other
+twenty-one are not touched and no claim is taken against them.
+
+Each flag is load-bearing:
+
+| Flag | Why |
+|---|---|
+| `--tenant=` | Required by `--subject`. Subject ids are per tenant and sending to the wrong salon's client is not recoverable |
+| `--subject=` | The whitelist. Repeatable, but one is the point |
+| `--ignore-window` | Sends outside 09:00–18:00 weekdays, so a Sunday evening test works |
+| `--force` | Sends although the tenant has not switched messages on. **Refused without `--subject`** — it exists to put one text on one handset, not to become a way to text a client base |
+
+Run it again and nothing happens: the claim on that due cycle is taken and the
+unique index on `rebook_sends` refuses a second. That is the safety rule, and
+this is the easiest way to see it work.
+
+### 5. Reply STOP to it
+
+From your phone, reply `STOP` to the text. For that to reach us the inbound
+webhook has to be configured on the Twilio number, which locally means a tunnel:
+
+```bash
+# in another terminal
+ngrok http 8000
+```
+
+Then in the Twilio console, on the number, set **A message comes in** to
+`https://<your-tunnel>/twilio/inbound` (POST), and the **status callback** to
+`https://<your-tunnel>/twilio/status`. Also set:
+
+```
+TWILIO_STATUS_URL=https://<your-tunnel>/twilio/status
+```
+
+`X-Twilio-Signature` is verified on both endpoints whenever `TWILIO_TOKEN` is
+set, and the signature is computed over the full request URL — so the URL Twilio
+is configured with has to be the URL that arrives. Behind a tunnel that means
+`TRUSTED_PROXIES` and `APP_URL` need to agree with it, or you will get a 403 that
+looks like a rejected reply. `TWILIO_VERIFY_SIGNATURE=false` turns verification
+off if you need to isolate that; do not leave it off.
+
+Afterwards, on the overdue page, Scout should be marked **no texts** and still be
+on the list. `START` reverses it.
+
+Without a tunnel you can still exercise the same path — the opt-out itself, not
+Twilio's delivery of it:
+
+```bash
+php artisan tinker
+>>> $c = App\Models\Customer::withoutGlobalScopes()->where('phone', '+447700900123')->first();
+>>> app(App\Services\Sms\SmsConsent::class)->optOut($c, 'manual');
+```
+
+### 6. Turn it on properly
+
+On the overdue page, after a dry run: **Turn messages on**. The confirm names the
+window and the attempt cap. From then on the hourly schedule sends, once per
+subject per due cycle, inside the window, in the salon's timezone.
+
+`php artisan schedule:work` runs the scheduler locally if you want to watch that
+happen rather than triggering it by hand.
+
+### Starting over
+
+```bash
+php artisan demo:rebooking --phone=07700900123
+```
+
+is enough for the subject flags. To clear the claims as well — so everybody
+becomes chaseable again — truncate the one table:
+
+```bash
+mysql -h 127.0.0.1 -u root appoint_manager \
+  -e "delete from rebook_sends where tenant_id = (select id from tenants where slug = 'rebooking-demo');"
+```
+
+---
+
 ## Sessions
 
 Each surface names and scopes its own cookie, assigned before the session is

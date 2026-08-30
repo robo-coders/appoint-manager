@@ -2743,3 +2743,114 @@ keys rather than reasoning about invoice dates.
 `sms_trial_included` (null) and `sms_trial_resets_monthly` (true).
 
 `config/services.php`: new `twilio.verify_signature` (true).
+
+---
+
+# Phase 12, section 2 — a path to test rebooking on a real phone
+
+## Why a second seeder rather than extending `demo:seed`
+
+`demo:seed` produces a diary, which means bookings in the future. It is the
+right shape for demonstrating the booking page and the wrong shape for
+rebooking, where the entire feature is a function of the *past*. Nothing
+`demo:seed` writes is overdue, so the overdue list seeded empty and the feature
+could not be looked at, let alone tested against a handset.
+
+Extending it was considered and rejected: the two need opposite data, and a
+single command that produced both would have to be told which it was doing —
+which is two commands with a flag on top.
+
+`demo:rebooking` is therefore additive. It does not touch `demo:seed`, and it
+can refill a tenant `demo:seed` created (`--slug=`).
+
+## Twenty-two clients, written out rather than generated
+
+`fake()` would have been shorter and is wrong here. The value of this seed is
+that the overdue list has a *shape* — four not due, six a few days over, five in
+the middle, three badly over — and a random spread produces that only sometimes.
+A demo that is convincing four runs in five is not a demo.
+
+So the list is a constant, and the fourth column is days since the last visit.
+Whether a row is overdue is that minus the service's own interval, which is read
+from `config/verticals.php` along with the price. Nothing here invents a price
+or an interval.
+
+Two of the names are load-bearing. **Zoë** exists because one accented character
+converts a 112-character message to UCS-2 and makes it two segments; that is the
+warning in the dry run, and it needs to fire on the seeded data rather than only
+in a test. **Scout** is the subject on the real number, overdue by a fortnight so
+it sits in the middle of the list rather than at either end.
+
+## Every seeded number is on Ofcom's reserved range
+
+`+447700900000`–`900999` is reserved for drama and documentation. Nothing seeded
+can ring a stranger's phone.
+
+This is not decoration. The command that follows is `rebooking:send --force
+--ignore-window`, and a plausible-looking fake number is one mistyped flag away
+from texting somebody's grandmother. A demo whose fake numbers cannot ring is
+the only version of this that is safe to leave in the repository.
+
+The one real number comes from `--phone` or `REBOOKING_DEMO_PHONE` and the
+command **refuses to run without it**. A silent fallback would have produced a
+seed with no way to receive the text, which is the one thing it is for.
+
+## Idempotency, and what it resets
+
+Keyed on the tenant slug, a client's derived email, a subject's name, and a
+visit's exact start instant. A second run updates. Verified by asserting equal
+row counts across two runs, not by inspection.
+
+It also *resets* the flags it owns — snooze, stop, failure count, block, and
+opt-out — then re-applies the three deliberate states. This matters more than
+usual because the command exists to be re-run while experimenting, and a STOP
+you sent yourself last time would otherwise silently suppress this run's sends.
+That is a confusing half-hour.
+
+Claims in `rebook_sends` are **not** reset, deliberately: the once-per-cycle rule
+is the thing being tested, and a seeder that quietly cleared it would hide the
+feature. DEPLOY.md gives the one-line delete for when you do want a clean slate.
+
+## `--force`, and why it requires `--subject`
+
+Sending is off until the operator previews a dry run — correctly, and that gate
+also blocks the one deliberate test send that has to happen before any customer
+sees this.
+
+`--force` bypasses it and is **refused without `--subject`**. Forcing one named
+subject is the entire point; forcing a client base is the failure mode the gate
+exists to prevent. The guard is in the command, and the service throws if asked
+to bypass the gate with an empty subject list, so it cannot be reached from a
+second caller either.
+
+`RebookMessenger::sendDue()` takes `$ignoreEnabledGate` and throws
+`InvalidArgumentException` when it is true with no subject whitelist.
+
+## Two footguns the command now warns about
+
+Neither is new, and both make a manual test look like a broken feature:
+
+- `SMS_DRIVER=log` is the default, so a send writes to a log file and no text
+  arrives.
+- `QUEUE_CONNECTION=database` is what `.env` ships, and `SendSms` is queued — so
+  the command reports success and the message sits in `jobs` until a worker
+  starts. This one cost time during verification: `messages.status` was `queued`
+  and the row looked wrong.
+
+The seeder prints a warning for each. DEPLOY.md documents both, and the queue
+one is called out as the commonest reason nothing appears to happen.
+
+## Tests
+
+`tests/Feature/Launch/RebookingDemoSeedTest.php`, eight cases:
+
+| Test | Proves |
+|---|---|
+| genuine variety | ≥20 subjects, the overdue count is strictly between 8 and all of them, and both `days_overdue <= 5` and `>= 40` are non-empty |
+| price list from config | Every service matches `config/verticals.php` by name and amount |
+| the number given | Exactly one customer on it; every other number on `+447700900` |
+| every state | One snoozed, one stopped, one opted out — and the opted-out one still on the list with its marker |
+| run twice | Equal counts for tenants, customers, subjects, bookings, services |
+| no phone number | Exits 1 and writes no tenant |
+| outside local | Refused |
+| one message | With sending **off**, `--subject --force` produces exactly one SMS, to the seeded number, carrying that subject's id |

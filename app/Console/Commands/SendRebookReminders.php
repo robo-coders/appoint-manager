@@ -25,6 +25,7 @@ class SendRebookReminders extends Command
         {--tenant= : Restrict to one tenant, by id or slug}
         {--subject=* : Restrict to these subject ids. Requires --tenant}
         {--ignore-window : Send outside the tenant\'s configured hours}
+        {--force : Send even though the tenant has not turned messages on. Requires --subject}
         {--dry-run : Print what would be sent and send nothing}';
 
     protected $description = 'Send due rebooking messages for tenants that have confirmed sending.';
@@ -35,6 +36,18 @@ class SendRebookReminders extends Command
 
         if ($subjects !== [] && ! $this->option('tenant')) {
             $this->error('--subject requires --tenant. Subject ids are per tenant and sending to the wrong one is not recoverable.');
+
+            return self::FAILURE;
+        }
+
+        /*
+         * `--force` bypasses the switch the operator has to throw before this
+         * feature sends anything. That is defensible for one named subject —
+         * putting a real text on a real handset before a customer sees it is the
+         * whole point — and indefensible for a client base, so it is refused.
+         */
+        if ($this->option('force') && $subjects === []) {
+            $this->error('--force requires --subject. It exists to send one deliberate test message, not to switch the feature on.');
 
             return self::FAILURE;
         }
@@ -64,6 +77,7 @@ class SendRebookReminders extends Command
                 null,
                 $subjects,
                 (bool) $this->option('ignore-window'),
+                $subjects !== [] && (bool) $this->option('force'),
             );
 
             $total += $sent;
