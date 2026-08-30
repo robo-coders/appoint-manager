@@ -7,7 +7,7 @@
 --}}
 <footer class="m-foot text-13 text-ink-2">
     <div class="wrap">
-        <span>{{ config('app.name') }}</span>
+        <span>{{ config('product.name') }}</span>
         <nav aria-label="Footer">
             <a class="m-quiet" href="{{ route('marketing.pricing') }}">Pricing</a>
             <a class="m-quiet" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>

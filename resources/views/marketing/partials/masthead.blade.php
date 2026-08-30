@@ -16,7 +16,7 @@
 --}}
 <header class="masthead">
     <div class="wrap">
-        <a class="wordmark text-17 font-medium no-underline" href="{{ route('marketing.home') }}">{{ config('app.name') }}</a>
+        <a class="wordmark text-17 font-medium no-underline" href="{{ route('marketing.home') }}">{{ config('product.name') }}</a>
         <nav class="m-nav text-13" aria-label="Main">
             <a class="m-quiet off-phone" href="{{ route('marketing.pricing') }}">Pricing</a>
             <a class="m-quiet off-phone" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>

@@ -49,7 +49,7 @@ class BookingConfirmedMail extends Mailable
                 'rows' => $rows,
                 'rowsText' => MailCopy::asText($rows),
                 'manageUrl' => book_url(null, 'b/'.$this->booking->public_token),
-                'footer' => 'Sent by '.config('app.name').' on behalf of '.$this->tenant->name.'.',
+                'footer' => 'Sent by '.config('product.name').' on behalf of '.$this->tenant->name.'.',
             ],
         );
     }

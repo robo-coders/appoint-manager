@@ -94,7 +94,7 @@ final class ErrorPage
             419 => 'You were signed out while that page was open',
             429 => 'Too many tries, too quickly',
             500 => 'Something on our side broke',
-            503 => 'Appoint Manager is down for a few minutes',
+            503 => config('product.name').' is down for a few minutes',
             default => 'Something went wrong on our side',
         };
     }
@@ -170,8 +170,8 @@ final class ErrorPage
         return match ($surface) {
             /*
              * A customer gets no link to us. Our marketing site sells
-             * appointment software to salon owners; they are not one, and
-             * "Appoint Manager home" is a tap that helps nobody.
+             * appointment software to salon owners; they are not one, and a tap
+             * through to our own home page helps nobody.
              */
             Surface::Book => [],
 
@@ -186,7 +186,7 @@ final class ErrorPage
             ],
 
             Surface::Marketing => [
-                ['label' => 'Appoint Manager', 'href' => Surface::Marketing->to()],
+                ['label' => config('product.name'), 'href' => Surface::Marketing->to()],
                 ['label' => 'Sign in', 'href' => Surface::App->to('login')],
             ],
         };

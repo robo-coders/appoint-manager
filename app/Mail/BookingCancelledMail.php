@@ -57,7 +57,7 @@ class BookingCancelledMail extends Mailable
                 'lede' => 'It is off the diary. Booking again is the same as the first time.',
                 'rows' => $rows,
                 'rowsText' => MailCopy::asText($rows),
-                'footer' => 'Sent by '.config('app.name').' on behalf of '.$this->tenant->name.'.',
+                'footer' => 'Sent by '.config('product.name').' on behalf of '.$this->tenant->name.'.',
             ],
         );
     }

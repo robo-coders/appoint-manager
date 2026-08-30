@@ -69,7 +69,7 @@ class DailyAgendaMail extends Mailable
                 // fact worth sending; an empty email is a bug.
                 'emptyLine' => 'Nothing booked tomorrow.',
                 'diaryUrl' => Surface::App->to('diary'),
-                'footer' => config('app.name'),
+                'footer' => config('product.name'),
             ],
         );
     }

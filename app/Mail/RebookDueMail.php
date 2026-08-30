@@ -34,7 +34,7 @@ class RebookDueMail extends Mailable
                 'heading' => $this->dueSubject->name.' is due',
                 'lede' => $this->body,
                 'bookUrl' => book_url($this->tenant->slug),
-                'footer' => 'Sent by '.config('app.name').' on behalf of '.$this->tenant->name.'.',
+                'footer' => 'Sent by '.config('product.name').' on behalf of '.$this->tenant->name.'.',
                 'tenant' => $this->tenant,
             ],
         );

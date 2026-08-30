@@ -27,7 +27,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
         <meta name="theme-color" content="{{ App\Support\DesignTokens::value('paper') }}">
-        <title>{{ $page['title'] }} — {{ config('app.name') }}</title>
+        <title>{{ $page['title'] }} — {{ config('product.name') }}</title>
         <style>
             :root { {!! App\Support\DesignTokens::root() !!} }
 

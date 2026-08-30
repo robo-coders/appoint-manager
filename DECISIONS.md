@@ -2854,3 +2854,22 @@ one is called out as the commonest reason nothing appears to happen.
 | no phone number | Exits 1 and writes no tenant |
 | outside local | Refused |
 | one message | With sending **off**, `--subject --force` produces exactly one SMS, to the seeded number, carrying that subject's id |
+
+# Phase 12, section 3 — the product name
+
+The name people read is `config('product.name')`, default `DiaryDesk`, overridable
+as `PRODUCT_NAME`. It is deliberately not `app.name`.
+
+`app.name` slugs into the cache prefix, the Redis prefix, and the three session
+cookie names via `Surface`. Renaming the product through that key would sign
+every operator out, cold-start the cache, and orphan the Horizon prefix. The
+repository, the database and the composer package stay as they are until they
+are renamed together with the domain.
+
+SMS bodies do not carry the product name. They open with the salon name. A
+confirmation, a reminder and a rebooking chase are from the salon to a client
+who has never heard of us; putting our name on them would spend a segment
+telling the wrong person who we are.
+
+The PWA manifest is composed by `SurfaceRoutes` rather than served as a static
+file, because a static file is the one place a rename silently misses.

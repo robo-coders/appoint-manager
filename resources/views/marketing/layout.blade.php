@@ -26,7 +26,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title }} · {{ config('app.name') }}</title>
+    <title>{{ $title }} · {{ config('product.name') }}</title>
     <meta name="description" content="{{ $description }}">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">

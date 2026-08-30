@@ -26,7 +26,7 @@ class StripeBillingGateway implements BillingGateway
                     'currency' => 'gbp',
                     'unit_amount' => $pence,
                     'recurring' => ['interval' => 'month'],
-                    'product_data' => ['name' => config('app.name')],
+                    'product_data' => ['name' => config('product.name')],
                 ],
                 'quantity' => 1,
             ]

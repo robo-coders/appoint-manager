@@ -31,7 +31,7 @@
             <td class="fig">{{ $figures->slot()->formatted() }}</td>
         </tr>
         <tr>
-            <th scope="row">{{ config('app.name') }}, one month</th>
+            <th scope="row">{{ config('product.name') }}, one month</th>
             <td class="fig">&minus;{{ $figures->monthly()->formatted() }}</td>
         </tr>
         <tr class="sum sum-first">

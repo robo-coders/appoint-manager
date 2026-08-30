@@ -55,7 +55,7 @@ class SalonCancellationMail extends Mailable
                 'rows' => $rows,
                 'rowsText' => MailCopy::asText($rows),
                 'diaryUrl' => Surface::App->to('diary'),
-                'footer' => config('app.name'),
+                'footer' => config('product.name'),
             ],
         );
     }

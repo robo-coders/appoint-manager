@@ -27,8 +27,51 @@ final class SurfaceRoutes
         // keeps working whichever hostname it points at.
         Route::middleware('web')->group(__DIR__.'/../../routes/machine.php');
 
+        self::manifest();
         self::gallery();
         self::errorPreviews();
+    }
+
+    /**
+     * The PWA manifest, rendered rather than served from `public/`.
+     *
+     * It was a static file with the product's name typed into it twice, which
+     * made it the one place a rename would silently miss — nothing renders it,
+     * so nothing looks wrong until an operator adds the app to her home screen
+     * and reads the old name under the icon.
+     *
+     * No host constraint, for the same reason `machine.php` has none: all four
+     * shells include `partials/head.blade.php` and all four therefore ask for
+     * `/site.webmanifest`. Public, cacheable, and no session — a manifest is an
+     * asset that happens to be composed.
+     */
+    private static function manifest(): void
+    {
+        Route::get('/site.webmanifest', function () {
+            $name = (string) config('product.name');
+
+            return response()->json([
+                'name' => $name,
+                // Android truncates the home-screen label around 12
+                // characters. There is nothing to shorten while the name is
+                // one short word, so this is the same string rather than a
+                // second one to keep in step.
+                'short_name' => $name,
+                'icons' => [
+                    ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+                    ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+                ],
+                /*
+                 * Mirrors `--paper` in tokens.css, the same way the
+                 * `theme-color` meta in `partials/head.blade.php` does. Neither
+                 * a JSON body nor an HTML attribute can read a CSS variable, so
+                 * both are literals; `check-design-tokens.mjs` pins them.
+                 */
+                'theme_color' => '#FCFBF9',
+                'background_color' => '#FCFBF9',
+                'display' => 'standalone',
+            ])->header('Content-Type', 'application/manifest+json');
+        })->name('site.webmanifest');
     }
 
     /**

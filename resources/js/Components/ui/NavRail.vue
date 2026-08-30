@@ -3,8 +3,9 @@ import AppLogo from '@/Components/AppLogo.vue';
 import KeyHint from '@/Components/ui/KeyHint.vue';
 import RailUserMenu from '@/Components/ui/RailUserMenu.vue';
 import { navIconFor } from '@/lib/navIcons';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import Search from 'lucide-vue-next/dist/esm/icons/search';
+import { computed } from 'vue';
 
 /**
  * The operator app's nav rail. `public/mockups/dashboard.html` is the target.
@@ -81,6 +82,13 @@ const emit = defineEmits<{ navigate: []; search: [] }>();
  * The fallback stays for anything `lib/navIcons` does not name — a rail item
  * with no icon gets its glyph, never an empty box.
  */
+/*
+ * The home link's accessible name. `AppLogo` inside it is given `label=""`, so
+ * the name has to be on the link — otherwise the first thing a screen reader
+ * meets in the rail is an unlabelled link.
+ */
+const appName = computed(() => (usePage().props.appName as string) ?? '');
+
 const glyphFor = (link: NavLink) => link.glyph ?? link.label.trim().slice(0, 2);
 
 const iconFor = (link: NavLink) => navIconFor(link.label);
@@ -102,7 +110,7 @@ const iconFor = (link: NavLink) => navIconFor(link.label);
             that could disagree. The measurement that forces the stack is
             recorded there, next to the markup it forces.
         -->
-        <Link :href="homeHref" class="flex items-center gap-2 px-4 py-4 text-ink" aria-label="Appoint Manager">
+        <Link :href="homeHref" class="flex items-center gap-2 px-4 py-4 text-ink" :aria-label="appName">
             <AppLogo
                 :size="20"
                 label=""

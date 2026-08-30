@@ -115,7 +115,7 @@
                         {{-- Who this is from, before anything else. --}}
                         <tr>
                             <td class="ink-2" style="padding:0 0 24px;font-family:{{ $sans }};font-size:13px;line-height:1.5;color:{{ $ink2 }};">
-                                {{ $from ?? config('app.name') }}
+                                {{ $from ?? config('product.name') }}
                             </td>
                         </tr>
 
@@ -152,7 +152,7 @@
                         --}}
                         <tr>
                             <td class="ink-2" style="padding:24px 0 0;font-family:{{ $sans }};font-size:12px;line-height:1.5;color:{{ $ink2 }};">
-                                {{ $footer ?? 'Sent by '.config('app.name').' on behalf of '.($from ?? config('app.name')).'.' }}
+                                {{ $footer ?? 'Sent by '.config('product.name').' on behalf of '.($from ?? config('product.name')).'.' }}
                             </td>
                         </tr>
                     </table>

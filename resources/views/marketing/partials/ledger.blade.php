@@ -33,7 +33,7 @@
         <tr>
             <th scope="col"><span class="sr-only">Line</span></th>
             <th scope="col" class="fig">On a free plan</th>
-            <th scope="col" class="fig">On {{ config('app.name') }}</th>
+            <th scope="col" class="fig">On {{ config('product.name') }}</th>
         </tr>
     </thead>
     <tbody>

@@ -60,9 +60,9 @@ it('renders our own page for every status', function (int $code) {
     expect(isOurs($html))->toBeTrue('status '.$code.' fell through to a stock error page')
         // The eyebrow is the tell: the status and its name, in mono, ours.
         ->and($html)->toContain((string) $code)
-        // The product's own name, whatever it is configured as — `APP_NAME` is
-        // not set under phpunit.xml, so a literal here would assert nothing.
-        ->and($html)->toContain(config('app.name'));
+        // The product's own name, from `product.name` — never `app.name`,
+        // which is the machine identity and is "Laravel" in this suite.
+        ->and($html)->toContain(config('product.name'));
 })->with([403, 404, 419, 429, 500, 503]);
 
 it('renders our 404 for a URL that simply does not exist', function () {

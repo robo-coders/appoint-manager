@@ -45,7 +45,12 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
-            'appName' => config('app.name'),
+            /*
+             * The product's name, for the chrome and the page title. From
+             * `product.name` and never `app.name` — that one is the machine
+             * identity and slugs into the session cookie names.
+             */
+            'appName' => config('product.name'),
             /*
              * Absolute URLs for the other surfaces. Vue cannot work these out —
              * it must never build a cross-surface link from a bare path, and an
@@ -63,7 +68,7 @@ class HandleInertiaRequests extends Middleware
              */
             'auth_panel' => [
                 'headline' => 'The diary, the deposits, and the people who did not turn up.',
-                'body' => config('app.name').' is appointment software for small businesses '
+                'body' => config('product.name').' is appointment software for small businesses '
                     .'that lose money when clients do not arrive. One diary, one place, and a '
                     .'deposit taken before the appointment rather than chased after it.',
             ],

@@ -139,8 +139,11 @@ const tokenValue = (name) => (tokensCss.match(new RegExp(`--${name}:\\s*([^;]+);
 
 const MIRRORS = [
     { file: 'resources/views/partials/head.blade.php', re: /<meta name="theme-color" content="(#[0-9a-fA-F]{3,8})"/, token: 'paper' },
-    { file: 'public/site.webmanifest', re: /"theme_color":\s*"(#[0-9a-fA-F]{3,8})"/, token: 'paper' },
-    { file: 'public/site.webmanifest', re: /"background_color":\s*"(#[0-9a-fA-F]{3,8})"/, token: 'paper' },
+    // The manifest is composed in SurfaceRoutes, not a static file, so the
+    // name can come from config. The two colours still cannot: a JSON body
+    // cannot read a CSS variable.
+    { file: 'app/Support/SurfaceRoutes.php', re: /'theme_color'\s*=>\s*'(#[0-9a-fA-F]{3,8})'/, token: 'paper' },
+    { file: 'app/Support/SurfaceRoutes.php', re: /'background_color'\s*=>\s*'(#[0-9a-fA-F]{3,8})'/, token: 'paper' },
 ];
 
 const drift = [];
