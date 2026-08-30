@@ -11,15 +11,15 @@
     quieter than it: a returning owner knows what she is looking for, a stranger
     does not. Also asserted.
 
-    Pricing and the trade page carry `off-phone` and are in the footer at 375.
-    See the note in `marketing.css` for why four links do not get a hamburger.
+    At 375 the masthead is two lines — wordmark, then the four routes — rather
+    than hiding Pricing and the trade page. See the note in `marketing.css`.
 --}}
 <header class="masthead">
     <div class="wrap">
         <a class="wordmark text-17 font-medium no-underline" href="{{ route('marketing.home') }}">{{ config('product.name') }}</a>
         <nav class="m-nav text-13" aria-label="Main">
-            <a class="m-quiet off-phone" href="{{ route('marketing.pricing') }}">Pricing</a>
-            <a class="m-quiet off-phone" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>
+            <a class="m-quiet" href="{{ route('marketing.pricing') }}">Pricing</a>
+            <a class="m-quiet" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>
             <a class="m-quiet" href="{{ app_url('login') }}">Log in</a>
             <a class="m-link" href="{{ app_url('register') }}">Start free trial</a>
         </nav>

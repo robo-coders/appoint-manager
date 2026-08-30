@@ -2873,3 +2873,23 @@ telling the wrong person who we are.
 
 The PWA manifest is composed by `SurfaceRoutes` rather than served as a static
 file, because a static file is the one place a rename silently misses.
+
+# Phase 12, section 4 — two marketing flaws
+
+## The masthead at 375
+
+Pricing and Dog grooming were `off-phone`: hidden below 768, reachable only
+from the footer. A groomer handed this URL in person opens it on a phone, and
+the two routes that tell her what it costs and whether it is for her were not
+in the top of the page.
+
+Four links do not get a hamburger. The masthead is two lines at 375 — wordmark,
+then the four routes — hairlines and type. The footer still carries the same
+two links because About, Contact, Privacy and Terms have nowhere else to live.
+
+## No invented salon
+
+The quoted waitlist texts used "Willow Street Grooming" and labelled it
+illustrative. A name on a marketing page that is not a customer is invented.
+The prefix is now described (`the salon’s name`) rather than substituted. The
+invariant bodies are still the strings in `Notifier`.

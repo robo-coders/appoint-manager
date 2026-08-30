@@ -1,9 +1,9 @@
 {{--
-    The footer, and on a phone it is also the navigation: pricing and the trade
-    page are hidden in the masthead below 768 and are reachable here at every
-    width. `MarketingNavTest` walks every link in here on every page, because a
-    404 from the marketing footer is the bug you find by accident in front of a
-    customer.
+    The footer. Pricing and the trade page are in the masthead at every width
+    as well; they stay here because About, Contact, Privacy and Terms have
+    nowhere else to live. `MarketingNavTest` walks every link in here on every
+    page, because a 404 from the marketing footer is the bug you find by
+    accident in front of a customer.
 --}}
 <footer class="m-foot text-13 text-ink-2">
     <div class="wrap">

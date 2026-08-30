@@ -93,11 +93,31 @@ it('offers a way in from every marketing page', function (string $path) {
 it('reaches pricing and the trade page from every page', function (string $path) {
     $html = $this->get($path)->assertOk()->getContent();
 
-    // Both are hidden in the masthead below 768 and live in the footer at every
-    // width, so "present somewhere on the page" is the honest assertion.
     expect($html)->toContain(route('marketing.pricing'))
         ->and($html)->toContain(route('marketing.dog-grooming'));
 })->with(MARKETING_PATHS);
+
+it('puts pricing and the trade page in the masthead, not only the footer', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+    $header = substr($html, strpos($html, '<header'), strpos($html, '</header>') - strpos($html, '<header'));
+
+    expect($header)->toContain(route('marketing.pricing'))
+        ->and($header)->toContain(route('marketing.dog-grooming'))
+        ->and($header)->toContain('Pricing')
+        ->and($header)->toContain('Dog grooming')
+        ->and($header)->not->toContain('off-phone');
+});
+
+it('does not invent a salon name on the quoted waitlist texts', function () {
+    foreach (['/', '/dog-grooming'] as $path) {
+        $html = $this->get($path)->assertOk()->getContent();
+
+        expect($html)
+            ->toContain('the salon’s name')
+            ->not->toContain('Willow Street')
+            ->not->toContain('Willow Street Grooming');
+    }
+});
 
 it('keeps the trial the louder of the two', function () {
     $html = $this->get('/')->assertOk()->getContent();

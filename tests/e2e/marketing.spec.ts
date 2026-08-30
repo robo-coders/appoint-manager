@@ -29,7 +29,7 @@ const ALL_PAGES = [
     ['terms', '/terms'],
 ] as const;
 
-const WIDTHS = [375, 768, 1280] as const;
+const WIDTHS = [375, 768, 1024, 1280, 1440] as const;
 
 async function settled(page: Page): Promise<void> {
     await page.evaluate(() => document.fonts.ready);
