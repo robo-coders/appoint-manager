@@ -75,6 +75,7 @@ const form = useForm({
     customer_email: '',
     customer_phone: '',
     subject_name: '',
+    rebook_interval_days: '' as string | number,
 });
 
 const shown = computed(() => annotate([...props.bookings, ...optimistic.value], props.is_today ? nowLocal.value : null));
@@ -400,6 +401,20 @@ watch(
                 <TextInput v-model="form.customer_email" type="email" label="Email" :error="form.errors.customer_email" />
                 <TextInput v-model="form.customer_phone" label="Phone" :error="form.errors.customer_phone" />
                 <TextInput v-model="form.subject_name" :label="sentenceCase(page.props.vertical.subject_singular) + ' name'" />
+                <Select
+                    v-model="form.rebook_interval_days"
+                    label="Come back in"
+                    hint="Leave as the usual unless this visit should change it."
+                    :options="[
+                        { value: '', label: 'The usual' },
+                        { value: 21, label: '3 weeks' },
+                        { value: 28, label: '4 weeks' },
+                        { value: 35, label: '5 weeks' },
+                        { value: 42, label: '6 weeks' },
+                        { value: 49, label: '7 weeks' },
+                        { value: 56, label: '8 weeks' },
+                    ]"
+                />
                 <Button type="submit" :loading="form.processing">Save booking</Button>
             </form>
         </SlideOver>

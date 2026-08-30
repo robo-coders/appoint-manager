@@ -123,6 +123,9 @@ class BookingController extends Controller
                 $startsAt,
                 BookingSource::Manual,
                 $subject,
+                rebookIntervalDays: $request->filled('rebook_interval_days')
+                    ? $request->integer('rebook_interval_days')
+                    : null,
             );
         } catch (SlotUnavailableException $exception) {
             return back()->withErrors(['starts_at' => $exception->getMessage()]);

@@ -13,4 +13,5 @@ enum MessageType: string
     case DailyAgenda = 'daily_agenda';
     case WaitlistOffer = 'waitlist_offer';
     case WaitlistGone = 'waitlist_gone';
+    case RebookDue = 'rebook_due';
 }

@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Tenant;
 use App\Services\Booking\FreedSlots;
+use App\Services\Rebooking\OverdueSubjects;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -15,16 +16,15 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The overview: three figures and today.
+ * The overview: recovered, overdue, deposits, no-shows, and today.
  *
- * The band is deliberately not four equal cards. `Recovered from waitlist` is
- * the number the salon opens this app for and it takes roughly 45% of the
- * width and the 34px size; the other two are 20px and share the rest. See
+ * The band is deliberately not four equal cards. Recovered and overdue take
+ * the weight (sunk, 34px); deposits and no-shows stay 20px. See
  * `public/mockups/dashboard.html`.
  */
 class DashboardController extends Controller
 {
-    public function __invoke(FreedSlots $freed): Response
+    public function __invoke(FreedSlots $freed, OverdueSubjects $overdue): Response
     {
         $tenant = current_tenant();
         abort_unless($tenant, 403);
@@ -44,6 +44,7 @@ class DashboardController extends Controller
             ],
             'band' => [
                 'recovered' => $this->recovered($tenant->currency, $monthStart, $nextMonth),
+                'overdue' => $overdue->summary($tenant),
                 'deposits' => $this->depositsHeld($tenant->currency),
                 'no_shows' => $this->noShowRate($monthStart, $nextMonth, $lastMonth),
             ],

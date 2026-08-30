@@ -29,6 +29,7 @@ const nav = computed(() => [
     { id: 'bookings', label: 'Go to bookings', href: route('bookings.index') },
     { id: 'customers', label: 'Go to customers', href: route('customers.index') },
     { id: 'waitlist', label: 'Go to waitlist', href: route('waitlist.index') },
+    { id: 'overdue', label: 'Go to overdue', href: route('overdue.index') },
     { id: 'services', label: 'Go to services', href: route('services.index') },
     { id: 'staff', label: 'Go to staff', href: route('staff.index') },
     { id: 'overview', label: 'Go to overview', href: route('dashboard') },

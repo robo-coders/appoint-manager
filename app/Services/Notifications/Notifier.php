@@ -12,12 +12,14 @@ use App\Mail\BookingConfirmedMail;
 use App\Mail\BookingReminderMail;
 use App\Mail\BookingRescheduledMail;
 use App\Mail\DailyAgendaMail;
+use App\Mail\RebookDueMail;
 use App\Mail\SalonCancellationMail;
 use App\Mail\SalonNewBookingMail;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Message;
 use App\Models\Service;
+use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Sms\SmsGateway;
@@ -114,6 +116,12 @@ final class Notifier
         $this->smsCustomer($tenant, null, $customer, $sms, MessageType::WaitlistGone);
     }
 
+    public function rebookDue(Tenant $tenant, Customer $customer, Subject $subject, string $body): void
+    {
+        $this->emailCustomer($tenant, null, $customer, new RebookDueMail($tenant, $subject, $body), MessageType::RebookDue, $body);
+        $this->smsCustomer($tenant, null, $customer, $this->fitSms($body), MessageType::RebookDue);
+    }
+
     private function scheduleReminder(Booking $booking): void
     {
         $when = $booking->starts_at->utc()->subHours((int) config('booking.reminder_hours'));
@@ -144,7 +152,7 @@ final class Notifier
         return (bool) data_get($tenant->settings, 'notifications.sms_enabled', true);
     }
 
-    private function emailCustomer(Tenant $tenant, Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body): void
+    private function emailCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body): void
     {
         Mail::to($customer->email)->queue($mail);
         $this->log($tenant, $customer, $booking, MessageChannel::Email, $type, $customer->email, $body, MessageStatus::Sent, null);

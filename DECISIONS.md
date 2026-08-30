@@ -2430,3 +2430,30 @@ already run after commit. Different staff do not contend. A slot-level
 `GET_LOCK` would be finer but is connection-scoped and does not roll back
 with the transaction. Not worth it until a salon actually queues on one
 stylist.
+
+## Automatic rebooking
+
+Due interval, highest wins: checkout on this appointment
+(`bookings.rebook_interval_days`), then the subject's own
+(`subjects.rebook_interval_days`), then the service default
+(`services.suggested_interval_days`, seeded from
+`config/verticals.php` `rebook_interval` `{value, unit}`). Units
+convert to days in `VerticalInterval` so a dentist vertical can say
+months without a code change. A checkout value is written onto the
+subject so the groomer teaches the system by using it.
+
+The overdue list is subjects whose last completed/confirmed visit is
+due today or earlier, with no future booking, not snoozed, not stopped,
+and not marked contacted in the last 14 days. Sorted by how overdue.
+The money figure is the sum of each subject's usual service price —
+the current price of the service on their last visit, not an average.
+
+Sending is off in `settings.rebooking.messages_enabled` for every
+tenant. Turning it on requires a dry run — who, the exact message,
+how many — and an explicit confirm. A POST to enable without that
+preview is refused. `rebooking:send` then runs daily at 09:00.
+
+The checkout override is on the operator diary, not the public booking
+page. The groomer teaches the system; the client does not pick their
+own interval. Leave "Come back in" on The usual and nothing is written
+to the subject.

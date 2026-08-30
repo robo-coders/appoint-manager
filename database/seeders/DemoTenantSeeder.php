@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\TenantContext;
+use App\Support\VerticalInterval;
 use Illuminate\Database\Seeder;
 
 class DemoTenantSeeder extends Seeder
@@ -61,6 +62,7 @@ class DemoTenantSeeder extends Seeder
                 'duration_minutes' => $service['duration_minutes'],
                 'price' => $service['price'],
                 'deposit_amount' => $service['deposit_amount'],
+                'suggested_interval_days' => VerticalInterval::toDays($service['rebook_interval'] ?? null),
                 'is_active' => true,
                 'sort_order' => $index,
             ]);

@@ -12,4 +12,5 @@ Schedule::command('bookings:release-expired')->everyMinute();
 Schedule::command('waitlist:expire-offers')->everyMinute();
 Schedule::command('bookings:daily-agenda')->hourly();
 Schedule::command('billing:dunning')->daily();
+Schedule::command('rebooking:send')->dailyAt('09:00');
 Schedule::command('db:backup --disk=s3')->daily()->at('02:15');

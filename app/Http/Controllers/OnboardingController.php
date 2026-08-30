@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\Booking\BookingService;
 use App\Support\SetupSteps;
 use App\Support\Timezones;
+use App\Support\VerticalInterval;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -153,6 +154,10 @@ class OnboardingController extends Controller
                 if ($service) {
                     $service->update($payload);
                 } else {
+                    $payload['suggested_interval_days'] = VerticalInterval::daysForNamedService(
+                        (string) current_tenant()?->type,
+                        $row['name'],
+                    );
                     $service = Service::query()->create($payload);
                 }
 

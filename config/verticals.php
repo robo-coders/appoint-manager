@@ -14,10 +14,10 @@ return [
             ['key' => 'notes', 'label' => 'Temperament / notes', 'type' => 'textarea', 'required' => false],
         ],
         'default_services' => [
-            ['name' => 'Full groom — small dog', 'duration_minutes' => 60, 'price' => 3500, 'deposit_amount' => 1000],
-            ['name' => 'Full groom — medium dog', 'duration_minutes' => 90, 'price' => 4500, 'deposit_amount' => 1000],
-            ['name' => 'Bath and blow dry', 'duration_minutes' => 45, 'price' => 2500, 'deposit_amount' => 1000],
-            ['name' => 'Nail clip', 'duration_minutes' => 15, 'price' => 1000, 'deposit_amount' => 0],
+            ['name' => 'Full groom — small dog', 'duration_minutes' => 60, 'price' => 3500, 'deposit_amount' => 1000, 'rebook_interval' => ['value' => 6, 'unit' => 'weeks']],
+            ['name' => 'Full groom — medium dog', 'duration_minutes' => 90, 'price' => 4500, 'deposit_amount' => 1000, 'rebook_interval' => ['value' => 6, 'unit' => 'weeks']],
+            ['name' => 'Bath and blow dry', 'duration_minutes' => 45, 'price' => 2500, 'deposit_amount' => 1000, 'rebook_interval' => ['value' => 4, 'unit' => 'weeks']],
+            ['name' => 'Nail clip', 'duration_minutes' => 15, 'price' => 1000, 'deposit_amount' => 0, 'rebook_interval' => ['value' => 3, 'unit' => 'weeks']],
         ],
     ],
 ];

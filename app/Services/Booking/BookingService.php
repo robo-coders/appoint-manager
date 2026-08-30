@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\WaitlistEntry;
 use App\Services\Availability\AvailabilityEngine;
 use App\Services\Notifications\Notifier;
+use App\Services\Rebooking\RebookInterval;
 use App\Services\Stripe\StripeGateway;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\AvailabilityCache;
@@ -107,13 +108,14 @@ final class BookingService
         ?BookingStatus $status = null,
         ?DepositStatus $depositStatus = null,
         ?int $waitlistEntryId = null,
+        ?int $rebookIntervalDays = null,
     ): Booking {
         $startsAt = $startsAt->utc();
         $endsAt = $startsAt->addMinutes($service->duration_minutes);
         $needsDeposit = $this->needsDeposit($tenant, $service, $source);
         app(TenantContext::class)->set($tenant);
 
-        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $waitlistEntryId) {
+        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $waitlistEntryId, $rebookIntervalDays) {
             $this->lockStaffRow($tenant, $staff);
 
             if ($this->afterLock !== null) {
@@ -137,8 +139,13 @@ final class BookingService
                 'price_at_booking' => $service->price->amount,
                 'deposit_at_booking' => $needsDeposit ? $service->deposit_amount->amount : 0,
                 'source' => $source,
+                'rebook_interval_days' => $rebookIntervalDays,
             ]);
             $booking->save();
+
+            if ($subject !== null && $rebookIntervalDays !== null && $rebookIntervalDays > 0) {
+                app(RebookInterval::class)->remember($subject, $rebookIntervalDays);
+            }
 
             return $booking;
         });

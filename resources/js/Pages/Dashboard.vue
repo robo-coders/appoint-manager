@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import EmptyState from '@/Components/ui/EmptyState.vue';
 import TimelineRow from '@/Components/ui/TimelineRow.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 /**
@@ -11,13 +11,11 @@ import { computed } from 'vue';
  *
  * Two ideas, and both of them are about weight.
  *
- * **The band is not four equal cards.** `Recovered from waitlist` takes 45% of
- * the width, a `--paper-sunk` fill and a border, and its figure is 34px mono;
- * the other two are 20px on paper with a hairline. Four equal cards say that
- * four numbers matter equally, which is never true — and this is the number the
- * salon opens the app for. What exactly it counts is documented on
- * `DashboardController::recovered()`, because a sales pitch that is not exact
- * is a lie.
+ * **The band is not four equal cards.** Recovered and overdue take the weight
+ * (sunk, 34px mono); deposits and no-shows stay 20px on paper with a hairline.
+ * What recovered counts is documented on `DashboardController::recovered()`,
+ * because a sales pitch that is not exact is a lie. Overdue is the sum of each
+ * subject's usual service price — see `OverdueSubjects`.
  *
  * **Today is a timeline, not a list.** Past appointments are muted and carry no
  * detail; the current one has a 2px ink left border and one extra line; the
@@ -48,6 +46,7 @@ const props = defineProps<{
     heading: { date: string; tenant: string; staff_today: string };
     band: {
         recovered: { value: string; count: number; month: string; unconfirmed: number };
+        overdue: { value: string; count: number; noun: string };
         deposits: { value: string; count: number };
         no_shows: { value: string; previous: string | null; previous_month: string; direction: string | null };
     };
@@ -119,11 +118,23 @@ const freedLine = (row: Row) => {
         <!-- ================================================================
              The weighted band. 45 / 27 / 28, not four quarters.
              ================================================================ -->
-        <div class="mt-8 grid gap-6 md:grid-cols-[45fr_27fr_28fr]">
+        <div class="mt-8 grid gap-6 md:grid-cols-[34fr_32fr_17fr_17fr]">
             <section class="rounded border border-rule bg-paper-sunk p-6">
                 <h2 class="caption">Recovered from waitlist</h2>
                 <p class="numeral mt-2 text-34 font-medium">{{ band.recovered.value }}</p>
                 <p class="mt-2 text-13 text-ink-2">{{ recoveredHint }}</p>
+            </section>
+
+            <section class="rounded border border-rule bg-paper-sunk p-6">
+                <h2 class="caption">Overdue</h2>
+                <p class="numeral mt-2 text-34 font-medium">{{ band.overdue.value }}</p>
+                <p class="mt-2 text-13 text-ink-2">
+                    <span class="numeral">{{ band.overdue.count }}</span>
+                    {{ band.overdue.noun }}
+                    <Link :href="route('overdue.index')" class="ml-2 underline decoration-rule-strong underline-offset-4">
+                        Open the list
+                    </Link>
+                </p>
             </section>
 
             <section class="rounded border border-rule p-6">

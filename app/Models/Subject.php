@@ -21,6 +21,10 @@ class Subject extends Model
         'customer_id',
         'name',
         'attributes',
+        'rebook_interval_days',
+        'rebook_snoozed_until',
+        'rebook_stopped_at',
+        'rebook_contacted_at',
     ];
 
     /**
@@ -30,6 +34,10 @@ class Subject extends Model
     {
         return [
             'attributes' => 'array',
+            'rebook_interval_days' => 'integer',
+            'rebook_snoozed_until' => 'datetime',
+            'rebook_stopped_at' => 'datetime',
+            'rebook_contacted_at' => 'datetime',
         ];
     }
 

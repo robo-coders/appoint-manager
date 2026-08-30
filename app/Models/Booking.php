@@ -36,6 +36,7 @@ class Booking extends Model
         'cancelled_at',
         'cancellation_reason',
         'source',
+        'rebook_interval_days',
         'stripe_payment_intent_id',
         'waitlist_entry_id',
     ];
@@ -61,6 +62,7 @@ class Booking extends Model
             'status' => BookingStatus::class,
             'deposit_status' => DepositStatus::class,
             'source' => BookingSource::class,
+            'rebook_interval_days' => 'integer',
             'price_at_booking' => MoneyCast::class,
             'deposit_at_booking' => MoneyCast::class,
             'deposit_paid_at' => 'datetime',

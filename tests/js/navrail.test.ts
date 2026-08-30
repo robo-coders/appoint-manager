@@ -17,6 +17,7 @@ const links: NavLink[] = [
     { href: 'http://localhost/bookings', label: 'Bookings', glyph: 'Bk', count: 12 },
     { href: 'http://localhost/customers', label: 'Customers', glyph: 'Cu', count: 348 },
     { href: 'http://localhost/waitlist', label: 'Waitlist', glyph: 'Wl', count: 3 },
+    { href: 'http://localhost/overdue', label: 'Overdue', glyph: 'Od', count: 4 },
     { href: 'http://localhost/services', label: 'Services', glyph: 'Sv', count: 9 },
     { href: 'http://localhost/staff', label: 'Staff', glyph: 'St', count: 4 },
     { href: 'http://localhost/hours', label: 'Hours', glyph: 'Hr' },
@@ -70,7 +71,7 @@ describe('the icon set', () => {
 
     it('is small and fixed, because every entry is a deep import somebody wrote', () => {
         // A number that only moves when a person adds a line to `lib/navIcons`.
-        expect(Object.keys(NAV_ICONS)).toHaveLength(14);
+        expect(Object.keys(NAV_ICONS)).toHaveLength(15);
     });
 });
 
@@ -94,7 +95,7 @@ describe('at 148px', () => {
         const wrapper = rail();
         const counts = wrapper.findAll('nav .numeral');
 
-        expect(counts.map((c) => c.text())).toEqual(['12', '348', '3', '9', '4']);
+        expect(counts.map((c) => c.text())).toEqual(['12', '348', '3', '4', '9', '4']);
     });
 
     it('marks the current page for assistive tech, not just with a tint', () => {

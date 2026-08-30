@@ -71,6 +71,7 @@ const links = computed<NavLink[]>(() => {
         { href: route('bookings.index'), label: 'Bookings', glyph: 'Bk', hint: 'B', count: n?.bookings },
         { href: route('customers.index'), label: 'Customers', glyph: 'Cu', hint: 'C', count: n?.customers },
         { href: route('waitlist.index'), label: 'Waitlist', glyph: 'Wl', hint: 'W', count: n?.waitlist },
+        { href: route('overdue.index'), label: 'Overdue', glyph: 'Od', hint: 'U', count: n?.overdue },
         { href: route('services.index'), label: 'Services', glyph: 'Sv', hint: 'S', count: n?.services },
         { href: route('staff.index'), label: 'Staff', glyph: 'St', hint: 'P', count: n?.staff },
         { href: route('availability.index'), label: 'Hours', glyph: 'Hr', hint: 'H' },

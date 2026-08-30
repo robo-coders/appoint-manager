@@ -25,6 +25,7 @@ use App\Http\Controllers\DiaryController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OverdueController;
 use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -111,6 +112,15 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/waitlist', [WaitlistController::class, 'index'])->name('waitlist.index');
     Route::post('/waitlist', [WaitlistController::class, 'store'])->name('waitlist.store');
+
+    Route::get('/overdue', [OverdueController::class, 'index'])->name('overdue.index');
+    Route::post('/overdue/preview-enable', [OverdueController::class, 'previewEnable'])->name('overdue.preview-enable');
+    Route::post('/overdue/enable', [OverdueController::class, 'enable'])->name('overdue.enable');
+    Route::post('/overdue/disable', [OverdueController::class, 'disable'])->name('overdue.disable');
+    Route::post('/overdue/{subject}/contacted', [OverdueController::class, 'contacted'])->name('overdue.contacted');
+    Route::post('/overdue/{subject}/snooze', [OverdueController::class, 'snooze'])->name('overdue.snooze');
+    Route::post('/overdue/{subject}/stop', [OverdueController::class, 'stop'])->name('overdue.stop');
+    Route::post('/overdue/{subject}/resume', [OverdueController::class, 'resume'])->name('overdue.resume');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

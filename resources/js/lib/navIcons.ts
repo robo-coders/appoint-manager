@@ -6,6 +6,7 @@ import IdCard from 'lucide-vue-next/dist/esm/icons/id-card';
 import LayoutDashboard from 'lucide-vue-next/dist/esm/icons/layout-dashboard';
 import List from 'lucide-vue-next/dist/esm/icons/list';
 import Plane from 'lucide-vue-next/dist/esm/icons/plane';
+import Repeat from 'lucide-vue-next/dist/esm/icons/repeat';
 import Scissors from 'lucide-vue-next/dist/esm/icons/scissors';
 import Send from 'lucide-vue-next/dist/esm/icons/send';
 import Settings from 'lucide-vue-next/dist/esm/icons/settings';
@@ -22,7 +23,7 @@ import type { Component } from 'vue';
  * rest away — but "should" is doing a lot of work in a file nobody looks at
  * again, and a single future import from the barrel in any other file would
  * silently undo it for the whole bundle. Naming the file makes the cost visible
- * and fixed: fourteen icons, and adding a fifteenth means adding a line here.
+ * and fixed: fifteen icons, and adding a sixteenth means adding a line here.
  *
  * The names are chosen, not derived, for the same reason the letter glyphs they
  * replace were: `Services`, `Staff` and `Settings` all begin with S, and three
@@ -39,6 +40,7 @@ export const NAV_ICONS: Record<string, Component> = {
     bookings: List,
     customers: Users,
     waitlist: Hourglass,
+    overdue: Repeat,
     services: Scissors,
     staff: IdCard,
     hours: Clock,

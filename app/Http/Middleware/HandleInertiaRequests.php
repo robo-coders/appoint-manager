@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WaitlistEntry;
+use App\Services\Rebooking\OverdueSubjects;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -136,6 +137,7 @@ class HandleInertiaRequests extends Middleware
                 ->where('status', '!=', BookingStatus::Cancelled->value)
                 ->count(),
             'customers' => Customer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count(),
+            'overdue' => app(OverdueSubjects::class)->summary($tenant)['count'],
             'waitlist' => WaitlistEntry::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->where('is_active', true)
