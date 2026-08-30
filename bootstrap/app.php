@@ -124,6 +124,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'stripe/webhook',
             'stripe/billing/webhook',
             'twilio/status',
+            'twilio/inbound',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

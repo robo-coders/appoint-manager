@@ -15,12 +15,15 @@ class Message extends Model
 
     protected $fillable = [
         'customer_id',
+        'subject_id',
         'booking_id',
         'channel',
         'type',
         'to',
         'body',
+        'segments',
         'provider_id',
+        'provider_error',
         'status',
     ];
 
@@ -33,6 +36,7 @@ class Message extends Model
             'channel' => MessageChannel::class,
             'type' => MessageType::class,
             'status' => MessageStatus::class,
+            'segments' => 'integer',
         ];
     }
 
@@ -50,5 +54,13 @@ class Message extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    /**
+     * @return BelongsTo<Subject, $this>
+     */
+    public function subject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class);
     }
 }

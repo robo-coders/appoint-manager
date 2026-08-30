@@ -62,6 +62,13 @@ return [
         'token' => env('TWILIO_TOKEN'),
         'from' => env('TWILIO_FROM'),
         'status_webhook_url' => env('TWILIO_STATUS_URL'),
+        /*
+         * `X-Twilio-Signature` verification on both Twilio webhooks. Skipped
+         * anyway when no token is set, which is every local and test
+         * environment; this key exists so a production incident can be
+         * diagnosed by turning it off deliberately rather than by editing code.
+         */
+        'verify_signature' => env('TWILIO_VERIFY_SIGNATURE', true),
     ],
 
     'plausible' => [

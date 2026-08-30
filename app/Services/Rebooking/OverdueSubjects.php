@@ -29,7 +29,7 @@ final class OverdueSubjects
     {
         $today = ($today ?? CarbonImmutable::now($tenant->timezone))->startOfDay();
         $todayUtc = $today->utc();
-        $contactedCutoff = $todayUtc->subDays(14);
+        $contactedCutoff = $todayUtc->subDays((int) config('rebooking.contacted_window_days'));
 
         $futureIds = Booking::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
@@ -97,6 +97,14 @@ final class OverdueSubjects
                     'price' => $price->formatted(),
                     'stopped' => false,
                     'snoozed_until' => $subject->rebook_snoozed_until?->toDateString(),
+                    /*
+                     * A customer who replied STOP stays on this list. Opting out
+                     * of texts is not opting out of being a customer, and the
+                     * salon can still pick up the phone — she just needs to be
+                     * told that is the only way to reach them.
+                     */
+                    'opted_out' => $subject->customer?->sms_opted_out_at !== null,
+                    'number_failing' => $subject->rebook_send_blocked_at !== null,
                 ];
             })
             ->filter()

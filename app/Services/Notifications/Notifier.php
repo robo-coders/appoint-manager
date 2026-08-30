@@ -23,12 +23,13 @@ use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Billing\SmsAllowance;
+use App\Services\Sms\SmsConsent;
 use App\Services\Sms\SmsGateway;
+use App\Support\SmsSegments;
 use App\Support\TenantContext;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 final class Notifier
 {
@@ -40,7 +41,7 @@ final class Notifier
 
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
         $url = book_url(null, 'b/'.$booking->public_token);
-        $sms = $this->fitSms($tenant->name.': confirmed '.$when.'. '.$url);
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': confirmed '.$when.'. '.$url);
 
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingConfirmedMail($booking, $tenant), MessageType::BookingConfirmed, 'Your booking is confirmed.');
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::BookingConfirmed);
@@ -56,7 +57,7 @@ final class Notifier
     {
         [$booking, $tenant] = $this->hydrate($booking);
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
-        $sms = $this->fitSms($tenant->name.': cancelled '.$when.'. Refund: '.$refundStatus);
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': cancelled '.$when.'. Refund: '.$refundStatus);
 
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingCancelledMail($booking, $tenant, $refundStatus), MessageType::Cancelled, 'Cancelled. Refund: '.$refundStatus);
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::Cancelled);
@@ -71,7 +72,7 @@ final class Notifier
         [$booking, $tenant] = $this->hydrate($booking);
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
         $url = book_url(null, 'b/'.$booking->public_token);
-        $sms = $this->fitSms($tenant->name.': new time '.$when.'. '.$url);
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': new time '.$when.'. '.$url);
 
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingRescheduledMail($booking, $tenant), MessageType::Rescheduled, 'Your booking was moved.');
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::Rescheduled);
@@ -86,7 +87,7 @@ final class Notifier
         [$booking, $tenant] = $this->hydrate($booking);
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
         $url = book_url(null, 'b/'.$booking->public_token);
-        $sms = $this->fitSms($tenant->name.': reminder '.$when.'. '.$url);
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': reminder '.$when.'. '.$url);
 
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingReminderMail($booking, $tenant), MessageType::Reminder, 'Reminder for your booking.');
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::Reminder);
@@ -107,20 +108,28 @@ final class Notifier
 
     public function waitlistOffer(Tenant $tenant, Customer $customer, string $claimUrl): void
     {
-        $sms = $this->fitSms($tenant->name.': a slot is free. Claim: '.$claimUrl);
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': a slot is free. Claim: '.$claimUrl);
         $this->smsCustomer($tenant, null, $customer, $sms, MessageType::WaitlistOffer);
     }
 
     public function waitlistGone(Tenant $tenant, Customer $customer): void
     {
-        $sms = $this->fitSms($tenant->name.': that slot was taken. We will text if another opens.');
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': that slot was taken. We will text if another opens.');
         $this->smsCustomer($tenant, null, $customer, $sms, MessageType::WaitlistGone);
     }
 
-    public function rebookDue(Tenant $tenant, Customer $customer, Subject $subject, string $body): void
+    /**
+     * @return Message|null The queued SMS, so the caller can tie a rebooking
+     *                      claim to it and hear about a later failure.
+     */
+    public function rebookDue(Tenant $tenant, Customer $customer, Subject $subject, string $body): ?Message
     {
-        $this->emailCustomer($tenant, null, $customer, new RebookDueMail($tenant, $subject, $body), MessageType::RebookDue, $body);
-        $this->smsCustomer($tenant, null, $customer, $this->fitSms($body), MessageType::RebookDue);
+        // The body arrives already composed and already carrying its opt-out
+        // notice, because the dry run showed the operator that exact string and
+        // reshaping it here would make the preview a lie.
+        $this->emailCustomer($tenant, null, $customer, new RebookDueMail($tenant, $subject, $body), MessageType::RebookDue, $body, $subject);
+
+        return $this->smsCustomer($tenant, null, $customer, $body, MessageType::RebookDue, $subject);
     }
 
     private function scheduleReminder(Booking $booking): void
@@ -153,10 +162,10 @@ final class Notifier
         return (bool) data_get($tenant->settings, 'notifications.sms_enabled', true);
     }
 
-    private function emailCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body): void
+    private function emailCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body, ?Subject $subject = null): void
     {
         Mail::to($customer->email)->queue($mail);
-        $this->log($tenant, $customer, $booking, MessageChannel::Email, $type, $customer->email, $body, MessageStatus::Sent, null);
+        $this->log($tenant, $customer, $booking, MessageChannel::Email, $type, $customer->email, $body, MessageStatus::Sent, null, 1, $subject);
     }
 
     private function emailSalon(Tenant $tenant, Booking $booking, Mailable $mail, MessageType $type): void
@@ -171,22 +180,35 @@ final class Notifier
      * Nothing here talks to Twilio inline. A provider outage must not be able to
      * roll back the booking or the refund that caused the message.
      */
-    private function smsCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, string $body, MessageType $type): void
+    private function smsCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, string $body, MessageType $type, ?Subject $subject = null): ?Message
     {
         if (! $this->smsEnabled($tenant) || ! $customer->phone) {
-            return;
+            return null;
         }
 
-        if (! app(SmsAllowance::class)->canSend($tenant)) {
-            return;
+        // The opt-out gate, and the only place it lives. A customer who replied
+        // STOP is suppressed from marketing and nothing else: a confirmation, a
+        // reminder and a waitlist offer are about an appointment they made and
+        // withholding them would put somebody outside a locked salon door.
+        if ($type->isMarketing() && app(SmsConsent::class)->isOptedOut($customer)) {
+            return null;
+        }
+
+        $body = SmsSegments::sanitise($body);
+        $segments = SmsSegments::count($body);
+
+        if (! app(SmsAllowance::class)->canSend($tenant, $segments)) {
+            return null;
         }
 
         $message = $this->log(
             $tenant, $customer, $booking, MessageChannel::Sms, $type,
-            $customer->phone, $body, MessageStatus::Queued, null,
+            $customer->phone, $body, MessageStatus::Queued, null, $segments, $subject,
         );
 
         SendSms::dispatch($message->id);
+
+        return $message;
     }
 
     private function log(
@@ -199,16 +221,20 @@ final class Notifier
         string $body,
         MessageStatus $status,
         ?string $providerId,
+        int $segments = 1,
+        ?Subject $subject = null,
     ): Message {
         $message = new Message;
         $message->forceFill([
             'tenant_id' => $tenant->id,
             'customer_id' => $customer?->id,
+            'subject_id' => $subject?->id,
             'booking_id' => $booking?->id,
             'channel' => $channel,
             'type' => $type,
             'to' => $to,
             'body' => $body,
+            'segments' => $segments,
             'provider_id' => $providerId,
             'status' => $status,
         ]);
@@ -217,8 +243,18 @@ final class Notifier
         return $message;
     }
 
-    private function fitSms(string $body): string
+    /**
+     * Keep a transactional SMS inside the segment budget without cutting the
+     * link off the end of it.
+     *
+     * The salon's name is the only unbounded string in any of these bodies, so
+     * it is the one that gives way. See `SmsSegments::fit` for what this
+     * replaced and why it mattered.
+     *
+     * @param  callable(string): string  $render
+     */
+    private function fitSms(string $salon, callable $render): string
     {
-        return Str::limit($body, 160, '');
+        return SmsSegments::fit($salon, $render, (int) config('rebooking.message.max_segments', 3));
     }
 }

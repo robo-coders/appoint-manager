@@ -38,6 +38,8 @@ class Subject extends Model
             'rebook_snoozed_until' => 'datetime',
             'rebook_stopped_at' => 'datetime',
             'rebook_contacted_at' => 'datetime',
+            'rebook_failed_sends' => 'integer',
+            'rebook_send_blocked_at' => 'datetime',
         ];
     }
 

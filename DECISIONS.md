@@ -2493,3 +2493,253 @@ checked on the next send, including a job already queued.
 At 80% the operator sees a banner and gets an email. At 100% of included,
 SMS stops unless prepaid remains; banner and email say so. At the ceiling,
 SMS stops, a top-up will not restart it, and the owner is alerted.
+
+# Rebooking safety
+
+Everything here is about the difference between a seeded database and two
+hundred real dog owners with real phones.
+
+## The duplicate rule, and why it is a unique index
+
+`rebooking:send` used to guard against duplicates with
+`alreadySentThisCycle()`: a `SELECT` on `messages` for a `rebook_due` row in
+the last fourteen days, followed by a send. That is a read, a gap, and a write.
+The gap is where a second scheduled run, a manual trigger, two queue workers
+and a retry after a crash all get their duplicate, and none of them would look
+like a bug — they would look like a groomer's client being texted every morning
+for a fortnight.
+
+So the rule is now a table:
+
+    rebook_sends
+      unique (tenant_id, subject_id, due_on, attempt)
+
+A row is a **claim**, inserted before the message is queued. Two callers race,
+one gets a row, the other gets SQLSTATE 23000 and is refused. There is no
+window, and the enforcement does not depend on any line of the job being
+correct. `RebookAttempts::claim()` catches 23000 and returns null; the job
+treats null as "somebody else has this one" and moves on.
+
+**The cycle key is `due_on`, not a timestamp and not a counter.** `due_on` is
+the date the subject fell due — last visit plus interval. Booking moves the last
+visit, which moves the due date, which is a new cycle. Nothing else can produce
+one, so "they booked, chase them again next time" needs no code at all. There is
+no clock arithmetic in the uniqueness rule.
+
+Proven three ways in `RebookingSafetyTest`: the job run on three consecutive
+days sends one message; the job run twice in the same minute sends one message;
+and a hand-written `INSERT` straight at the table, bypassing every line of
+application logic, throws `UniqueConstraintViolationException`.
+
+## Chased, did not book, still overdue six weeks later
+
+**One follow-up after a gap, then silence.** `max_per_cycle` is 2 and
+`follow_up_gap_days` is 21. Day one: the chase. Day twenty-two: the follow-up.
+After that nothing, ever, for that due cycle — a client who has been asked twice
+and has not booked is a phone call, not a third text. A fourth, fifth and sixth
+run at day 42, 63 and 84 were asserted to send nothing.
+
+They stay on the overdue list, which is the point. The list is useful whether or
+not messages are on: it has the phone number, the due date and the money. What
+changes is that the list is now the *only* thing that will reach them, and the
+dry run says so — `attempts_used`.
+
+## STOP
+
+`customers.sms_opted_out_at`, set only through `SmsConsent` and deliberately not
+fillable. A consent flag a mass-assigned customer form could clear is not a
+consent flag.
+
+**Per tenant falls out of the schema.** `customers` is already per tenant, so a
+client of two salons is two rows. Nothing has to remember the rule.
+
+**Marketing only.** `MessageType::isMarketing()` is true for `RebookDue` and
+false for everything else. A confirmation, a reminder, a cancellation and a
+waitlist offer are service messages about an appointment the customer made, and
+somebody who replied STOP to a marketing text has not asked to stop being told
+their dog's appointment moved. Suppressing those would put a person outside a
+locked salon door. Asserted: a confirmation still sends to an opted-out client.
+
+**Which salon is a reply to?** Inbound SMS arrives on one platform number shared
+by every tenant, so the webhook payload cannot say. `SmsConsent::resolve()` uses
+the most recent outbound SMS to that number: a STOP is a reply to the last thing
+that arrived. The alternative — opting the number out of every tenant that holds
+it — was rejected, because it is the wrong answer to "opt-out is per tenant" and
+it lets one salon's client silence another salon's messages. If we have never
+texted the number there is nothing to opt out of and the endpoint says so
+rather than guessing. Asserted with the same phone number at two salons.
+
+`STOP STOPALL UNSUBSCRIBE CANCEL END QUIT` opt out; `START UNSTOP` opt back in.
+Case-insensitive, trimmed, and with surrounding punctuation stripped, because
+"STOP." and "stop!" are the same intent and refusing them over a full stop
+would be indefensible. Twilio suppresses its own standard set at the number
+level whether or not this endpoint exists; we handle them too, because a
+message Twilio silently drops is one we have still counted, still logged as
+sent, and still shown the salon as a chase that happened.
+
+**`/twilio/inbound` verifies `X-Twilio-Signature`.** AUDIT H7 recorded
+`/twilio/status` as unverified, which was survivable while the endpoint only
+moved a row from `sent` to `delivered`. It stops being survivable when an
+endpoint can set a consent flag: an unauthenticated caller who knows a phone
+number could opt a salon's client out of messages that salon is paying for.
+`VerifyTwilioSignature` now covers both, and skips when no `TWILIO_TOKEN` is
+configured — which is every local and test environment, and is what keeps it
+from being a wall in front of the suite.
+
+## The hour, in the salon's timezone
+
+`SendWindow`, defaulting to 09:00–18:00 on weekdays, evaluated in
+`tenants.timezone`. Per-tenant override at
+`settings.rebooking.send_window`.
+
+**`rebooking:send` is hourly now, not daily at 09:00.** A single daily run is
+inside exactly one timezone's window: a salon in Sydney would never have been
+sent for at all. Hourly is only safe *because* the duplicate rule is a unique
+index — twenty-four runs a day produce one message per subject per cycle, and
+would do so if it ran every minute. This is the clearest illustration of why
+that rule had to move to the data layer.
+
+Outside the window nothing is claimed and nothing is dropped. The subject is
+still overdue at nine tomorrow morning. Asserted with a Sydney tenant: at 10:00
+UTC (20:00 there) nothing sends; at 23:30 UTC (09:30 there) it does. A London
+tenant at the same first instant is at 11:00 and is sent for.
+
+## Segments, not messages
+
+**Allowance decrements by segment.** `sms_cycle_used` counts what the carrier
+bills. A message over 160 GSM-7 characters is two segments, and one character
+outside GSM 03.38 — a curly apostrophe from Word, an emoji, the ë in Zoë —
+converts the whole message to UCS-2 and drops the limit to 70.
+
+Counting messages was the alternative and it is wrong twice over. It makes a
+salon's 200 quietly cost us 400, and it makes the hard ceiling — which exists to
+bound *spend* — bound something that is not spend. `canSend()` also takes the
+segment count of the message about to go out, so a two-segment message cannot be
+waved through on a one-segment remainder.
+
+`App\Support\SmsSegments` does the counting: GSM-7 at 160/153, UCS-2 at 70/67,
+the nine extension characters (`^{}\[~]|€`) charged two septets each, and UCS-2
+measured in UTF-16 code units so an emoji costs two. Eleven unit tests, including
+the 160/161 and 69/70 boundaries.
+
+Sanitising is limited to punctuation: curly quotes to straight, the dashes and
+the ellipsis, and the four space characters that are not spaces. **Letters are
+never touched.** Stripping the accent from a customer's name to save a penny is
+not our decision to make; the cost is reported instead.
+
+### The truncation bug this uncovered
+
+`Notifier::fitSms()` was `Str::limit($body, 160, '')`, and every one of these
+messages ends in a URL. A salon with a long name produced a confirmation text
+with the booking link sliced in half — silently, with nothing to catch it. The
+rebooking body had the same shape and the same bug.
+
+`SmsSegments::fit()` replaces it: the caller names the one part that may be
+shortened — the salon's own name, the only unbounded string in any of these
+bodies — and a callable puts the message back together around it. The link and
+the opt-out notice survive. With `max_segments` at 3 a real salon name never
+reaches the guard at all; it exists to bound a pathological case, not to format.
+Asserted: a confirmation for a 184-character salon name still contains the
+booking token.
+
+### The opt-out notice is in the body
+
+`" Reply STOP to opt out."`, appended by `RebookMessenger::body()` and therefore
+counted in the segment budget. A message that fits in 160 characters until the
+legally required sentence is added is a two-segment message, and we would rather
+know that before sending two hundred of them. The dry run shows the exact
+string, character count and segment count per message, and warns when any
+message exceeds one segment.
+
+## Failure, and the truth about what was sent
+
+- **Provider rejection consumes nothing.** Unchanged: `SendSms` consumes after
+  the gateway returns a SID.
+- **A rejected send releases its claim.** `RebookAttempts::release()` deletes
+  the claim row and clears `rebook_contacted_at`, so tomorrow's run retries
+  rather than hiding the subject behind a contact that never happened. Deleting
+  is deliberate — the claim's job is to prevent a duplicate *delivery*, and
+  nothing was delivered. The attempt is not lost: it is in `messages` with
+  status `failed`, which is what the salon sees.
+- **Retries are bounded.** `subjects.rebook_failed_sends`, blocked at
+  `max_send_failures` (3), flagged on the list as "check number". A permanently
+  invalid number stops being dialled.
+- **Correcting the number clears the flag.** On `Customer`'s `updated` event
+  rather than in `CustomerController`, because the number is also editable from
+  the import path and from tinker, and a flag that only clears down one route is
+  a flag that gets stuck.
+- **Billing on accept is kept, and made visible.** A later `failed` or
+  `undelivered` callback is not refunded — Twilio bills us on accept, so
+  refunding would mean absorbing a cost we really incurred. What changes is that
+  `messages.provider_error` records what the carrier said, the overdue page has
+  a send log that shows it, and an undelivered rebooking chase counts towards the
+  failure bound. "Unreachable destination handset" on the screen is the
+  difference between shrugging and correcting a digit.
+
+### `messages.subject_id`, and why the claim is not found by message id
+
+The obvious link from a failed message back to its claim is
+`rebook_sends.message_id`, and it does not work. The gateway is called from
+inside the queued job, and on the `sync` driver — the whole test suite, and any
+deployment without a worker — a provider rejection throws before the caller has
+had a chance to write the id onto the claim. So the link that has to survive a
+throw is the one the message itself carries. `messages.subject_id` is that link.
+`rebook_sends.message_id` is kept for the audit trail and is best effort.
+
+It earns its place twice: a client with two dogs receives two chases, and a send
+log naming only the client cannot say which one bounced.
+
+### `succeeded()` is not called on provider accept
+
+Twilio accepting a message says nothing about whether a handset received it.
+Clearing `rebook_failed_sends` on accept would mean a permanently dead number
+resets its own history every cycle and is dialled forever. Only a `delivered`
+callback clears it.
+
+## The ceiling: 600 → 1000
+
+Three top-ups was a wall a busy salon hit and had to telephone us about, which
+is a poor first impression of a product sold on saving her work. 1000 is five
+times the included pack and still bounds the runaway-loop case the ceiling
+exists for: a loop reaches it in minutes and it is £40 of spend rather than
+£400. Everything else about the ceiling is as built — a top-up will not lift it,
+only super admin can, and the platform owner is emailed.
+
+## The trial allowance is a policy now
+
+It was emergent. A tenant with no Stripe invoice has no cycle-reset event, so
+`maybeResetCycle()` reads the month off `sms_cycle_started_at` — and a sixty-day
+trial therefore received two included packs, which nothing said.
+
+The behaviour is kept. A long trial that runs out of texts in week five stops
+demonstrating the feature it is there to sell. But it is now
+`billing.sms_trial_included` (null = same as `sms_included`) and
+`billing.sms_trial_resets_monthly` (true), so changing it means changing two
+keys rather than reasoning about invoice dates.
+
+## New config keys
+
+`config/rebooking.php`, all of it new:
+
+| Key | Default | Controls |
+|---|---|---|
+| `contacted_window_days` | 14 | How long a contacted subject stays off the **list** |
+| `attempts.max_per_cycle` | 2 | Messages per subject per due cycle |
+| `attempts.follow_up_gap_days` | 21 | Days between chase and follow-up |
+| `attempts.max_send_failures` | 3 | Rejections before a number is flagged and dropped |
+| `send_window.start` | `09:00` | Earliest send, tenant's timezone |
+| `send_window.end` | `18:00` | Latest send, tenant's timezone |
+| `send_window.days` | `[1,2,3,4,5]` | ISO weekdays sending is allowed |
+| `message.body` | `:salon: :subject is due :due. Book: :url` | The chase |
+| `message.opt_out_suffix` | ` Reply STOP to opt out.` | Appended, and counted |
+| `message.warn_above_segments` | 1 | Dry-run warning threshold |
+| `message.max_segments` | 3 | Runaway guard, not a formatting rule |
+| `opt_out_keywords` | stop, stopall, unsubscribe, cancel, end, quit | Inbound opt-out |
+| `opt_in_keywords` | start, unstop | Inbound opt-in |
+| `opt_out_reply` / `opt_in_reply` | `''` | Empty: Twilio already acknowledges its own keywords |
+| `send_log_rows` | 20 | Rows on the overdue page's send log |
+
+`config/billing.php`: `sms_hard_ceiling` 600 → **1000**; new
+`sms_trial_included` (null) and `sms_trial_resets_monthly` (true).
+
+`config/services.php`: new `twilio.verify_signature` (true).
