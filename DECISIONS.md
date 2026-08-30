@@ -2353,19 +2353,6 @@ The four items already recorded under phase 11 (hardcoded `£39` in
 `customers.email` NOT NULL, `.DS_Store` listed twice in `.gitignore`) stay
 recorded and untouched.
 
-- **The booking lock deadlocks instead of returning 409.**
-  `BookingService::lockStaffWindow()` does `SELECT … FOR UPDATE` on the
-  overlapping bookings window. When the window is empty — the first booking
-  of the day — InnoDB gap-locks the index. Two concurrent transactions both
-  take that gap lock, both try to INSERT into the same gap, and InnoDB kills
-  one with `SQLSTATE 40001` (Deadlock found when trying to get lock). The
-  database ends with one row, so the lock works. The loser sees a 500, not a
-  409. The three rewritten concurrency tests assert the contract (exactly one
-  winner, loser gets `SlotUnavailableException` / 409) and fail on the
-  deadlock. That is the suite telling the truth. The one-line bandage is
-  `DB::transaction($callback, 5)` so Laravel retries and the second attempt
-  throws 409; the real fix is to lock a row that exists (the staff user)
-  rather than a window that does not. Neither is done here.
 - **`brand_colour` is `varchar(20)` and MySQL enforces it.**
   `TenantAccentTest` writes `x); background:url(//evil` past the validator to
   prove the page will not emit it. SQLite stored the 27 characters. MySQL
@@ -2396,14 +2383,42 @@ database the parent is using — including a ParallelTesting suffix), releases
 them from a barrier, and re-opens a transaction so the trait's rollback
 still has something to roll back.
 
-Fail-first, with `lockForUpdate()` removed from `lockStaffWindow`:
+Fail-first, with `lockForUpdate()` removed from the old bookings window:
 
 - two transactions: both returned `ok: true` with `booking_id` 1 and 2
 - two public requests: `[201, 201]`
 - two waitlist claims: `[200, 200]`
 
-Restored, the same three fail on deadlock 500 instead of double-booking.
+Restored against the empty-window gap lock, the same three failed on
+deadlock 500 instead of double-booking. That is fixed: the staff `users`
+row is locked instead. See "Booking lock is the staff row" below.
 `TenantIsolationTest` could not fail-first: `runningUnitTests()` is no
 longer in `TenantScope`. The test now flips `env` to `local` so a
 reintroduced console exemption cannot hide behind `APP_ENV=testing`.
 `ScopeFailClosedTest` already covered this more thoroughly.
+
+## Booking lock is the staff row
+
+`SELECT … FOR UPDATE` on overlapping bookings gap-locks an empty index
+range. Two concurrent first-of-the-day inserts into that gap deadlock
+(`SQLSTATE 40001`): one booking remains, the loser got a 500.
+
+The lock is now `users.id` for that staff member (scoped by `tenant_id`).
+The row exists, so InnoDB takes a row lock. The loser waits, then
+`assertSlotOpen()` throws `SlotUnavailableException` — the same 409 /
+"That time is no longer available." the sequential re-check already
+produces. Waitlist claims wrap that as `OfferUnavailableException::taken()`
+(also 409). The operator diary catches the same exception and returns
+validation errors on `starts_at`.
+
+A leftover 40001 is mapped to that same exception and reported, so a
+customer never sees a 500. There is no retry. A retry would hide a
+still-wrong lock under load; the staff row should not deadlock. One
+injected-deadlock test keeps the 409 body from regressing to 500.
+
+Single-staff high volume: every booking for that person serialises on one
+row. The transaction is short — lock, availability, insert — and mail/SMS
+already run after commit. Different staff do not contend. A slot-level
+`GET_LOCK` would be finer but is connection-scoped and does not roll back
+with the transaction. Not worth it until a salon actually queues on one
+stylist.

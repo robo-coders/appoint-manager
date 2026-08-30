@@ -26,6 +26,8 @@ use App\Support\AvailabilityCache;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Database\DeadlockException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -111,8 +113,8 @@ final class BookingService
         $needsDeposit = $this->needsDeposit($tenant, $service, $source);
         app(TenantContext::class)->set($tenant);
 
-        $booking = DB::transaction(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $waitlistEntryId) {
-            $this->lockStaffWindow($tenant, $staff, $startsAt, $endsAt, $service->buffer_minutes);
+        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $waitlistEntryId) {
+            $this->lockStaffRow($tenant, $staff);
 
             if ($this->afterLock !== null) {
                 ($this->afterLock)();
@@ -314,8 +316,8 @@ final class BookingService
         $oldEnd = CarbonImmutable::parse($booking->ends_at)->utc();
         $oldStaffId = $booking->staff_id;
 
-        $booking = DB::transaction(function () use ($booking, $tenant, $service, $staff, $startsAt, $endsAt) {
-            $this->lockStaffWindow($tenant, $staff, $startsAt, $endsAt, $service->buffer_minutes);
+        $booking = $this->inStaffLockedWrite(function () use ($booking, $tenant, $service, $staff, $startsAt, $endsAt) {
+            $this->lockStaffRow($tenant, $staff);
             $this->assertSlotOpen($tenant, $service, $staff, $startsAt, ignoreBookingId: $booking->id);
 
             $booking->forceFill([
@@ -446,16 +448,57 @@ final class BookingService
             && CarbonImmutable::parse($booking->starts_at)->utc()->isFuture();
     }
 
-    private function lockStaffWindow(Tenant $tenant, User $staff, CarbonImmutable $startsAt, CarbonImmutable $endsAt, int $buffer): void
+    /**
+     * Serialise writes for one staff member by locking their `users` row.
+     *
+     * The previous approach selected overlapping bookings `FOR UPDATE`. That
+     * window is usually empty (first booking of the day), so InnoDB takes a
+     * gap lock. Two transactions can both hold the gap, both INSERT into it,
+     * and InnoDB kills one with SQLSTATE 40001. The staff row exists, so this
+     * is a row lock: the loser waits, then `assertSlotOpen()` sees the slot
+     * gone and throws `SlotUnavailableException`.
+     */
+    private function lockStaffRow(Tenant $tenant, User $staff): void
     {
-        Booking::withoutGlobalScopes()
+        User::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
-            ->where('staff_id', $staff->id)
-            ->where('status', '!=', BookingStatus::Cancelled->value)
-            ->where('starts_at', '<', $endsAt->addMinutes($buffer))
-            ->where('ends_at', '>', $startsAt->subMinutes($buffer))
+            ->whereKey($staff->id)
             ->lockForUpdate()
-            ->get();
+            ->firstOrFail();
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
+    private function inStaffLockedWrite(callable $callback): mixed
+    {
+        try {
+            return DB::transaction($callback);
+        } catch (DeadlockException $exception) {
+            report($exception);
+
+            throw SlotUnavailableException::forSlot();
+        } catch (QueryException $exception) {
+            if ($this->isDeadlock($exception)) {
+                report($exception);
+
+                throw SlotUnavailableException::forSlot();
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function isDeadlock(QueryException $exception): bool
+    {
+        if ((string) $exception->getCode() === '40001') {
+            return true;
+        }
+
+        return ($exception->errorInfo[0] ?? null) === '40001';
     }
 
     private function assertSlotOpen(

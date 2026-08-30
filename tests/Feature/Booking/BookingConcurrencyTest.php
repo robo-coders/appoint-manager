@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Booking\BookingService;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Tests\Support\Concurrent;
 
 function bookableSalon(): array
@@ -74,12 +75,9 @@ it('creates an unconnected online booking as confirmed with no deposit', functio
 });
 
 /*
- * These two used to be sequential. They now fork two PHP processes with their
- * own PDO connections and release them from a barrier. That is what found the
- * deadlock: `lockForUpdate()` on an empty bookings window gap-locks the index,
- * both transactions then INSERT into the same gap, and InnoDB kills one with
- * SQLSTATE 40001. The database ends with one row — the lock works — but the
- * loser sees a 500, not a 409. Left failing on purpose. See DECISIONS.md.
+ * These two fork PHP processes with their own PDO connections and release
+ * them from a barrier. The staff `users` row is locked for the write, so
+ * the loser waits, then `assertSlotOpen()` throws `SlotUnavailableException`.
  */
 it('lets exactly one of two concurrent transactions take the same slot', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
@@ -137,4 +135,38 @@ it('returns 409 to exactly one of two concurrent public requests for the same sl
 
     expect($statuses)->toBe([201, 409], 'workers: '.json_encode($results))
         ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
+});
+
+it('returns 409 with the slot-gone body when a booking write deadlocks', function () {
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
+    $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
+
+    $this->app->extend(BookingService::class, function (BookingService $bookings) {
+        return $bookings->withAfterLock(function (): never {
+            $previous = new PDOException(
+                'SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction',
+            );
+            $previous->errorInfo = ['40001', 1213, 'Deadlock found when trying to get lock; try restarting transaction'];
+
+            throw new QueryException('mysql', 'insert into bookings', [], $previous);
+        });
+    });
+
+    $this->postJson(route('public.booking.store', $tenant->slug), [
+        'service_id' => $service->id,
+        'staff_id' => $staff->id,
+        'starts_at' => $startsAt->toIso8601String(),
+        'name' => 'Alex Reed',
+        'email' => 'alex@example.com',
+        'phone' => '07700900000',
+        'subject_name' => 'Willow',
+        'subject_attributes' => [
+            'breed' => 'Labrador',
+            'size' => 'medium',
+        ],
+    ])
+        ->assertConflict()
+        ->assertJson(['message' => 'That time is no longer available.']);
+
+    expect(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(0);
 });
