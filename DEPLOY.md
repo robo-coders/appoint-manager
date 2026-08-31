@@ -190,15 +190,12 @@ generated-column difference, or SQL that 9 accepts and 8 rejects. InnoDB
 gap locks and `lockForUpdate()` have been the same on both in practice; that
 is not a reason to treat them as interchangeable.
 
-### Leftover `kestrel` database
+### Leftover database from the rename
 
-The rename moved tables out of `kestrel` and recorded `DROP DATABASE kestrel`
-as the last step. If that database is still on a machine (empty, after the
-move), drop it:
-
-```bash
-mysql -h 127.0.0.1 -P 3306 -u root -e "DROP DATABASE IF EXISTS kestrel;"
-```
+The rename moved tables out of the old schema and recorded dropping it as the
+last step. The `DROP DATABASE` command is in DECISIONS.md, under the rename
+section — that file is the one place the old name is allowed to appear. If
+that empty database is still on a machine, run the command recorded there.
 
 Do not drop `appoint_manager`, `appoint_manager_test`, or `appoint_manager_e2e`.
 

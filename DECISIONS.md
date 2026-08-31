@@ -2882,8 +2882,8 @@ stops looking like a backlog.
 - **`composer.json` `post-create-project-cmd` touched `database/database.sqlite`.**
   Removed. We are MySQL everywhere; that file is not part of the product.
 - **Leftover `kestrel` database.** Empty (zero tables). Dropped on this
-  machine. The command is in `DEPLOY.md` for any other checkout that still
-  has it.
+  machine. The `DROP DATABASE` stays in the rename section above — `DEPLOY.md`
+  points here, because the name check forbids the old name everywhere else.
 - **MySQL version.** 8.4 is authoritative — docker-compose and production.
   This laptop is 9.5; that is a local deviation, recorded in `DEPLOY.md`, not
   a second target. What breaks if they diverge: reserved words, auth plugin,
@@ -2931,3 +2931,40 @@ it. Do not re-open these as "found broken" unless the reason changes.
   request. What would close it: rewrite those tests against a real queue, plus
   a worker process with no tenant context (AUDIT C9). Recorded since phase 11.
   Not this pass.
+
+# Phase 12, section 6 — full verification
+
+## Gates
+
+| Gate | Result |
+|---|---|
+| `npm run check` | pass (design, contrast, components, name, vitest 115, pint) |
+| `npx vue-tsc --noEmit` | pass |
+| `./vendor/bin/pint --test` | pass |
+| Pest serial | **643 passed** (2837 assertions), 45.25s |
+| Pest `--parallel` | **643 passed** (2837 assertions), 20.56s, 8 processes. Agrees. |
+| `npm run test:e2e` | **69 passed**. Dashboard baselines regenerated: the overdue card from rebooking was missing from the old shots. |
+| Lighthouse mobile, 5 runs each | home and pricing both **99 / 100 / 100 / 100** every run. `php artisan serve` flatters performance; 99 is not what a real edge will score. |
+
+`check:name` first failed on the leftover-schema note I had put in `DEPLOY.md`. The old name is only allowed in `DECISIONS.md`. The DROP stays in the rename section; DEPLOY points there.
+
+## Manual walk
+
+Login was the thing a previous pass could not finish. The cause is host, not credentials. `.env` has `APP_URL=http://localhost:8000`. Ziggy builds `route('login')` on that host. Opening `http://127.0.0.1:8000/login` posts cross-origin; the session cookie never rides, the page does not move, and there is no error callout. `http://localhost:8000/login` with `owner@rebooking-demo.test` / `password` lands on the diary. Super admin is `admin@gmail.com` / `admin@1234` at `/admin/login`. `node scripts/walkthrough.mjs` is the click-through.
+
+What I actually opened:
+
+- **Login** at 375 and 1280. Wordmark is DiaryDesk. Two columns at 1280, one at 375. Fine.
+- **Diary** for Sunday 30 August. Empty grid — `demo:rebooking` seeds history, not today. Two staff columns (Demo Groomer, Demo Owner). Overdue 16 on the rail. Fine, but a first-time opener will think the product has no bookings.
+- **New booking** drawer. Email is not required. **Come back in** set to 4 weeks. The interval control is the last field, after dog name, which is easy to miss.
+- **Overdue** at 375 and 1280. Sixteen dogs, £560. Nala marked **no texts**. Scout labelled **Your own mobile**. Gus under Stopped with Start chasing again. One queued text in the send log. Preview messages is the first thing on the page. At 375 the list is cards, not a table; that is readable. I did not get a screenshot of the dry-run bodies — the script waited for the word "segment" and the page says "texts" unless a message is over one part. Snooze and stop were not clicked on this pass.
+- **Billing, super admin controls, send log** — not clicked in the browser this pass. The pages exist; `/billing` shows price, `used of included`, and the top-up button. The usage figure is not in the rail. It appears on Billing, and as a banner only after 80% or a stop. At zero used, there is nothing to "see" on the diary.
+- **Public booking** `/book/rebooking-demo` returned 200, title `Rebooking Demo Salon — book in London, E8 3AA`.
+- **Deposit with a Stripe test card** — not done. `STRIPE_KEY` and `STRIPE_SECRET` are empty, and the demo tenant has no connected account. The booking page cannot reach a card.
+
+What looked wrong or confusing, plainly:
+
+- Empty diary on a Sunday after a rebooking seed. The overdue list is where the work is; the diary looks dead.
+- Login on `127.0.0.1` fails silently. DEPLOY already says localhost; the failure mode still needs to be named, because it is how this walk died last time.
+- No usage number in the chrome until you are near the limit. The brief asked to see the counter; it lives on `/billing` only.
+- I did not finish snooze, stop, dry-run bodies, admin kill/credit/trial, or a real card. Those are in the script. They are not a substitute for having watched them.
