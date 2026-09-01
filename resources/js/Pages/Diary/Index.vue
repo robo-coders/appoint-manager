@@ -43,7 +43,13 @@ const props = defineProps<{
     range_start: string;
     timezone: string;
     staff: Array<{ id: number; name: string; colour: string | null; is_bookable: boolean }>;
-    services: Array<{ id: number; name: string; duration_minutes: number; price: Money }>;
+    services: Array<{
+        id: number;
+        name: string;
+        duration_minutes: number;
+        price: Money;
+        suggested_interval_days: number | null;
+    }>;
     bookings: DiaryBooking[];
     /** Keyed by staff id. Day view only. */
     working: Record<number, Array<{ start: string; end: string }>>;
@@ -78,7 +84,39 @@ const form = useForm({
     customer_email: '',
     customer_phone: '',
     subject_name: '',
-    rebook_interval_days: '' as string | number,
+    rebook_interval_days: (props.services[0]?.suggested_interval_days ?? '') as string | number,
+});
+
+const intervalLabel = (days: number) => {
+    if (days % 7 === 0) {
+        const weeks = days / 7;
+
+        return weeks === 1 ? '1 week' : `${weeks} weeks`;
+    }
+
+    return `${days} days`;
+};
+
+const chosenService = computed(() => props.services.find((item) => item.id === Number(form.service_id)));
+
+const intervalFromService = computed(() => {
+    const days = chosenService.value?.suggested_interval_days;
+
+    return days != null && Number(form.rebook_interval_days) === days;
+});
+
+const intervalOptions = computed(() => {
+    const days = chosenService.value?.suggested_interval_days;
+    const values = [21, 28, 35, 42, 49, 56];
+
+    if (days != null && !values.includes(days)) {
+        values.unshift(days);
+    }
+
+    return [
+        { value: '', label: 'The usual' },
+        ...values.map((value) => ({ value, label: intervalLabel(value) })),
+    ];
 });
 
 const shown = computed(() => annotate([...props.bookings, ...optimistic.value], props.is_today ? nowLocal.value : null));
@@ -212,6 +250,7 @@ const submit = () => {
             optimistic.value = optimistic.value.filter((booking) => booking.id !== temp.id);
             form.reset();
             form.service_id = props.services[0]?.id ?? 0;
+            form.rebook_interval_days = props.services[0]?.suggested_interval_days ?? '';
         },
     });
 };
@@ -231,6 +270,14 @@ onUnmounted(() => {
     window.removeEventListener('resize', onResize);
     if (clock) clearInterval(clock);
 });
+
+watch(
+    () => form.service_id,
+    (id) => {
+        const service = props.services.find((item) => item.id === Number(id));
+        form.rebook_interval_days = service?.suggested_interval_days ?? '';
+    },
+);
 
 watch(
     () => page.url,
@@ -428,6 +475,12 @@ watch(
                     :options="services.map((s) => ({ value: s.id, label: s.name }))"
                 />
                 <Select
+                    v-model="form.rebook_interval_days"
+                    label="Come back in"
+                    :hint="intervalFromService ? 'Usual for this service.' : 'Clear it if this visit should not set a return.'"
+                    :options="intervalOptions"
+                />
+                <Select
                     v-model="form.staff_id"
                     label="Staff"
                     :options="staff.map((s) => ({ value: s.id, label: s.name }))"
@@ -437,20 +490,6 @@ watch(
                 <TextInput v-model="form.customer_email" type="email" label="Email" :error="form.errors.customer_email" />
                 <TextInput v-model="form.customer_phone" label="Phone" :error="form.errors.customer_phone" />
                 <TextInput v-model="form.subject_name" :label="sentenceCase(page.props.vertical.subject_singular) + ' name'" />
-                <Select
-                    v-model="form.rebook_interval_days"
-                    label="Come back in"
-                    hint="Leave as the usual unless this visit should change it."
-                    :options="[
-                        { value: '', label: 'The usual' },
-                        { value: 21, label: '3 weeks' },
-                        { value: 28, label: '4 weeks' },
-                        { value: 35, label: '5 weeks' },
-                        { value: 42, label: '6 weeks' },
-                        { value: 49, label: '7 weeks' },
-                        { value: 56, label: '8 weeks' },
-                    ]"
-                />
                 <Button type="submit" :loading="form.processing">Save booking</Button>
             </form>
         </SlideOver>

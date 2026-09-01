@@ -109,12 +109,13 @@ class DiaryController extends Controller
             'services' => Service::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
-                ->get(['id', 'name', 'duration_minutes', 'price', 'deposit_amount'])
+                ->get(['id', 'name', 'duration_minutes', 'price', 'deposit_amount', 'suggested_interval_days'])
                 ->map(fn (Service $service) => [
                     'id' => $service->id,
                     'name' => $service->name,
                     'duration_minutes' => $service->duration_minutes,
                     'price' => $service->price->toArray(),
+                    'suggested_interval_days' => $service->suggested_interval_days,
                 ])
                 ->values(),
             'bookings' => $bookings,

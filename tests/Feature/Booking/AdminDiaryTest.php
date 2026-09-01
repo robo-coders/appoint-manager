@@ -7,8 +7,10 @@ use App\Models\AvailabilityRule;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
+use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Rebooking\OverdueSubjects;
 use Carbon\CarbonImmutable;
 
 it('shows the diary, bookings list and customer detail for the current tenant only', function () {
@@ -153,4 +155,116 @@ it('stores two walk-in bookings for clients who have no email', function () {
     expect($emails)->toBe([null, null])
         ->and(Customer::query()->count())->toBe(2)
         ->and(Booking::query()->count())->toBe(2);
+});
+
+it('sends each service interval to the diary so the form can fill Come back in', function () {
+    $salon = aDiarySalon();
+    $salon['service']->forceFill(['suggested_interval_days' => 28])->save();
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'user_id' => $salon['staff']->id,
+        'weekday' => Weekday::Wednesday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('diary.index', ['date' => '2026-08-19']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('services.0.suggested_interval_days', 28));
+});
+
+it('writes the posted service interval onto the subject and chases on that due date', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
+
+    $tenant = Tenant::factory()->create(['timezone' => 'Europe/London']);
+    $owner = User::factory()->for($tenant)->owner()->create(['is_bookable' => true]);
+    $service = Service::factory()->for($tenant)->create([
+        'duration_minutes' => 60,
+        'deposit_amount' => 0,
+        'suggested_interval_days' => 42,
+        'price' => 3500,
+    ]);
+    $service->staff()->attach($owner->id);
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $owner->id,
+        'weekday' => Weekday::Tuesday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    actingAsTenant($owner)
+        ->post(route('bookings.store'), [
+            'service_id' => $service->id,
+            'staff_id' => $owner->id,
+            'starts_at' => '2026-03-10T11:00',
+            'customer_name' => 'Sam Lee',
+            'customer_phone' => '07700900001',
+            'subject_name' => 'Ash',
+            'rebook_interval_days' => 42,
+        ])
+        ->assertRedirect();
+
+    $subject = Subject::query()->first();
+
+    expect($subject?->rebook_interval_days)->toBe(42)
+        ->and(Booking::query()->value('rebook_interval_days'))->toBe(42);
+
+    $this->travelTo(CarbonImmutable::parse('2026-04-21 10:00:00', 'Europe/London'));
+
+    $rows = app(OverdueSubjects::class)->forTenant($tenant);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['subject_name'])->toBe('Ash')
+        ->and($rows[0]['due_on'])->toBe('2026-04-21');
+});
+
+it('does not write an interval when Come back in is cleared', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
+
+    $tenant = Tenant::factory()->create(['timezone' => 'Europe/London']);
+    $owner = User::factory()->for($tenant)->owner()->create(['is_bookable' => true]);
+    $service = Service::factory()->for($tenant)->create([
+        'duration_minutes' => 60,
+        'deposit_amount' => 0,
+        'suggested_interval_days' => 42,
+        'price' => 3500,
+    ]);
+    $service->staff()->attach($owner->id);
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $owner->id,
+        'weekday' => Weekday::Tuesday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    actingAsTenant($owner)
+        ->post(route('bookings.store'), [
+            'service_id' => $service->id,
+            'staff_id' => $owner->id,
+            'starts_at' => '2026-03-10T11:00',
+            'customer_name' => 'Sam Lee',
+            'customer_phone' => '07700900001',
+            'subject_name' => 'Ash',
+            'rebook_interval_days' => '',
+        ])
+        ->assertRedirect();
+
+    $subject = Subject::query()->first();
+
+    expect($subject?->rebook_interval_days)->toBeNull()
+        ->and(Booking::query()->value('rebook_interval_days'))->toBeNull();
+
+    /*
+     * Clearing the checkout field does not stop chasing. DECISIONS.md and
+     * RebookInterval fall through to the service default; Stop is the action
+     * that takes a subject off the list. The form's empty option is "The usual".
+     */
+    $this->travelTo(CarbonImmutable::parse('2026-04-21 10:00:00', 'Europe/London'));
+
+    expect(app(OverdueSubjects::class)->forTenant($tenant))->toHaveCount(1);
 });
