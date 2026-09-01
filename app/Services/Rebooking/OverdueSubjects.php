@@ -153,6 +153,35 @@ final class OverdueSubjects
     }
 
     /**
+     * Snoozed subjects, so the operator can see who she put off and undo it.
+     *
+     * They are off the send set on purpose — that is what snooze means — but
+     * taking them off the page with no way back is a hole: the only other
+     * lever is waiting for the date to pass.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function snoozedForTenant(Tenant $tenant): Collection
+    {
+        return Subject::withoutGlobalScopes()
+            ->with(['customer' => fn ($query) => $query->withoutGlobalScopes()])
+            ->where('tenant_id', $tenant->id)
+            ->whereNull('rebook_stopped_at')
+            ->whereNotNull('rebook_snoozed_until')
+            ->where('rebook_snoozed_until', '>', CarbonImmutable::now('UTC'))
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Subject $subject) => [
+                'subject_id' => $subject->id,
+                'subject_name' => $subject->name,
+                'customer_name' => $subject->customer?->name,
+                'snoozed_until' => $subject->rebook_snoozed_until
+                    ?->timezone($tenant->timezone)
+                    ->format('j F'),
+            ]);
+    }
+
+    /**
      * @param  Collection<int, int>  $subjectIds
      * @return Collection<int, Booking>
      */

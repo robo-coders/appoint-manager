@@ -3,6 +3,7 @@
 use App\Models\StripeEvent;
 use App\Services\Billing\BillingGateway;
 use App\Services\Billing\FakeBillingGateway;
+use App\Services\Billing\UnconfiguredBillingGateway;
 use App\Services\Stripe\FakeStripeGateway;
 use App\Services\Stripe\StripeConnectGateway;
 use App\Services\Stripe\StripeGateway;
@@ -82,8 +83,35 @@ it('cannot resolve the fake billing gateway in any environment but testing', fun
         app()['env'] = $environment;
         config(['services.stripe.secret' => null]);
 
-        expect(fn () => rebind(BillingGateway::class))->toThrow(RuntimeException::class);
+        $resolved = null;
+        $threw = null;
+
+        try {
+            $resolved = rebind(BillingGateway::class);
+        } catch (RuntimeException $exception) {
+            $threw = $exception;
+        }
+
+        expect($resolved)->not->toBeInstanceOf(FakeBillingGateway::class);
+
+        if ($environment === 'local') {
+            expect($resolved)->toBeInstanceOf(UnconfiguredBillingGateway::class)
+                ->and($threw)->toBeNull();
+        } else {
+            expect($threw)->toBeInstanceOf(RuntimeException::class);
+        }
     }
+});
+
+it('lets local open the billing screen without Stripe keys', function () {
+    app()['env'] = 'local';
+    config([
+        'services.stripe.secret' => null,
+        'billing.monthly_price_id' => null,
+        'billing.billing_webhook_secret' => null,
+    ]);
+
+    expect(rebind(BillingGateway::class))->toBeInstanceOf(UnconfiguredBillingGateway::class);
 });
 
 it('has no STRIPE_FAKE escape hatch left to set', function () {

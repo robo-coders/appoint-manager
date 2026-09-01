@@ -47,6 +47,7 @@ const props = defineProps<{
     summary: { count: number; value: string; noun: string };
     rows: Row[];
     stopped: Array<{ subject_id: number; subject_name: string; customer_name: string | null; stopped_on: string | null }>;
+    snoozed: Array<{ subject_id: number; subject_name: string; customer_name: string | null; snoozed_until: string | null }>;
     messages_enabled: boolean;
     dry_run: {
         count: number;
@@ -226,6 +227,20 @@ const call = (phone: string) => {
                 </MenuItem>
             </template>
         </Table>
+
+        <section v-if="snoozed.length" class="mt-8">
+            <h2 class="border-b border-b-rule pb-3 text-17">Snoozed</h2>
+            <ul class="divide-y divide-rule">
+                <li v-for="row in snoozed" :key="row.subject_id" class="flex flex-wrap items-baseline justify-between gap-3 py-3">
+                    <p>
+                        <span class="font-medium">{{ row.subject_name }}</span>
+                        <span class="text-ink-2"> · {{ row.customer_name }}</span>
+                        <span v-if="row.snoozed_until" class="text-ink-2"> · until {{ row.snoozed_until }}</span>
+                    </p>
+                    <Button variant="ghost" @click="router.post(route('overdue.resume', row.subject_id))">Start chasing again</Button>
+                </li>
+            </ul>
+        </section>
 
         <section v-if="stopped.length" class="mt-8">
             <h2 class="border-b border-b-rule pb-3 text-17">Stopped</h2>

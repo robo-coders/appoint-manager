@@ -11,6 +11,7 @@ use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Notifications\SmsAllowanceWarning;
+use App\Services\Billing\BillingGateway;
 use App\Services\Billing\FakeBillingGateway;
 use App\Services\Billing\SmsAllowance;
 use App\Services\Notifications\Notifier;
@@ -250,7 +251,46 @@ it('reads the monthly price on the billing page from config', function () {
             ->where('billing.monthly_price', BillingPrice::formatPence((int) config('billing.monthly_price_pence')))
             ->missing('billing.yearly_price')
             ->where('sms.included', (int) config('billing.sms_included'))
-            ->where('sms.topup_price', BillingPrice::formatPence((int) config('billing.sms_topup_price_pence'))));
+            ->where('sms.topup_price', BillingPrice::formatPence((int) config('billing.sms_topup_price_pence')))
+            ->where('billing.can_charge', true));
+});
+
+it('lets the billing screen render when Stripe is not configured, and refuses the card', function () {
+    ['owner' => $owner] = aMeteredSalon();
+
+    app()['env'] = 'local';
+    config([
+        'services.stripe.secret' => null,
+        'billing.monthly_price_id' => null,
+        'billing.billing_webhook_secret' => null,
+    ]);
+    app()->forgetInstance(BillingGateway::class);
+
+    actingAsTenant($owner)
+        ->get(route('billing.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Billing/Index')
+            ->where('billing.can_charge', false)
+            ->where('billing.monthly_price', BillingPrice::formatPence((int) config('billing.monthly_price_pence')))
+            ->where('sms.included', (int) config('billing.sms_included'))
+            ->where('sms.topup_size', (int) config('billing.sms_topup_size'))
+            ->where('sms.topup_price', BillingPrice::formatPence((int) config('billing.sms_topup_price_pence')))
+            ->where('billing.invoices', []));
+
+    $this->actingAs($owner)
+        ->from(route('billing.index'))
+        ->withSession(['_token' => 'a-real-csrf-token'])
+        ->withHeader('X-CSRF-TOKEN', 'a-real-csrf-token')
+        ->post(route('billing.checkout'))
+        ->assertRedirect(route('billing.index'))
+        ->assertSessionHasErrors('billing');
+
+    $message = session('errors')->get('billing')[0];
+
+    expect($message)
+        ->toContain('not set up')
+        ->not->toContain('STRIPE_SECRET');
 });
 
 it('warns at the configured threshold', function () {

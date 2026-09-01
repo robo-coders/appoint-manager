@@ -107,6 +107,20 @@ class SuperAdminController extends Controller
     }
 
     /**
+     * Moving a trial date is not putting a paying salon onto a trial.
+     *
+     * @return array{subscription_status?: string}
+     */
+    private function trialStatusUnlessPaying(Tenant $tenant): array
+    {
+        if ($tenant->subscription_status === 'active') {
+            return [];
+        }
+
+        return ['subscription_status' => 'trial'];
+    }
+
+    /**
      * Is this one of the salons worth looking at first?
      *
      * The screen opens sorted on this rather than alphabetically. A hundred
@@ -236,7 +250,13 @@ class SuperAdminController extends Controller
             'trial_ends_at' => ($tenant->trial_ends_at && $tenant->trial_ends_at->isFuture()
                 ? $tenant->trial_ends_at
                 : now())->addDays($days),
-            'subscription_status' => 'trial',
+            /*
+             * Extending a date is not the same as putting a paying salon onto
+             * a trial. The demo tenant is `active` with a leftover trial end
+             * still in the future; writing `trial` here used to demote it on
+             * the console to "Trial" the moment we added fourteen days.
+             */
+            ...($this->trialStatusUnlessPaying($tenant)),
         ])->save();
 
         $this->audit($tenant, 'trial.extend', ['days' => $days]);
@@ -260,7 +280,7 @@ class SuperAdminController extends Controller
             $ends = CarbonImmutable::parse((string) $request->input('ends_at'))->endOfDay();
             $tenant->forceFill([
                 'trial_ends_at' => $ends,
-                'subscription_status' => 'trial',
+                ...($this->trialStatusUnlessPaying($tenant)),
             ])->save();
             $this->audit($tenant, 'trial.set', ['ends_at' => $ends->toDateString()]);
 
@@ -273,7 +293,7 @@ class SuperAdminController extends Controller
             : now();
         $tenant->forceFill([
             'trial_ends_at' => $base->copy()->addDays($days),
-            'subscription_status' => 'trial',
+            ...($this->trialStatusUnlessPaying($tenant)),
         ])->save();
         $this->audit($tenant, 'trial.set', ['days' => $days]);
 

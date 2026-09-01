@@ -10,6 +10,7 @@ use App\Policies\StaffPolicy;
 use App\Services\Billing\BillingGateway;
 use App\Services\Billing\FakeBillingGateway;
 use App\Services\Billing\StripeBillingGateway;
+use App\Services\Billing\UnconfiguredBillingGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\RecordingSmsGateway;
 use App\Services\Sms\SmsGateway;
@@ -70,14 +71,23 @@ class AppServiceProvider extends ServiceProvider
                 return new FakeBillingGateway;
             }
 
-            if (! config('services.stripe.secret')) {
-                throw new RuntimeException('STRIPE_SECRET is not set. Refusing to boot the billing gateway.');
-            }
+            $configured = (bool) config('services.stripe.secret')
+                && (bool) config('billing.monthly_price_id')
+                && (bool) config('billing.billing_webhook_secret');
 
-            if (! config('billing.monthly_price_id') || ! config('billing.billing_webhook_secret')) {
+            if (! $configured) {
+                /*
+                 * Local, and only local: the operator still needs to *see*
+                 * price and usage. Binding the test fake here would invent
+                 * invoices and accept forged signatures. Binding nothing 500s
+                 * the screen. This gateway reads; checkout still refuses.
+                 */
+                if ($this->app->environment('local')) {
+                    return new UnconfiguredBillingGateway;
+                }
+
                 throw new RuntimeException(
-                    'Platform billing is not configured (STRIPE_PRICE_MONTHLY / STRIPE_BILLING_WEBHOOK_SECRET). '
-                    .'Refusing to boot rather than silently faking subscriptions.'
+                    'STRIPE_SECRET is not set. Refusing to boot the billing gateway.'
                 );
             }
 

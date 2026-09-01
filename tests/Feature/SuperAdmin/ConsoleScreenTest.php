@@ -78,6 +78,21 @@ it('leaves a subscribed salon alone', function () {
         ->where('tenants.0.needs_attention', false));
 });
 
+it('does not demote a paying salon when the trial date is moved', function () {
+    $admin = aSuperAdmin();
+    $tenant = aConsoleTenant([
+        'subscription_status' => 'active',
+        'trial_ends_at' => now()->addDays(5),
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('super-admin.trial', $tenant), ['days' => 14])
+        ->assertRedirect();
+
+    expect($tenant->fresh()->subscription_status)->toBe('active')
+        ->and($tenant->fresh()->trial_ends_at?->toDateString())->toBe(now()->addDays(19)->toDateString());
+});
+
 /*
  * Comped wins over everything. A salon we are not charging cannot have a
  * payment problem, and marking one as needing attention would put a permanent

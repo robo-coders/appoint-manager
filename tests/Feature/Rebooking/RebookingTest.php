@@ -136,7 +136,34 @@ it('excludes a snoozed subject', function () {
     aPastVisit($salon, '2026-07-18 09:00:00');
     $salon['subject']->forceFill(['rebook_snoozed_until' => CarbonImmutable::parse('2026-09-10', 'Europe/London')])->save();
 
-    expect(app(OverdueSubjects::class)->forTenant($salon['tenant']))->toHaveCount(0);
+    expect(app(OverdueSubjects::class)->forTenant($salon['tenant']))->toHaveCount(0)
+        ->and(app(OverdueSubjects::class)->snoozedForTenant($salon['tenant']))->toHaveCount(1);
+});
+
+it('shows a snoozed subject so chasing can start again', function () {
+    $salon = aRebookSalon(['suggested_interval_days' => 42]);
+    aPastVisit($salon, '2026-07-18 09:00:00');
+    $user = User::factory()->create(['tenant_id' => $salon['tenant']->id]);
+
+    actingAsTenant($user)
+        ->post(route('overdue.snooze', $salon['subject']), ['days' => 14])
+        ->assertRedirect();
+
+    $this->get(route('overdue.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Overdue/Index')
+            ->has('rows', 0)
+            ->has('snoozed', 1)
+            ->where('snoozed.0.subject_name', 'Bella'));
+
+    $this->post(route('overdue.resume', $salon['subject']))->assertRedirect();
+
+    $this->get(route('overdue.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('rows', 1)
+            ->has('snoozed', 0));
 });
 
 it('excludes a subject marked contacted in the last 14 days', function () {

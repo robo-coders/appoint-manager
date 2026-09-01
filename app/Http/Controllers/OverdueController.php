@@ -32,6 +32,7 @@ class OverdueController extends Controller
             'summary' => $summary,
             'rows' => $rows,
             'stopped' => $overdue->stoppedForTenant($tenant),
+            'snoozed' => $overdue->snoozedForTenant($tenant),
             'messages_enabled' => $messages->isEnabled($tenant),
             'dry_run' => $previewing ? $messages->dryRun($tenant) : null,
             'window' => SendWindow::describe($tenant),

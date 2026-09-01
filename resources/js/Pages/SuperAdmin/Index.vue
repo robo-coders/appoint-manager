@@ -10,7 +10,7 @@ import SlideOver from '@/Components/ui/SlideOver.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 /**
  * Every tenant on the platform. Our screen, at 2am.
@@ -166,6 +166,32 @@ const openControls = (tenant: Tenant) => {
     credit.value = '200';
     pricePence.value = tenant.monthly_price_override_pence === null ? '' : String(tenant.monthly_price_override_pence);
 };
+
+/*
+ * The panel holds a copy of the row from when it opened. A save reloads the
+ * tenant list but used to leave this copy stale, so "Set allowance" wrote 250
+ * and the panel still said 200. Keep the open row in sync with the list.
+ */
+watch(
+    () => props.tenants,
+    (tenants) => {
+        const current = controlling.value;
+
+        if (! current) {
+            return;
+        }
+
+        const fresh = tenants.find((tenant) => tenant.id === current.id);
+
+        if (fresh) {
+            controlling.value = fresh;
+            allowance.value = fresh.sms_included_override === null ? '' : String(fresh.sms_included_override);
+            ceiling.value = fresh.sms_ceiling_override === null ? '' : String(fresh.sms_ceiling_override);
+            trialEnds.value = fresh.trial_ends_at ?? '';
+            pricePence.value = fresh.monthly_price_override_pence === null ? '' : String(fresh.monthly_price_override_pence);
+        }
+    },
+);
 
 const tenantById = (id: string) => props.tenants.find((tenant) => String(tenant.id) === id.trim());
 

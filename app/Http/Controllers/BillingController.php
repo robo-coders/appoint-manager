@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PaymentsNotConfiguredException;
 use App\Models\AuditLog;
 use App\Services\Billing\BillingGateway;
 use App\Services\Billing\SmsAllowance;
+use App\Services\Billing\UnconfiguredBillingGateway;
 use App\Support\BillingPrice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,12 @@ class BillingController extends Controller
                 'monthly_price' => BillingPrice::formatPence(BillingPrice::forTenant($tenant)),
                 'list_price' => BillingPrice::formatPence(BillingPrice::listMonthlyPence()),
                 'has_price_override' => $tenant->monthly_price_override_pence !== null,
+                /*
+                 * Local without keys still needs to *see* the price. Taking a
+                 * card does not work, and the screen must not offer a button
+                 * whose only outcome is an error. Same shape as payments.
+                 */
+                'can_charge' => ! $billing instanceof UnconfiguredBillingGateway,
             ],
             'sms' => $sms->snapshot($tenant),
         ]);
@@ -43,7 +51,11 @@ class BillingController extends Controller
         $tenant = current_tenant();
         abort_unless($tenant, 403);
 
-        return redirect()->away($billing->checkoutUrl($tenant, 'monthly'));
+        try {
+            return redirect()->away($billing->checkoutUrl($tenant, 'monthly'));
+        } catch (PaymentsNotConfiguredException) {
+            return $this->unreachable();
+        }
     }
 
     public function topUp(BillingGateway $billing): RedirectResponse
@@ -51,7 +63,11 @@ class BillingController extends Controller
         $tenant = current_tenant();
         abort_unless($tenant, 403);
 
-        return redirect()->away($billing->topUpCheckoutUrl($tenant));
+        try {
+            return redirect()->away($billing->topUpCheckoutUrl($tenant));
+        } catch (PaymentsNotConfiguredException) {
+            return $this->unreachable();
+        }
     }
 
     public function pause(BillingGateway $billing): RedirectResponse
@@ -59,7 +75,11 @@ class BillingController extends Controller
         $tenant = current_tenant();
         abort_unless($tenant, 403);
 
-        $billing->pause($tenant);
+        try {
+            $billing->pause($tenant);
+        } catch (PaymentsNotConfiguredException) {
+            return $this->unreachable();
+        }
 
         AuditLog::query()->create([
             'actor_id' => auth()->id(),
@@ -78,7 +98,12 @@ class BillingController extends Controller
         $reason = $request->string('reason')->toString();
 
         $tenant->forceFill(['cancellation_reason' => $reason !== '' ? $reason : null])->save();
-        $billing->cancel($tenant);
+
+        try {
+            $billing->cancel($tenant);
+        } catch (PaymentsNotConfiguredException) {
+            return $this->unreachable();
+        }
 
         AuditLog::query()->create([
             'actor_id' => auth()->id(),
@@ -88,5 +113,16 @@ class BillingController extends Controller
         ]);
 
         return back()->with('toast', 'Subscription cancelled. Clients can still book online.');
+    }
+
+    /**
+     * A salon owner cannot set STRIPE_SECRET. Tell them the card cannot be
+     * taken, not which env file is empty.
+     */
+    private function unreachable(): RedirectResponse
+    {
+        return back()->withErrors([
+            'billing' => 'Card payments are not set up on this installation yet. Get in touch and we will sort it out.',
+        ]);
     }
 }

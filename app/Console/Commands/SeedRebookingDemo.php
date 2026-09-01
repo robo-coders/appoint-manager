@@ -199,6 +199,10 @@ class SeedRebookingDemo extends Command
         if ($existing !== null) {
             $this->line("Refilling existing tenant #{$existing->id} ({$slug}).");
 
+            if ($existing->plan === null && $existing->subscription_status === 'active') {
+                $existing->forceFill(['plan' => 'monthly'])->save();
+            }
+
             return $existing;
         }
 
@@ -216,6 +220,7 @@ class SeedRebookingDemo extends Command
             'onboarding_completed_at' => now(),
             'booking_page_live' => true,
             'subscription_status' => 'active',
+            'plan' => 'monthly',
             'trial_ends_at' => now()->addDays((int) config('billing.trial_days')),
         ]);
     }

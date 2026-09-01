@@ -8,7 +8,7 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 /**
@@ -38,6 +38,7 @@ const props = defineProps<{
         monthly_price: string;
         list_price: string;
         has_price_override: boolean;
+        can_charge: boolean;
     };
     sms: {
         used: number;
@@ -58,6 +59,13 @@ const checkout = useForm({});
 const topUp = useForm({});
 const cancel = useForm({ reason: '' });
 const confirming = ref(false);
+const page = usePage();
+
+const chargeError = computed(() => {
+    const errors = page.props.errors as Record<string, string>;
+
+    return errors.billing ?? '';
+});
 
 const subscribe = () => checkout.post(route('billing.checkout'));
 
@@ -69,6 +77,7 @@ const planLine = computed(() => {
         return `Trial — ${b.trial_days_remaining} day${b.trial_days_remaining === 1 ? '' : 's'} left, no card needed.`;
     }
     if (b.next_charge) return `${b.plan ?? 'Subscribed'} — next charge ${b.next_charge}.`;
+    if (b.status === 'active') return 'Subscribed.';
 
     return b.plan ?? 'No subscription.';
 });
@@ -104,14 +113,26 @@ const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...in
                 </div>
                 <p class="mt-3 text-14">{{ planLine }}</p>
                 <p class="mt-1 text-13 text-ink-2">
-                    {{ billing.payment_method ?? 'No card on file. You do not need one during the trial.' }}
+                    {{
+                        billing.payment_method
+                            ?? (billing.on_trial
+                                ? 'No card on file. You do not need one during the trial.'
+                                : 'No card on file.')
+                    }}
                 </p>
 
-                <div class="mt-4 flex flex-wrap gap-3">
+                <Callout v-if="chargeError" class="mt-4" tone="danger">
+                    {{ chargeError }}
+                </Callout>
+
+                <div v-if="billing.can_charge" class="mt-4 flex flex-wrap gap-3">
                     <Button :loading="checkout.processing" @click="subscribe">
                         {{ billing.monthly_price }} a month
                     </Button>
                 </div>
+                <p v-else class="mt-4 text-13 text-ink-2">
+                    {{ billing.monthly_price }} a month. Card payments are not set up on this installation yet.
+                </p>
                 <p v-if="billing.has_price_override" class="mt-2 text-13 text-ink-2">
                     Your rate. The list price is {{ billing.list_price }} a month.
                 </p>
@@ -142,7 +163,7 @@ const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...in
                 <Callout v-else-if="sms.warning === 80" class="mt-4" title="Most of this cycle's texts are used">
                     You have used {{ sms.used }} of {{ sms.included }}. Nothing has stopped yet.
                 </Callout>
-                <div class="mt-4">
+                <div v-if="billing.can_charge" class="mt-4">
                     <Button
                         variant="secondary"
                         :loading="topUp.processing"
@@ -179,7 +200,7 @@ const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...in
                     booking page stays up either way.
                 </p>
 
-                <div class="mt-4 space-y-3">
+                <div v-if="billing.can_charge" class="mt-4 space-y-3">
                     <Textarea
                         v-model="cancel.reason"
                         label="Why are you leaving?"
