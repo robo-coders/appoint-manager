@@ -20,6 +20,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Inertia\Inertia;
 use Sentry\State\Scope;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -112,12 +113,12 @@ return Application::configure(basePath: dirname(__DIR__))
          * DECISIONS.md as such.
          */
         $middleware->redirectGuestsTo(fn (Request $request) => Surface::current($request->getHost(), $request->path()) === Surface::Admin
-            ? Surface::Admin->to('login')
-            : Surface::App->to('login'));
+            ? Surface::Admin->path('login')
+            : Surface::App->path('login'));
 
         // Where an already-authenticated request is sent away from a guest page.
         $middleware->redirectUsersTo(fn (Request $request) => Surface::current($request->getHost(), $request->path()) === Surface::Admin
-            ? Surface::Admin->to()
+            ? Surface::Admin->path()
             : home_route());
 
         $middleware->validateCsrfTokens(except: [
@@ -173,6 +174,29 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'message' => 'Your session expired. Sign in again and this will work.',
                 ], 419);
+            }
+
+            /*
+             * An Inertia POST to the login form with a stale token used to
+             * render the 419 page *inside* Inertia's error iframe, over the
+             * form, while `onFinish` cleared the password. Dismiss the iframe
+             * and you are looking at a blank form with no explanation — the
+             * same shape as a host-mismatched session drop. Send them back to
+             * the form on this host, with a flash the page already knows how
+             * to paint as a Callout.
+             */
+            if ($request->header('X-Inertia') && $request->is('login', 'admin/login')) {
+                $request->session()?->flash('auth_notice', [
+                    'kind' => 'expired',
+                    'title' => 'Your session expired',
+                    'body' => 'Sign in again and this will work.',
+                ]);
+
+                $login = Surface::current($request->getHost(), $request->path()) === Surface::Admin
+                    ? Surface::Admin->path('login')
+                    : Surface::App->path('login');
+
+                return Inertia::location($request->getSchemeAndHttpHost().$login);
             }
 
             return response()->view('errors.419', [

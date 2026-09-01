@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { FROZEN_NOW } from '../../playwright.config';
-import { expectSurface } from './support';
+import { DEMO, expectSurface } from './support';
 
 /**
  * The auth surface, and the flow that turns a stranger into a diary.
@@ -140,6 +140,26 @@ test.describe('signing in', () => {
         await settled(page);
 
         await expect(page).toHaveScreenshot('login-error-375.png', { fullPage: true });
+    });
+
+    /*
+     * The host-mismatch footgun. The e2e server's APP_URL is 127.0.0.1 (see
+     * playwright.config.ts). Opening the form on localhost used to post to
+     * 127.0.0.1, drop the session, and sit there. Relative same-surface URLs
+     * plus a host-local login redirect are the fix; this is the proof they
+     * hold without editing .env.
+     */
+    test('signs in from localhost even when APP_URL is 127.0.0.1', async ({ page, baseURL }) => {
+        await at(page, 1280);
+        const login = (baseURL ?? 'http://127.0.0.1:8129').replace('127.0.0.1', 'localhost') + '/login';
+
+        await page.goto(login);
+        await page.locator('input[type="email"]').fill(DEMO.ownerEmail);
+        await page.locator('input[type="password"]').fill(DEMO.ownerPassword);
+        await page.getByRole('button', { name: 'Sign in' }).click();
+
+        await expect(page).toHaveURL(/\/diary/);
+        expect(new URL(page.url()).hostname).toBe('localhost');
     });
 });
 

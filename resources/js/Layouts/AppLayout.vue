@@ -85,10 +85,12 @@ const links = computed<NavLink[]>(() => {
 /**
  * Is the rail's link the page we are on?
  *
- * `route()` returns an **absolute** URL and `page.url` is a path, so the
+ * `route()` used to return an **absolute** URL and `page.url` is a path, so the
  * previous version compared "http://app.example/dashboard" with "/dashboard"
  * and was false for every item on every screen — the active tint has never
- * appeared. Both sides are reduced to a path first.
+ * appeared. Both sides are reduced to a path first. Same-surface `route()` is
+ * relative now (see `lib/ziggyHost.ts`); this still has to handle a full URL,
+ * because a stub or a leftover absolute href must not un-highlight the rail.
  */
 const pathOf = (url: string) => {
     try {

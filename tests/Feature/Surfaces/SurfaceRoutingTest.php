@@ -260,6 +260,16 @@ it('scopes the session cookie to the exact host and never the parent domain', fu
         ->and(config('session.cookie'))->toBe(Surface::Admin->cookie());
 });
 
+it('does not share an operator cookie with the booking host, even by name', function () {
+    withSubdomains();
+
+    expect(Surface::App->cookie())->not->toBe(Surface::Book->cookie())
+        ->and(Surface::Admin->cookie())->not->toBe(Surface::Book->cookie())
+        ->and(Surface::App->path('login'))->toBe('/login')
+        ->and(Surface::Admin->path('login'))->toBe('/login')
+        ->and(Surface::Admin->path())->toBe('/');
+});
+
 it('hands impersonation across to the app surface and back again', function () {
     withSubdomains();
 

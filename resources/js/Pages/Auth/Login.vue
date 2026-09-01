@@ -4,8 +4,8 @@ import Callout from '@/Components/ui/Callout.vue';
 import Checkbox from '@/Components/ui/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 /**
  * Sign in. The shape of this page is `GuestLayout`'s decision, and the reason
@@ -43,14 +43,33 @@ const form = useForm({
     remember: false,
 });
 
+const page = usePage();
+
 /*
  * "These credentials do not match our records" arrives on `email`, and it is
  * not a fact about the email field. Anything else on that key is.
  */
 const attemptFailed = computed(() => (form.errors.email?.includes('credentials') ? form.errors.email : ''));
 const emailError = computed(() => (attemptFailed.value ? '' : form.errors.email));
+const expired = computed(() => (page.props.authNotice?.kind === 'expired' ? page.props.authNotice : null));
+const incomplete = ref('');
+
+onMounted(() => {
+    /*
+     * Cross-origin / network failure. The host-mismatch bug used to die here:
+     * Inertia never got a response, `onFinish` cleared the password, and the
+     * form sat still. Name it, so it cannot be silent again.
+     */
+    const stop = router.on('exception', (event) => {
+        incomplete.value = 'That sign-in did not complete. Refresh the page and try again.';
+        event.preventDefault();
+    });
+
+    onUnmounted(stop);
+});
 
 const submit = () => {
+    incomplete.value = '';
     form.post(route('login'), {
         onFinish: () => {
             form.reset('password');
@@ -67,19 +86,37 @@ const submit = () => {
         <Callout v-if="status" class="mb-6">{{ status }}</Callout>
 
         <!--
-            `role="alert"`, because a failed sign-in that is only visible is not
-            reported. The message appears after a submit rather than on load, so
-            a live region is the only thing that tells a screen reader anything
-            happened at all — the focus is still on the button that did it.
+            Three distinct failures, never a blank form. A wrong password, a
+            stale CSRF token, and a request that never came back used to look
+            identical: password cleared, page unmoved, nothing said. A groomer
+            reads that as "the app is broken".
         -->
         <Callout
-            v-if="attemptFailed"
+            v-if="expired"
+            tone="danger"
+            :title="expired.title"
+            class="mb-6"
+            role="alert"
+        >
+            {{ expired.body }}
+        </Callout>
+        <Callout
+            v-else-if="attemptFailed"
             tone="danger"
             title="That did not sign you in"
             class="mb-6"
             role="alert"
         >
             {{ attemptFailed }}
+        </Callout>
+        <Callout
+            v-else-if="incomplete"
+            tone="danger"
+            title="That did not sign you in"
+            class="mb-6"
+            role="alert"
+        >
+            {{ incomplete }}
         </Callout>
 
         <form class="space-y-4" @submit.prevent="submit">

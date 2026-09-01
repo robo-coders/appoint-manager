@@ -53,7 +53,7 @@ class AdminSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(Surface::Admin->to());
+        return redirect()->intended(Surface::Admin->path());
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -62,6 +62,6 @@ class AdminSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->to(Surface::Admin->to('login'));
+        return redirect()->to(Surface::Admin->path('login'));
     }
 }

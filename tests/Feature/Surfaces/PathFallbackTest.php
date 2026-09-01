@@ -62,6 +62,14 @@ it('uses one session cookie when there is only one host', function () {
     expect(config('session.domain'))->toBeNull();
 });
 
+it('builds in-request paths, not APP_URL, so a host alias cannot drop the session', function () {
+    expect(Surface::App->path('login'))->toBe('/login')
+        ->and(Surface::App->path('diary'))->toBe('/diary')
+        ->and(Surface::Admin->path('login'))->toBe('/admin/login')
+        ->and(Surface::Admin->path())->toBe('/admin')
+        ->and(home_route())->toBe('/diary');
+});
+
 it('resolves every named route', function () {
     $missing = collect([
         'marketing.home', 'marketing.pricing', 'login', 'register', 'dashboard', 'diary.index',

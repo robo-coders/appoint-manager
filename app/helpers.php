@@ -27,14 +27,19 @@ if (! function_exists('home_route')) {
      * tenant's diary, where the onboarding gate would bounce them to
      * /onboarding. While impersonating, the authenticated user is the salon
      * owner rather than the super admin, so this correctly returns the diary.
+     *
+     * A path, not `app_url()`. After login the browser must stay on the host
+     * it posted to; an absolute APP_URL here is what made 127.0.0.1/login
+     * bounce to localhost and drop the session. Mail and queued jobs still
+     * use `app_url()` / `admin_url()`.
      */
     function home_route(): string
     {
         if (auth()->user()?->is_super_admin && ! session()->has('impersonator_id')) {
-            return admin_url();
+            return Surface::Admin->path();
         }
 
-        return app_url('diary');
+        return Surface::App->path('diary');
     }
 }
 

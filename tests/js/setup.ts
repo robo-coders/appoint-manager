@@ -21,10 +21,10 @@ import { vi } from 'vitest';
 /**
  * `route('diary.index', { date: '2026-08-19' })` -> `/diary?date=2026-08-19`.
  *
- * Absolute in the real app, and that mattered once: `AppLayout.isCurrent()`
- * compared an absolute URL with a path and was false on every screen, so the
- * active nav item never highlighted. The stub returns absolute URLs for the
- * same reason — a stub that returned paths would make that bug untestable.
+ * The real app now generates *relative* URLs so a login opened on 127.0.0.1
+ * cannot post to localhost. The stub still returns absolute URLs: that is how
+ * `AppLayout.isCurrent()` used to fail (absolute vs path), and pathOf() has
+ * to keep handling both.
  */
 const routeStub = (name: string, params?: unknown): string => {
     const path = `/${name.replace(/\./g, '/').replace(/\/index$/, '')}`;

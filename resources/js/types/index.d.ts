@@ -73,5 +73,10 @@ export type PageProps<
     urls: { marketing: string; app: string; admin: string };
     /** The one sentence the auth surface's quiet column carries. Built in PHP. */
     auth_panel: { headline: string; body: string };
+    /**
+     * Stale CSRF / dropped session on the login form. Distinct from a wrong
+     * password, which arrives as a validation error on `email`.
+     */
+    authNotice: { kind: 'expired'; title: string; body: string } | null;
     preview: unknown;
 };

@@ -66,6 +66,12 @@ class HandleInertiaRequests extends Middleware
              * screen: six auth screens all show the same panel, and six copies of
              * one sentence is five chances for them to disagree.
              */
+            /*
+             * A failed sign-in that is not a validation error — stale CSRF,
+             * dropped session. Login.vue paints this as a Callout. Flash, so
+             * it survives the Inertia::location bounce off a 419.
+             */
+            'authNotice' => $request->session()->get('auth_notice'),
             'auth_panel' => [
                 'headline' => 'The diary, the deposits, and the people who did not turn up.',
                 'body' => config('product.name').' is appointment software for small businesses '

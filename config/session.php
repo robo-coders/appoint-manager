@@ -156,7 +156,20 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    /*
+     * Never the parent domain. A cookie on `.appoint-manager.com` would be
+     * sent to app., admin. and book. together, which is the sharing the
+     * surface split exists to prevent. `ConfigureSurfaceSession` assigns the
+     * exact request host when subdomain routing is on, and null (host-only)
+     * when it is not.
+     *
+     * `.env.example` used to ship `SESSION_DOMAIN=null`. `env()` returns the
+     * string "null" for that, which browsers treat as a domain named "null".
+     * Treat that the same as unset.
+     */
+    'domain' => (($sessionDomain = env('SESSION_DOMAIN')) === null || $sessionDomain === '' || $sessionDomain === 'null')
+        ? null
+        : $sessionDomain,
 
     /*
     |--------------------------------------------------------------------------

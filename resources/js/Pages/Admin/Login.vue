@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import Button from '@/Components/ui/Button.vue';
+import Callout from '@/Components/ui/Callout.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 /**
  * The console's own door.
@@ -16,13 +18,59 @@ import { Head, useForm } from '@inertiajs/vue3';
  * it, and saying so is cheaper than answering the question later.
  */
 const form = useForm({ email: '', password: '' });
+const page = usePage();
 
-const submit = () => form.post(route('admin.login.store'), { onFinish: () => form.reset('password') });
+const attemptFailed = computed(() => (form.errors.email?.includes('credentials') ? form.errors.email : ''));
+const emailError = computed(() => (attemptFailed.value ? '' : form.errors.email));
+const expired = computed(() => (page.props.authNotice?.kind === 'expired' ? page.props.authNotice : null));
+const incomplete = ref('');
+
+onMounted(() => {
+    const stop = router.on('exception', (event) => {
+        incomplete.value = 'That sign-in did not complete. Refresh the page and try again.';
+        event.preventDefault();
+    });
+
+    onUnmounted(stop);
+});
+
+const submit = () => {
+    incomplete.value = '';
+    form.post(route('admin.login.store'), { onFinish: () => form.reset('password') });
+};
 </script>
 
 <template>
     <GuestLayout title="Console" lede="Staff only. Separate session, separate host, IP allowlist." quiet>
         <Head title="Console" />
+
+        <Callout
+            v-if="expired"
+            tone="danger"
+            :title="expired.title"
+            class="mb-6"
+            role="alert"
+        >
+            {{ expired.body }}
+        </Callout>
+        <Callout
+            v-else-if="attemptFailed"
+            tone="danger"
+            title="That did not sign you in"
+            class="mb-6"
+            role="alert"
+        >
+            {{ attemptFailed }}
+        </Callout>
+        <Callout
+            v-else-if="incomplete"
+            tone="danger"
+            title="That did not sign you in"
+            class="mb-6"
+            role="alert"
+        >
+            {{ incomplete }}
+        </Callout>
 
         <form class="space-y-4" @submit.prevent="submit">
             <TextInput
@@ -32,7 +80,7 @@ const submit = () => form.post(route('admin.login.store'), { onFinish: () => for
                 autocomplete="username"
                 required
                 autofocus
-                :error="form.errors.email"
+                :error="emailError"
             />
             <TextInput
                 v-model="form.password"

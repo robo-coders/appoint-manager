@@ -75,6 +75,30 @@ enum Surface: string
     }
 
     /**
+     * A path on this surface, for in-request redirects that must stay on the
+     * host the browser is already on.
+     *
+     * `to()` is built from `APP_URL` / `APP_URL_*`. That is correct for mail,
+     * queued jobs, and any link that has to name a hostname because there is
+     * no request. It is wrong for a 302 after login: with `APP_URL` set to
+     * `http://localhost:8000`, a successful POST on `http://127.0.0.1:8000`
+     * used to bounce to localhost, the session cookie did not go with it, and
+     * the form sat there with a cleared password and no error. Relative paths
+     * ride the current request's origin. Cross-surface links still use `to()`.
+     */
+    public function path(string $path = ''): string
+    {
+        $path = ltrim($path, '/');
+        $prefix = $this->pathPrefix();
+
+        if ($prefix !== '') {
+            $path = $path === '' ? $prefix : "{$prefix}/{$path}";
+        }
+
+        return $path === '' ? '/' : '/'.$path;
+    }
+
+    /**
      * The session cookie name. Distinct per surface so a cookie issued on one
      * host is not even *named* the same as another's.
      */

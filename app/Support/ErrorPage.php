@@ -162,7 +162,7 @@ final class ErrorPage
         if ($code === 419) {
             return [[
                 'label' => 'Sign in and carry on',
-                'href' => ($surface === Surface::Admin ? Surface::Admin : Surface::App)->to('login'),
+                'href' => ($surface === Surface::Admin ? Surface::Admin : Surface::App)->path('login'),
                 'note' => 'You will land back on the page you were on.',
             ]];
         }
@@ -176,18 +176,18 @@ final class ErrorPage
             Surface::Book => [],
 
             Surface::Admin => [
-                ['label' => 'Tenants', 'href' => Surface::Admin->to()],
+                ['label' => 'Tenants', 'href' => Surface::Admin->path()],
             ],
 
             Surface::App => [
-                ['label' => 'Today’s diary', 'href' => Surface::App->to('diary')],
-                ['label' => 'All bookings', 'href' => Surface::App->to('bookings')],
-                ['label' => 'Customers', 'href' => Surface::App->to('customers')],
+                ['label' => 'Today’s diary', 'href' => Surface::App->path('diary')],
+                ['label' => 'All bookings', 'href' => Surface::App->path('bookings')],
+                ['label' => 'Customers', 'href' => Surface::App->path('customers')],
             ],
 
             Surface::Marketing => [
-                ['label' => config('product.name'), 'href' => Surface::Marketing->to()],
-                ['label' => 'Sign in', 'href' => Surface::App->to('login')],
+                ['label' => config('product.name'), 'href' => Surface::Marketing->path()],
+                ['label' => 'Sign in', 'href' => Surface::App->path('login')],
             ],
         };
     }
