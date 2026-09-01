@@ -37,7 +37,8 @@ use Illuminate\Support\Str;
  * This builds the other half: a client base with a history, deliberately spread
  * so the list has variety — a few not due, a few just due, a few badly overdue —
  * and one subject whose number comes from `REBOOKING_DEMO_PHONE` so a real text
- * can arrive on a real phone.
+ * can arrive on a real phone. It also fills the diary for the next open day, so
+ * the screen a groomer actually opens is not empty.
  *
  * Idempotent, and that matters more here than usual: the command exists to be
  * run repeatedly while trying something out. Every row is keyed on something
@@ -129,6 +130,9 @@ class SeedRebookingDemo extends Command
         $this->hours([$owner, $groomer]);
 
         $today = CarbonImmutable::now($tenant->timezone)->startOfDay();
+        $diaryDay = $this->openDay([$owner, $groomer], $today);
+        $forward = $this->openDay([$owner, $groomer], $diaryDay, includeFrom: false);
+
         $seeded = [];
 
         foreach (self::CLIENTS as [$subjectName, $ownerName, $serviceIndex, $after, $breed]) {
@@ -147,9 +151,12 @@ class SeedRebookingDemo extends Command
 
         $this->states($seeded, $consent);
 
+        $this->diaryDay($tenant, $owner, $groomer, $services, $diaryDay);
+        $this->forwardDay($tenant, $owner, $groomer, $services, $forward);
+
         $context->clear();
 
-        $this->summary($tenant, $owner, $scout, $phone, $messenger);
+        $this->summary($tenant, $owner, $scout, $phone, $messenger, $diaryDay, $forward);
 
         if ($this->option('enable-sending')) {
             $messenger->enableAfterDryRun($tenant->fresh());
@@ -465,10 +472,184 @@ class SeedRebookingDemo extends Command
     }
 
     /**
+     * First local day on or after `$from` that any of `$staff` work.
+     *
+     * Seeding on a Sunday still produces a Monday. The overdue history is left
+     * on the calendar days it already occupies; this only picks where the diary
+     * demo lives.
+     *
+     * @param  list<User>  $staff
+     */
+    private function openDay(array $staff, CarbonImmutable $from, bool $includeFrom = true): CarbonImmutable
+    {
+        $ids = collect($staff)->pluck('id');
+        $weekdays = AvailabilityRule::withoutGlobalScopes()
+            ->where('tenant_id', $staff[0]->tenant_id)
+            ->whereIn('user_id', $ids)
+            ->pluck('weekday')
+            ->map(fn ($weekday) => (int) ($weekday instanceof Weekday ? $weekday->value : $weekday))
+            ->unique();
+
+        for ($i = $includeFrom ? 0 : 1; $i <= 14; $i++) {
+            $day = $from->addDays($i);
+
+            if ($weekdays->contains((int) $day->isoWeekday())) {
+                return $day->startOfDay();
+            }
+        }
+
+        return $from->startOfDay();
+    }
+
+    /**
+     * A working day the diary layout exists to handle: completed, in the chair,
+     * upcoming, an overlap, an overrun, and a cancellation that freed the slot.
+     *
+     * History visits from `client()` all sit on Demo Groomer at 10:00, and some
+     * of those days coincide with this one when the run date is a Sunday (the
+     * last visit then lands on Monday). Nothing here occupies that groomer's
+     * 10:00–11:30, so the overdue data stays exactly where it was.
+     *
+     * @param  list<Service>  $services
+     */
+    private function diaryDay(Tenant $tenant, User $owner, User $groomer, array $services, CarbonImmutable $day): void
+    {
+        $fullSmall = $services[0];
+        $full = $services[1];
+        $bath = $services[2];
+        $nails = $services[3];
+        $at = fn (int $hour, int $minute = 0): CarbonImmutable => $day->setTime($hour, $minute);
+
+        // Morning, already marked done.
+        $this->slot($tenant, $groomer, $bath, 'Bramble', 'Ned Shah', 'Labrador', $at(9), $at(9, 45), BookingStatus::Completed);
+        $this->slot($tenant, $owner, $full, 'Fern', 'Amy Cole', 'Cockapoo', $at(9), $at(10, 30), BookingStatus::Completed);
+        $this->slot($tenant, $owner, $nails, 'Maple', 'Ivy Chen', 'Pug', $at(10, 30), $at(10, 45), BookingStatus::Completed);
+
+        // Still to come, or in the chair around lunch depending on the clock.
+        $this->slot($tenant, $owner, $bath, 'Rowan', 'Chris Vale', 'Cavapoo', $at(11), $at(11, 45), BookingStatus::Confirmed);
+        $this->slot($tenant, $owner, $fullSmall, 'Sable', 'Jo Hart', 'Miniature schnauzer', $at(12), $at(13), BookingStatus::Confirmed);
+        $this->slot($tenant, $groomer, $bath, 'Hedgerow', 'Pat Quinn', 'Whippet', $at(11, 45), $at(12, 30), BookingStatus::Confirmed);
+
+        // Overlap on the groomer, both confirmed.
+        $this->slot($tenant, $groomer, $full, 'Wren', 'Hope Marsh', 'Cocker spaniel', $at(13, 30), $at(15), BookingStatus::Confirmed);
+        $this->slot($tenant, $groomer, $nails, 'Clove', 'Ben Crowe', 'Jack russell', $at(13, 45), $at(14), BookingStatus::Confirmed);
+
+        /*
+         * Runs long. The medium groom is 90 minutes and this one is holding 150
+         * — `ends_at` past `starts_at + duration_minutes` is the only way an
+         * overrun exists in this schema.
+         */
+        $this->slot($tenant, $owner, $full, 'Fig', 'Leah Dunn', 'Labradoodle', $at(14), $at(16, 30), BookingStatus::Confirmed);
+        $this->slot($tenant, $owner, $nails, 'Moss', 'Owen Pike', 'Border terrier', $at(16, 30), $at(16, 45), BookingStatus::Confirmed);
+
+        // Cancelled this morning, and nothing has refilled it — a freed slot.
+        $this->slot(
+            $tenant, $groomer, $full, 'Pepper', 'Nina West', 'Springer spaniel',
+            $at(15, 30), $at(17), BookingStatus::Cancelled,
+            $day->setTime(8, 12), 'Client cancelled',
+        );
+    }
+
+    /**
+     * The next open day, lightly, so paging forward is not an empty grid.
+     *
+     * @param  list<Service>  $services
+     */
+    private function forwardDay(Tenant $tenant, User $owner, User $groomer, array $services, CarbonImmutable $day): void
+    {
+        $full = $services[1];
+        $bath = $services[2];
+        $nails = $services[3];
+        $at = fn (int $hour, int $minute = 0): CarbonImmutable => $day->setTime($hour, $minute);
+
+        $this->slot($tenant, $owner, $full, 'Mabel', 'Hugh Bell', 'Bichon frise', $at(10), $at(11, 30), BookingStatus::Confirmed);
+        $this->slot($tenant, $groomer, $bath, 'Juno', 'Rita Shah', 'Shih tzu', $at(11), $at(11, 45), BookingStatus::Confirmed);
+        $this->slot($tenant, $groomer, $nails, 'Pip', 'Carl Nash', 'Wire fox terrier', $at(14), $at(14, 15), BookingStatus::Confirmed);
+    }
+
+    /**
+     * One diary client with no visit history — a future (or today) booking must
+     * not pull an overdue subject off the list.
+     */
+    private function slot(
+        Tenant $tenant,
+        User $staff,
+        Service $service,
+        string $subjectName,
+        string $ownerName,
+        string $breed,
+        CarbonImmutable $starts,
+        CarbonImmutable $ends,
+        BookingStatus $status,
+        ?CarbonImmutable $cancelledAt = null,
+        ?string $reason = null,
+    ): void {
+        $email = Str::slug($subjectName).'.'.Str::slug($ownerName).'@'.$this->option('slug').'.test';
+
+        $customer = Customer::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('email', $email)
+            ->first() ?? new Customer;
+
+        $customer->forceFill([
+            'tenant_id' => $tenant->id,
+            'name' => $ownerName,
+            'email' => $email,
+            'phone' => $this->fakePhone($subjectName),
+        ])->save();
+
+        $subject = Subject::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('customer_id', $customer->id)
+            ->where('name', $subjectName)
+            ->first() ?? new Subject;
+
+        $subject->forceFill([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'name' => $subjectName,
+            'attributes' => ['breed' => $breed, 'size' => 'medium'],
+        ])->save();
+
+        $startsAt = $starts->utc();
+
+        $booking = Booking::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('subject_id', $subject->id)
+            ->where('starts_at', $startsAt)
+            ->first() ?? new Booking;
+
+        $booking->forceFill([
+            'tenant_id' => $tenant->id,
+            'staff_id' => $staff->id,
+            'service_id' => $service->id,
+            'customer_id' => $customer->id,
+            'subject_id' => $subject->id,
+            'starts_at' => $startsAt,
+            'ends_at' => $ends->utc(),
+            'status' => $status,
+            'deposit_status' => DepositStatus::None,
+            'price_at_booking' => $service->price->amount,
+            'deposit_at_booking' => 0,
+            'public_token' => $booking->public_token ?? (string) Str::uuid(),
+            'source' => BookingSource::Manual,
+            'cancelled_at' => $cancelledAt?->utc(),
+            'cancellation_reason' => $reason,
+        ])->save();
+    }
+
+    /**
      * @param  array{customer: Customer, subject: Subject}  $scout
      */
-    private function summary(Tenant $tenant, User $owner, array $scout, string $phone, RebookMessenger $messenger): void
-    {
+    private function summary(
+        Tenant $tenant,
+        User $owner,
+        array $scout,
+        string $phone,
+        RebookMessenger $messenger,
+        CarbonImmutable $diaryDay,
+        CarbonImmutable $forward,
+    ): void {
         $run = $messenger->dryRun($tenant->fresh());
 
         $this->line('');
@@ -477,6 +658,8 @@ class SeedRebookingDemo extends Command
         $this->line('  Sign in       '.app_url('login'));
         $this->line('                '.$owner->email.' / password');
         $this->line('  Overdue list  '.app_url('overdue'));
+        $this->line('  Diary         '.app_url('diary').' — '.$diaryDay->isoFormat('dddd D MMMM')
+            .($diaryDay->isToday() ? '' : ' (next open day)').', then '.$forward->isoFormat('dddd D MMMM'));
         $this->line('  Booking page  '.book_url($tenant->slug));
         $this->line('');
         $this->line('  Clients       '.(count(self::CLIENTS) + 1).', with '.count(self::CLIENTS).' fake numbers on Ofcom\'s reserved range');

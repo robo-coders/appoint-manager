@@ -77,6 +77,11 @@ class DiaryController extends Controller
             ->get(['id', 'name', 'colour', 'is_bookable'])
             ->values();
 
+        $working = $view === 'day' ? $this->workingWindows($tenant, $staff, $from) : [];
+        $closed = $view === 'day'
+            && $staff->isNotEmpty()
+            && collect($working)->every(fn (array $windows) => $windows === []);
+
         return Inertia::render('Diary/Index', [
             'view' => $view,
             'date' => $focus->toDateString(),
@@ -91,7 +96,14 @@ class DiaryController extends Controller
              * with one appointment in it is indistinguishable from a column for
              * somebody who is not in at all, and every gap runs from 00:00.
              */
-            'working' => $view === 'day' ? $this->workingWindows($tenant, $staff, $from) : [],
+            'working' => $working,
+            /*
+             * A closed day with no hours is not an empty diary. The grid would
+             * invent 09:00–17:00 bounds and look broken. The page says so, and
+             * names the next day anybody actually works.
+             */
+            'closed' => $closed,
+            'next_open' => $closed ? $this->nextOpenDay($staff, $from) : null,
             'now' => CarbonImmutable::now($tenant->timezone)->format('H:i'),
             'is_today' => $focus->toDateString() === CarbonImmutable::now($tenant->timezone)->toDateString(),
             'services' => Service::query()
@@ -190,5 +202,39 @@ class DiaryController extends Controller
         }
 
         return $out;
+    }
+
+    /**
+     * The next local date, after `$from`, on which anybody in `$staff` has hours.
+     *
+     * @param  Collection<int, User>  $staff
+     */
+    private function nextOpenDay(Collection $staff, CarbonImmutable $from): ?string
+    {
+        $ids = $staff->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        $weekdays = AvailabilityRule::query()
+            ->whereIn('user_id', $ids)
+            ->pluck('weekday')
+            ->map(fn ($weekday) => (int) ($weekday instanceof Weekday ? $weekday->value : $weekday))
+            ->unique();
+
+        if ($weekdays->isEmpty()) {
+            return null;
+        }
+
+        for ($i = 1; $i <= 14; $i++) {
+            $day = $from->addDays($i);
+
+            if ($weekdays->contains((int) $day->isoWeekday())) {
+                return $day->toDateString();
+            }
+        }
+
+        return null;
     }
 }

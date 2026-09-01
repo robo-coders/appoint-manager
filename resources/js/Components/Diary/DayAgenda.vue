@@ -35,6 +35,8 @@ const props = defineProps<{
     /** Null for everyone. */
     filterStaffId: number | null;
     now: string | null;
+    /** Quiet line when the list is genuinely empty. Not an EmptyState card. */
+    emptyCopy?: string;
 }>();
 
 const emit = defineEmits<{
@@ -128,7 +130,9 @@ const freedAction = (booking: DiaryBooking) => {
 
         <p v-if="filterStaffId === null" class="caption pb-2">Pick one person to see the gaps in their day.</p>
 
-        <ul>
+        <p v-if="rows.length === 0 && emptyCopy" class="caption py-4">{{ emptyCopy }}</p>
+
+        <ul v-else>
             <template v-for="row in rows" :key="row.kind === 'gap' ? `g-${row.gap.starts_at}` : row.booking.id">
                 <TimelineRow
                     v-if="row.kind === 'gap'"

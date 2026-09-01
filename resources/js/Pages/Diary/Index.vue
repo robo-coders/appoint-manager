@@ -49,6 +49,9 @@ const props = defineProps<{
     working: Record<number, Array<{ start: string; end: string }>>;
     now: string;
     is_today: boolean;
+    /** True when nobody has hours on this day. The grid is not drawn. */
+    closed: boolean;
+    next_open: string | null;
 }>();
 
 const page = usePage();
@@ -149,13 +152,16 @@ const go = (date: string, view = props.view) => {
     router.get(route('diary.index'), { date, view }, { preserveState: true, preserveScroll: true });
 };
 
-const heading = computed(() =>
-    new Date(`${props.date}T12:00:00`).toLocaleDateString(undefined, {
+const formatDay = (value: string) =>
+    new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
-    }),
-);
+    });
+
+const heading = computed(() => formatDay(props.date));
+
+const closedCopy = computed(() => (props.is_today ? 'Closed today.' : 'Closed this day.'));
 
 /** Booking into a gap: the staff member and the minute are already decided. */
 const bookGap = (gap: Gap) => {
@@ -270,61 +276,90 @@ watch(
         />
 
         <template v-else-if="view === 'day'">
-            <DayAgenda
-                v-if="narrow"
-                :staff="staff"
-                :bookings="shown"
-                :gaps="gaps"
-                :filter-staff-id="filterStaffId"
-                :now="is_today ? nowLocal : null"
-                @open="selected = $event"
-                @book-gap="bookGap"
-                @offer="offer"
-                @filter="filterStaffId = $event"
-            />
+            <p v-if="closed && shown.length === 0" class="caption py-4">
+                {{ closedCopy }}
+                <button
+                    v-if="next_open"
+                    type="button"
+                    class="underline decoration-rule underline-offset-4 hover:decoration-ink"
+                    @click="go(next_open)"
+                >
+                    See {{ formatDay(next_open) }}
+                </button>
+            </p>
 
             <template v-else>
-                <DayGrid
+                <DayAgenda
+                    v-if="narrow"
                     :staff="staff"
                     :bookings="shown"
                     :gaps="gaps"
-                    :day-start="bounds.start"
-                    :day-end="bounds.end"
+                    :filter-staff-id="filterStaffId"
                     :now="is_today ? nowLocal : null"
+                    empty-copy="No bookings for this day."
                     @open="selected = $event"
                     @book-gap="bookGap"
+                    @offer="offer"
+                    @filter="filterStaffId = $event"
                 />
 
-                <!--
+                <template v-else>
+                    <DayGrid
+                        v-if="!closed || shown.length > 0"
+                        :staff="staff"
+                        :bookings="shown"
+                        :gaps="gaps"
+                        :day-start="bounds.start"
+                        :day-end="bounds.end"
+                        :now="is_today ? nowLocal : null"
+                        @open="selected = $event"
+                        @book-gap="bookGap"
+                    />
+
+                    <p v-if="closed" class="caption mt-4">
+                        {{ closedCopy }}
+                        <button
+                            v-if="next_open"
+                            type="button"
+                            class="underline decoration-rule underline-offset-4 hover:decoration-ink"
+                            @click="go(next_open)"
+                        >
+                            See {{ formatDay(next_open) }}
+                        </button>
+                    </p>
+                    <p v-else-if="shown.length === 0" class="caption mt-4">No bookings for this day.</p>
+
+                    <!--
                     The freed slots get their action below the grid, where there
                     is room for a real label: a 9rem column cannot hold "Offer to
                     3 waiting" and a truncated call to action is not one.
                 -->
-                <ul v-if="freed.length" class="mt-6">
-                    <li
-                        v-for="booking in freed"
-                        :key="`freed-${booking.id}`"
-                        class="flex flex-wrap items-baseline gap-4 border-b border-b-rule border-l-2 border-l-accent px-4 py-3"
-                    >
-                        <span class="numeral w-col-time shrink-0 text-14 font-medium">
-                            {{ booking.starts_at_local.slice(11) }}
-                        </span>
-                        <span class="flex-1 text-14">
-                            <span class="font-medium text-accent">Freed —</span>
-                            {{ booking.customer_name }} cancelled,
-                            <span class="numeral">{{ booking.minutes }}</span> min open with {{ booking.staff_name }}
-                        </span>
-                        <Button variant="accent" class="shrink-0" @click="offer(booking)">
-                            {{
-                                booking.offers_sent
-                                    ? `${booking.offers_sent} offer${booking.offers_sent === 1 ? '' : 's'} out`
-                                    : booking.waiting
-                                      ? `Offer to ${booking.waiting} waiting`
-                                      : 'Fill this slot'
-                            }}
-                        </Button>
-                    </li>
-                </ul>
+                    <ul v-if="freed.length" class="mt-6">
+                        <li
+                            v-for="booking in freed"
+                            :key="`freed-${booking.id}`"
+                            class="flex flex-wrap items-baseline gap-4 border-b border-b-rule border-l-2 border-l-accent px-4 py-3"
+                        >
+                            <span class="numeral w-col-time shrink-0 text-14 font-medium">
+                                {{ booking.starts_at_local.slice(11) }}
+                            </span>
+                            <span class="flex-1 text-14">
+                                <span class="font-medium text-accent">Freed —</span>
+                                {{ booking.customer_name }} cancelled,
+                                <span class="numeral">{{ booking.minutes }}</span> min open with {{ booking.staff_name }}
+                            </span>
+                            <Button variant="accent" class="shrink-0" @click="offer(booking)">
+                                {{
+                                    booking.offers_sent
+                                        ? `${booking.offers_sent} offer${booking.offers_sent === 1 ? '' : 's'} out`
+                                        : booking.waiting
+                                          ? `Offer to ${booking.waiting} waiting`
+                                          : 'Fill this slot'
+                                }}
+                            </Button>
+                        </li>
+                    </ul>
+                </template>
             </template>
         </template>
 
@@ -351,6 +386,7 @@ watch(
                     :gaps="[]"
                     :filter-staff-id="filterStaffId"
                     :now="null"
+                    empty-copy="No bookings for this day."
                     @open="selected = $event"
                     @book-gap="bookGap"
                     @offer="offer"

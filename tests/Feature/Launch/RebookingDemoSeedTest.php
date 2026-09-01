@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Message;
@@ -9,6 +10,7 @@ use App\Models\Tenant;
 use App\Services\Rebooking\OverdueSubjects;
 use App\Services\Rebooking\RebookMessenger;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 
 /*
 | The seeder exists so the rebooking surface can be looked at and tested on a
@@ -39,6 +41,31 @@ function seedTestTenant(): Tenant
     app(TenantContext::class)->set($tenant);
 
     return $tenant;
+}
+
+function nextOpenWeekday(?CarbonImmutable $from = null): CarbonImmutable
+{
+    $day = ($from ?? CarbonImmutable::now('Europe/London'))->startOfDay();
+
+    for ($i = 0; $i < 7; $i++) {
+        $candidate = $day->addDays($i);
+
+        if ((int) $candidate->isoWeekday() <= 5) {
+            return $candidate;
+        }
+    }
+
+    return $day;
+}
+
+function bookingsOn(Tenant $tenant, CarbonImmutable $day)
+{
+    return Booking::withoutGlobalScopes()
+        ->with('service')
+        ->where('tenant_id', $tenant->id)
+        ->where('starts_at', '>=', $day->startOfDay()->utc())
+        ->where('starts_at', '<', $day->addDay()->utc())
+        ->get();
 }
 
 it('seeds a salon whose overdue list has genuine variety', function () {
@@ -113,6 +140,71 @@ it('seeds every state the list can show', function () {
     // silently gone.
     $rows = app(OverdueSubjects::class)->forTenant($tenant);
     expect($rows->where('opted_out', true))->toHaveCount(1);
+});
+
+it('fills the next open diary day with overlap, overrun and a freed cancellation', function () {
+    seedRebookingDemo();
+    $tenant = seedTestTenant();
+
+    $day = nextOpenWeekday();
+    $rows = bookingsOn($tenant, $day);
+
+    expect($rows->where('status', BookingStatus::Cancelled))->not->toBeEmpty()
+        ->and($rows->where('status', BookingStatus::Completed))->not->toBeEmpty()
+        ->and($rows->where('status', BookingStatus::Confirmed))->not->toBeEmpty();
+
+    $live = $rows->where('status', '!=', BookingStatus::Cancelled);
+    $overlap = $live->contains(function (Booking $booking) use ($live) {
+        return $live->contains(fn (Booking $other) => $other->id !== $booking->id
+            && $other->staff_id === $booking->staff_id
+            && $other->starts_at->lt($booking->ends_at)
+            && $other->ends_at->gt($booking->starts_at));
+    });
+
+    $overrun = $live->contains(function (Booking $booking) {
+        $held = (int) $booking->starts_at->diffInMinutes($booking->ends_at);
+
+        return $held > (int) $booking->service->duration_minutes;
+    });
+
+    expect($overlap)->toBeTrue()
+        ->and($overrun)->toBeTrue();
+
+    $forward = nextOpenWeekday($day->addDay());
+    expect(bookingsOn($tenant, $forward))->toHaveCount(3);
+});
+
+it('does not take overdue subjects off the list by booking them today', function () {
+    seedRebookingDemo();
+    $tenant = seedTestTenant();
+
+    $names = app(OverdueSubjects::class)->forTenant($tenant)->pluck('subject_name');
+
+    expect($names)->toContain('Bella')
+        ->and($names)->toContain('Alfie')
+        ->and($names)->toContain('Scout')
+        ->and($names)->not->toContain('Fern')
+        ->and($names)->not->toContain('Pepper');
+});
+
+it('seeds Monday when the run date is a Sunday', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-09-06 10:00:00', 'Europe/London'));
+
+    seedRebookingDemo();
+    $tenant = seedTestTenant();
+
+    $fern = Subject::withoutGlobalScopes()
+        ->where('tenant_id', $tenant->id)
+        ->where('name', 'Fern')
+        ->firstOrFail();
+
+    $starts = Booking::withoutGlobalScopes()
+        ->where('subject_id', $fern->id)
+        ->value('starts_at');
+
+    expect(CarbonImmutable::parse($starts)->timezone('Europe/London')->toDateString())->toBe('2026-09-07')
+        ->and(bookingsOn($tenant, CarbonImmutable::parse('2026-09-07', 'Europe/London'))->count())->toBeGreaterThan(8)
+        ->and(bookingsOn($tenant, CarbonImmutable::parse('2026-09-08', 'Europe/London')))->toHaveCount(3);
 });
 
 it('does not double anything when run twice', function () {

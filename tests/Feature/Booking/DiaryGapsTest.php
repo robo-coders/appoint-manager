@@ -87,5 +87,45 @@ it('works out no windows for the week view', function () {
     actingAsTenant($salon['user'])
         ->get(route('diary.index', ['date' => '2026-08-19', 'view' => 'week']))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('working', [])->where('view', 'week'));
+        ->assertInertia(fn ($page) => $page->where('working', [])->where('view', 'week')->where('closed', false));
+});
+
+it('marks a day nobody works as closed and names the next open day', function () {
+    $salon = aDiarySalon();
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'user_id' => $salon['staff']->id,
+        'weekday' => Weekday::Monday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('diary.index', ['date' => '2026-08-16']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('closed', true)
+            ->where('next_open', '2026-08-17')
+            ->where('bookings', []));
+});
+
+it('leaves an open empty day unmarked as closed', function () {
+    $salon = aDiarySalon();
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'user_id' => $salon['staff']->id,
+        'weekday' => Weekday::Wednesday,
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+    ]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('diary.index', ['date' => '2026-08-19']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('closed', false)
+            ->where('next_open', null)
+            ->has('bookings', 0));
 });
