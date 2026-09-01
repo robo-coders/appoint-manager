@@ -45,15 +45,23 @@ it('keeps the app on the root, unprefixed', function () {
     actingAsTenant($owner)->get('/diary')->assertOk();
 });
 
-it('builds every helper URL against the single host', function () {
-    $tenant = Tenant::factory()->create(['slug' => 'willow-street']);
-    $base = rtrim(config('app.url'), '/');
+it('builds customer-facing booking links from APP_URL_BOOK without moving the operator host', function () {
+    config(['app.surfaces.book' => 'https://phone.example.test']);
 
-    expect(marketing_url())->toBe($base)
+    $tenant = Tenant::factory()->create(['slug' => 'willow-street']);
+    $base = rtrim((string) config('app.url'), '/');
+
+    expect(book_url($tenant))->toBe('https://phone.example.test/book/willow-street')
         ->and(app_url('diary'))->toBe("{$base}/diary")
         ->and(admin_url())->toBe("{$base}/admin")
-        ->and(book_url($tenant))->toBe("{$base}/book/willow-street")
-        ->and(book_url(null, 'b/abc'))->toBe("{$base}/book/b/abc");
+        ->and(marketing_url())->toBe($base)
+        ->and(booking_url_is_loopback(book_url($tenant)))->toBeFalse();
+});
+
+it('treats a localhost booking link as unreachable from a phone', function () {
+    expect(booking_url_is_loopback('http://localhost:8000/book/x'))->toBeTrue()
+        ->and(booking_url_is_loopback('http://127.0.0.1:8000/book/x'))->toBeTrue()
+        ->and(booking_url_is_loopback('https://book.example.test/x'))->toBeFalse();
 });
 
 it('uses one session cookie when there is only one host', function () {

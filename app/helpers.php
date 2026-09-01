@@ -104,6 +104,20 @@ if (! function_exists('book_url')) {
     }
 }
 
+if (! function_exists('booking_url_is_loopback')) {
+    /**
+     * True when a customer-facing booking link would open on this computer.
+     * A phone cannot follow localhost; the dry run has to say so before send.
+     */
+    function booking_url_is_loopback(string $url): bool
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $host = trim($host, '[]');
+
+        return in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0'], true);
+    }
+}
+
 if (! function_exists('admin_url')) {
     function admin_url(string $path = ''): string
     {

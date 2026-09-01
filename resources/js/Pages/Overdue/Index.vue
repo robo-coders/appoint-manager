@@ -49,12 +49,14 @@ const props = defineProps<{
     stopped: Array<{ subject_id: number; subject_name: string; customer_name: string | null; stopped_on: string | null }>;
     snoozed: Array<{ subject_id: number; subject_name: string; customer_name: string | null; snoozed_until: string | null }>;
     messages_enabled: boolean;
-    dry_run: {
+        dry_run: {
         count: number;
         segments: number;
         over_one_segment: number;
         window: string;
         in_window: boolean;
+        book_url: string;
+        book_url_unreachable: boolean;
         messages: DryRunMessage[];
         suppressed: Array<DryRunMessage & { reason: string }>;
     } | null;
@@ -140,6 +142,15 @@ const call = (phone: string) => {
             <template #action>
                 <Button @click="confirmingEnable = true">Turn messages on</Button>
             </template>
+        </Callout>
+
+        <Callout
+            v-if="dry_run && dry_run.book_url_unreachable"
+            tone="danger"
+            title="These booking links will not open on a phone"
+            class="mb-6"
+        >
+            They point at this computer ({{ dry_run.book_url }}). Set APP_URL_BOOK to a tunnel or this machine’s address on the network, leave APP_URL as it is, then preview again.
         </Callout>
 
         <Callout v-if="dry_run && dry_run.over_one_segment > 0" tone="accent" class="mb-6">

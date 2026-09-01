@@ -2438,7 +2438,7 @@ Config keys in `config/billing.php`, defaults:
 - `sms_included` 200
 - `sms_topup_size` 200
 - `sms_topup_price_pence` 800
-- `sms_hard_ceiling` 600
+- `sms_hard_ceiling` 1000
 - `sms_warning_thresholds` `[80, 100]`
 - `owner_alert_email` from `BILLING_OWNER_EMAIL`, else `MAIL_FROM_ADDRESS`
 

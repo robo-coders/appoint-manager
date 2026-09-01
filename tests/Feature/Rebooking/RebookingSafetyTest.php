@@ -677,8 +677,15 @@ it('shows the send log on the overdue page including what failed', function () {
 |--------------------------------------------------------------------------
 */
 
-it('has a hard ceiling of 1000 by default', function () {
-    expect((int) config('billing.sms_hard_ceiling'))->toBe(1000);
+it('takes the hard ceiling from config, not from a number in the allowance class', function () {
+    $salon = aChasingSalon();
+
+    expect(app(SmsAllowance::class)->ceiling($salon['salon']))
+        ->toBe((int) config('billing.sms_hard_ceiling'));
+
+    config(['billing.sms_hard_ceiling' => 750]);
+
+    expect(app(SmsAllowance::class)->ceiling($salon['salon']->fresh()))->toBe(750);
 });
 
 it('reads the trial allowance from config rather than from the reset rule', function () {

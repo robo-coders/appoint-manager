@@ -92,6 +92,13 @@ return [
     'surfaces' => [
         'marketing' => $blankIsUnset('APP_URL_MARKETING', $blankIsUnset('APP_URL', 'http://localhost')),
         'app' => $blankIsUnset('APP_URL_APP', $blankIsUnset('APP_URL', 'http://localhost')),
+        /*
+         * Customer-facing booking links (SMS, email, the dry run) are built
+         * from this, via `book_url()`. Default is APP_URL. Set APP_URL_BOOK
+         * to a tunnel or LAN address when a phone has to open the link;
+         * leave APP_URL, APP_URL_APP, APP_URL_ADMIN and APP_URL_MARKETING
+         * alone so the operator app does not move with it. See DEPLOY.md.
+         */
         'book' => $blankIsUnset('APP_URL_BOOK', $blankIsUnset('APP_URL', 'http://localhost')),
         'admin' => $blankIsUnset('APP_URL_ADMIN', $blankIsUnset('APP_URL', 'http://localhost')),
     ],

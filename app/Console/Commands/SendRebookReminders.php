@@ -108,6 +108,12 @@ class SendRebookReminders extends Command
         $this->line('  window: '.SendWindow::describe($tenant).' '.$tenant->timezone
             .' — '.($run['in_window'] ? 'open now' : 'closed now'));
         $this->line('  due: '.count($rows).', segments: '.array_sum(array_column($rows, 'segments')));
+        $this->line('  book: '.$run['book_url']);
+
+        if ($run['book_url_unreachable']) {
+            $this->error('  The booking link points at this computer. A phone cannot open it.');
+            $this->line('  Set APP_URL_BOOK to a tunnel or this machine\'s LAN address. Leave APP_URL alone.');
+        }
 
         foreach ($rows as $row) {
             $flag = $row['segments'] > 1 ? '  ** '.$row['segments'].' segments ('.$row['encoding'].') — billed as '.$row['segments'] : '';

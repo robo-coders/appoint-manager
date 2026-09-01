@@ -44,13 +44,14 @@ final class RebookMessenger
     /**
      * What the next send would do, and what it would cost.
      *
-     * @return array{count: int, segments: int, over_one_segment: int, window: string, in_window: bool, messages: list<array<string, mixed>>, suppressed: list<array<string, mixed>>}
+     * @return array{count: int, segments: int, over_one_segment: int, window: string, in_window: bool, book_url: string, book_url_unreachable: bool, messages: list<array<string, mixed>>, suppressed: list<array<string, mixed>>}
      */
     public function dryRun(Tenant $tenant, ?CarbonImmutable $today = null, ?CarbonImmutable $at = null): array
     {
         $rows = $this->overdue->forTenant($tenant, $today);
         $messages = [];
         $suppressed = [];
+        $bookUrl = book_url($tenant->slug);
 
         foreach ($rows as $row) {
             $body = $this->body($tenant, $row);
@@ -88,6 +89,8 @@ final class RebookMessenger
             'over_one_segment' => count(array_filter($messages, fn (array $m) => $m['segments'] > 1)),
             'window' => SendWindow::describe($tenant),
             'in_window' => SendWindow::isOpen($tenant, $at),
+            'book_url' => $bookUrl,
+            'book_url_unreachable' => booking_url_is_loopback($bookUrl),
             'messages' => $messages,
             'suppressed' => $suppressed,
         ];

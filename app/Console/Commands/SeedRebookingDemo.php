@@ -10,6 +10,8 @@ use App\Enums\Weekday;
 use App\Models\AvailabilityRule;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\Message;
+use App\Models\RebookSend;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
@@ -123,6 +125,7 @@ class SeedRebookingDemo extends Command
 
         $tenant = $this->tenant();
         $context->set($tenant);
+        $this->clearSendHistory($tenant);
 
         $owner = $this->owner($tenant);
         $groomer = $this->groomer($tenant);
@@ -195,13 +198,18 @@ class SeedRebookingDemo extends Command
     {
         $slug = (string) $this->option('slug');
         $existing = Tenant::query()->withoutGlobalScopes()->where('slug', $slug)->first();
+        $trialEnds = now()->addDays((int) config('demo.trial_days'));
 
         if ($existing !== null) {
             $this->line("Refilling existing tenant #{$existing->id} ({$slug}).");
 
+            $fill = ['trial_ends_at' => $trialEnds];
+
             if ($existing->plan === null && $existing->subscription_status === 'active') {
-                $existing->forceFill(['plan' => 'monthly'])->save();
+                $fill['plan'] = 'monthly';
             }
+
+            $existing->forceFill($fill)->save();
 
             return $existing;
         }
@@ -221,8 +229,22 @@ class SeedRebookingDemo extends Command
             'booking_page_live' => true,
             'subscription_status' => 'active',
             'plan' => 'monthly',
-            'trial_ends_at' => now()->addDays((int) config('billing.trial_days')),
+            'trial_ends_at' => $trialEnds,
         ]);
+    }
+
+    /**
+     * This tenant's send log, and nothing else's.
+     *
+     * Leftover queued rows from an earlier local send read as "this product
+     * has already been texting customers". A demo seed must not carry them.
+     * The command has already refused to run outside `local`, and the delete
+     * is keyed on this tenant's id — never a truncate, never an unscoped wipe.
+     */
+    private function clearSendHistory(Tenant $tenant): void
+    {
+        RebookSend::withoutGlobalScopes()->where('tenant_id', $tenant->id)->delete();
+        Message::withoutGlobalScopes()->where('tenant_id', $tenant->id)->delete();
     }
 
     private function owner(Tenant $tenant): User
@@ -666,6 +688,10 @@ class SeedRebookingDemo extends Command
         $this->line('  Diary         '.app_url('diary').' — '.$diaryDay->isoFormat('dddd D MMMM')
             .($diaryDay->isToday() ? '' : ' (next open day)').', then '.$forward->isoFormat('dddd D MMMM'));
         $this->line('  Booking page  '.book_url($tenant->slug));
+        if (($run['book_url_unreachable'] ?? false) === true) {
+            $this->error('  That link points at this computer. A phone cannot open it.');
+            $this->line('  Set APP_URL_BOOK to a tunnel or LAN address; leave APP_URL alone. See DEPLOY.md.');
+        }
         $this->line('');
         $this->line('  Clients       '.(count(self::CLIENTS) + 1).', with '.count(self::CLIENTS).' fake numbers on Ofcom\'s reserved range');
         $this->line('  Overdue now   '.$run['count'].' would be texted, '.$run['segments'].' segments');

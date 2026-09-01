@@ -284,13 +284,32 @@ it('shows who would be contacted before sending can be turned on', function () {
             ->where('dry_run.count', 1)
             ->where('dry_run.messages.0.subject_name', 'Bella')
             ->where('dry_run.messages.0.phone', '+447700900111')
-            ->has('dry_run.messages.0.body'));
+            ->has('dry_run.messages.0.body')
+            ->where('dry_run.book_url_unreachable', booking_url_is_loopback(book_url($salon['tenant']->slug))));
 
     actingAsTenant($user)
         ->post(route('overdue.enable'))
         ->assertRedirect(route('overdue.index'));
 
     expect(app(RebookMessenger::class)->isEnabled($salon['tenant']->fresh()))->toBeTrue();
+});
+
+it('composes the booking link from APP_URL_BOOK and flags a localhost one', function () {
+    $salon = aRebookSalon(['suggested_interval_days' => 42]);
+    aPastVisit($salon, '2026-07-18 09:00:00');
+
+    $run = app(RebookMessenger::class)->dryRun($salon['tenant']);
+
+    expect($run['book_url_unreachable'])->toBe(booking_url_is_loopback($run['book_url']))
+        ->and($run['messages'][0]['body'])->toContain($run['book_url']);
+
+    config(['app.surfaces.book' => 'https://phone.example.test']);
+
+    $run = app(RebookMessenger::class)->dryRun($salon['tenant']);
+
+    expect($run['book_url'])->toBe('https://phone.example.test/book/'.$salon['tenant']->slug)
+        ->and($run['book_url_unreachable'])->toBeFalse()
+        ->and($run['messages'][0]['body'])->toContain('https://phone.example.test/book/');
 });
 
 it('sends nothing while messages are off', function () {

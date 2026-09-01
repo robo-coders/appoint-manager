@@ -1,9 +1,13 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\MessageChannel;
+use App\Enums\MessageStatus;
+use App\Enums\MessageType;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Message;
+use App\Models\RebookSend;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
@@ -271,4 +275,53 @@ it('sends one message to the named subject and none to the other twenty', functi
     expect($sms)->toHaveCount(1)
         ->and($sms[0]->to)->toBe('+447700900123')
         ->and($sms[0]->subject_id)->toBe($scout->id);
+});
+
+it('resets the trial from config on every run, relative to now', function () {
+    expect(seedRebookingDemo())->toBe(0);
+
+    $tenant = seedTestTenant();
+    $expected = now()->addDays((int) config('demo.trial_days'))->toDateString();
+
+    expect($tenant->trial_ends_at?->toDateString())->toBe($expected);
+
+    $tenant->forceFill(['trial_ends_at' => now()->subMonth()])->save();
+
+    seedRebookingDemo();
+
+    expect($tenant->fresh()->trial_ends_at?->toDateString())->toBe($expected);
+});
+
+it('clears this tenant send log on a fresh seed and leaves other tenants alone', function () {
+    seedRebookingDemo();
+    $tenant = seedTestTenant();
+
+    app(TenantContext::class)->clear();
+    $other = Tenant::factory()->create();
+
+    $leftover = new Message;
+    $leftover->forceFill([
+        'tenant_id' => $tenant->id,
+        'channel' => MessageChannel::Sms,
+        'type' => MessageType::RebookDue,
+        'to' => '+447700900123',
+        'body' => 'Queued leftover',
+        'status' => MessageStatus::Queued,
+    ])->save();
+
+    $keep = new Message;
+    $keep->forceFill([
+        'tenant_id' => $other->id,
+        'channel' => MessageChannel::Sms,
+        'type' => MessageType::RebookDue,
+        'to' => '+447700900999',
+        'body' => 'Another salon',
+        'status' => MessageStatus::Queued,
+    ])->save();
+
+    seedRebookingDemo();
+
+    expect(Message::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(0)
+        ->and(RebookSend::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(0)
+        ->and(Message::withoutGlobalScopes()->where('tenant_id', $other->id)->count())->toBe(1);
 });

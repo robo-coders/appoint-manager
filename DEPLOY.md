@@ -619,6 +619,63 @@ Either way nothing is sent. What to look at:
   limit from 160 to 70. That is the warning working.
 - The send window, in the tenant's timezone, and whether it is open right now.
 - Who is on the list and will *not* be texted, with the reason.
+- The booking link in the body. If it is `localhost` or `127.0.0.1`, the dry
+  run says so in a danger callout (and the artisan command prints it in red).
+  A phone cannot open that link. Fix it before sending — see below.
+
+### Booking links a phone can open
+
+Customer-facing links (SMS, email, the dry run) are built from `APP_URL_BOOK`,
+which defaults to `APP_URL`. The operator app, the console and the marketing
+site do not read it. Do not change `APP_URL` to make a text tappable.
+
+**How to set it.** Pick one:
+
+A tunnel, if the phone is not on this network. In another terminal:
+
+```bash
+ngrok http 8000
+# or: cloudflared tunnel --url http://127.0.0.1:8000
+```
+
+Then in `.env`, the public URL it prints, **without** changing `APP_URL`:
+
+```
+APP_URL_BOOK=https://<your-tunnel>
+```
+
+A LAN address, if the phone is on the same wifi:
+
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+```
+APP_URL_BOOK=http://192.168.x.x:8000
+```
+
+(that machine's address on the LAN, not `127.0.0.1`).
+
+Restart `php artisan serve` after saving `.env`. Path fallback still applies, so
+the composed link looks like:
+
+```
+https://<your-tunnel>/book/rebooking-demo
+```
+
+or `http://192.168.x.x:8000/book/rebooking-demo`.
+
+**How to check.** Preview messages on `/overdue`, or:
+
+```bash
+php artisan rebooking:send --tenant=rebooking-demo --dry-run
+```
+
+The body must contain that host, not `localhost`. If it still points at this
+computer, the dry run will say so and you should not send.
+
+`APP_URL` stays `http://127.0.0.1:8000` (or `http://localhost:8000`) so signing
+in and the diary do not move.
 
 ### 4. One real text, to you and nobody else
 
@@ -721,8 +778,11 @@ happen rather than triggering it by hand.
 php artisan demo:rebooking --phone=07700900123
 ```
 
-is enough for the subject flags. To clear the claims as well — so everybody
-becomes chaseable again — truncate the one table:
+is enough. It now clears this tenant's send log and rebooking claims as well,
+so leftover queued rows from an earlier local send do not show up as if the
+product had already been texting customers. Other tenants are not touched.
+
+To reset only the claims without reseeding, still:
 
 ```bash
 mysql -h 127.0.0.1 -u root appoint_manager \

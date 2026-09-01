@@ -14,6 +14,10 @@ import { MENU_CLOSE } from './menuClose';
  * overlay, so a confirm that exists to be read carefully was read through a
  * second surface. An item now closes the menu itself, before its own handler
  * runs, which does not depend on what that handler goes on to do.
+ *
+ * The panel hangs below the trigger when there is room, and above it when the
+ * last row of a list would otherwise open into the heading underneath. Same
+ * panel, no extra motion.
  */
 withDefaults(defineProps<{ label?: string; align?: 'left' | 'right' }>(), {
     label: 'Actions',
@@ -21,12 +25,14 @@ withDefaults(defineProps<{ label?: string; align?: 'left' | 'right' }>(), {
 });
 
 const open = ref(false);
+const dropUp = ref(false);
 const root = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLButtonElement | null>(null);
 
 const close = (restoreFocus = true) => {
     if (!open.value) return;
     open.value = false;
+    dropUp.value = false;
     if (restoreFocus) trigger.value?.focus();
 };
 
@@ -39,9 +45,34 @@ provide(MENU_CLOSE, () => close(false));
 
 const toggle = async () => {
     open.value = !open.value;
-    if (!open.value) return;
+    if (!open.value) {
+        dropUp.value = false;
+        return;
+    }
     await nextTick();
+    place();
     items()[0]?.focus();
+};
+
+/**
+ * Open upward when the panel would run off the bottom of the viewport.
+ * Same hairline panel, same type — only the edge it hangs from changes.
+ */
+const place = () => {
+    const triggerEl = trigger.value;
+    const panel = root.value?.querySelector<HTMLElement>('[role="menu"]');
+
+    if (!triggerEl || !panel) {
+        dropUp.value = false;
+        return;
+    }
+
+    const rect = triggerEl.getBoundingClientRect();
+    const height = panel.offsetHeight || panel.getBoundingClientRect().height;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    dropUp.value = height > 0 && spaceBelow < height + 8 && spaceAbove > spaceBelow;
 };
 
 const items = () => Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
@@ -97,8 +128,8 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
         <div
             v-if="open"
             role="menu"
-            class="appear absolute z-30 mt-1 min-w-44 rounded border border-rule bg-white py-1"
-            :class="align === 'right' ? 'right-0' : 'left-0'"
+            class="appear absolute z-30 min-w-44 rounded border border-rule bg-white py-1"
+            :class="[align === 'right' ? 'right-0' : 'left-0', dropUp ? 'bottom-full mb-1' : 'top-full mt-1']"
             @click="close(false)"
         >
             <slot />
