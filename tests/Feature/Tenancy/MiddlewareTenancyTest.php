@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\TimeOff;
 use App\Models\User;
 use App\Models\WaitlistEntry;
+use App\Support\Surface;
 use App\Support\SurfaceRoutes;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
@@ -489,6 +490,9 @@ it('sends a signed-out visitor to login rather than through the tenant middlewar
 
     $salon = aSalonWithOneOfEverything('Willow Street');
 
+    // Relative. `redirectGuestsTo` returns `Surface::App->path('login')`
+    // so the browser stays on this host. `app_url('login')` is built from
+    // APP_URL and would send a 127.0.0.1 visitor to localhost.
     $this->get(route('customers.show', $salon['customer']))
-        ->assertRedirect(app_url('login'));
+        ->assertRedirect(Surface::App->path('login'));
 });

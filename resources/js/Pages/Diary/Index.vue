@@ -325,14 +325,13 @@ watch(
         <template v-else-if="view === 'day'">
             <p v-if="closed && shown.length === 0" class="caption py-4">
                 {{ closedCopy }}
-                <button
+                <Link
                     v-if="next_open"
-                    type="button"
+                    :href="route('diary.index', { date: next_open, view })"
                     class="underline decoration-rule underline-offset-4 hover:decoration-ink"
-                    @click="go(next_open)"
                 >
                     See {{ formatDay(next_open) }}
-                </button>
+                </Link>
             </p>
 
             <template v-else>
@@ -365,14 +364,13 @@ watch(
 
                     <p v-if="closed" class="caption mt-4">
                         {{ closedCopy }}
-                        <button
+                        <Link
                             v-if="next_open"
-                            type="button"
+                            :href="route('diary.index', { date: next_open, view })"
                             class="underline decoration-rule underline-offset-4 hover:decoration-ink"
-                            @click="go(next_open)"
                         >
                             See {{ formatDay(next_open) }}
-                        </button>
+                        </Link>
                     </p>
                     <p v-else-if="shown.length === 0" class="caption mt-4">No bookings for this day.</p>
 

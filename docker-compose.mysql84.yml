@@ -1,0 +1,37 @@
+# MySQL 8.4 on 33084, alongside a laptop mysqld already bound to 3306.
+#
+# `docker-compose.yml` publishes 3306 because that is phpunit.xml's default
+# port. This file is a complete service, not an overlay: Compose appends
+# `ports` when merging, so overlaying would still bind 3306 and fail the
+# moment a brew mysqld is listening there. Used only by
+# `scripts/test-mysql84.sh`.
+#
+# Separate container name and volume so a later `docker compose up` on the
+# default file does not collide, and so first boot still runs
+# `docker/mysql/init.sql`.
+
+services:
+    mysql:
+        image: mysql:8.4
+        container_name: appoint-manager-mysql84
+        restart: unless-stopped
+        ports:
+            - '33084:3306'
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+            MYSQL_ROOT_HOST: '%'
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            - --default-authentication-plugin=caching_sha2_password
+        volumes:
+            - appoint-manager-mysql84:/var/lib/mysql
+            - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot']
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+volumes:
+    appoint-manager-mysql84:

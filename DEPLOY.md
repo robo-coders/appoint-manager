@@ -117,7 +117,7 @@ Parallel workers create `appoint_manager_test_test_1`, `_2`, … themselves.
 ## Test database
 
 The Pest suite is MySQL 8.4, same as Docker and production. It is **not**
-SQLite and it is **not** the development database. `phpunit.xml` forces:
+SQLite and it is **not** the development database. `phpunit.xml` sets:
 
 ```
 DB_CONNECTION=mysql
@@ -128,8 +128,10 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-`force="true"` so a shell that exported `DB_DATABASE=appoint_manager` cannot
-point `migrate:fresh` at the salon you are working on.
+Connection, host, database name, user and password are `force="true"` so a
+shell that exported `DB_DATABASE=appoint_manager` cannot point `migrate:fresh`
+at the salon you are working on. **Port is not forced** — that is how
+`./scripts/test-mysql84.sh` retargets the suite at 8.4 on 33084.
 
 ### Fresh clone (Docker)
 
@@ -137,9 +139,36 @@ point `migrate:fresh` at the salon you are working on.
 machine here. Docker is.
 
 ```bash
+./scripts/test-mysql84.sh
+```
+
+That is the one command. It brings MySQL 8.4 up on **33084** so a brew 9.x
+on 3306 is left alone, prints `SELECT VERSION()` and refuses to continue if
+it is not `8.4.*`, migrates `appoint_manager_test`, and runs Pest serial then
+parallel. phpunit.xml defaults to 3306 and does not force the port, so the
+script's `DB_PORT` is what the tests open.
+
+How it starts 8.4, in order:
+
+1. **Docker**, if `docker` is on PATH — `docker-compose.mysql84.yml`, image
+   `mysql:8.4`, own container and volume, published on 33084. This is the
+   same image production is aiming at.
+2. **keg-only `mysql@8.4`**, if Docker is missing — isolated datadir under
+   `$(brew --prefix)/var/appoint-manager-mysql84`, same charset/collation as
+   the compose file (`utf8mb4` / `utf8mb4_unicode_ci`). It will never run
+   `brew services start mysql@8.4`: Homebrew's default datadir for that
+   formula is the same path as 9.x.
+
+This laptop did not have a Docker CLI. The brew fallback is how the claim
+is verifiable here tonight. Install Docker when you want the image itself.
+
+To bring 8.4 up on 3306 because nothing else is bound there:
+
+```bash
 docker compose up -d
 ./scripts/test-setup.sh
 ./vendor/bin/pest
+./vendor/bin/pest --parallel
 ```
 
 `docker compose up -d` starts MySQL 8.4 and creates three empty databases on
@@ -149,8 +178,10 @@ and runs `php artisan migrate` against `appoint_manager_test` so a failed first
 test is a setup problem, not a red herring mid-suite. RefreshDatabase will
 `migrate:fresh` on its own after that.
 
-If port 3306 is already taken, change the left-hand port in `docker-compose.yml`
-and the `DB_PORT` values in `.env` **and** `phpunit.xml`. phpunit.xml wins.
+If you change the published port, set `DB_PORT` in the shell **and**
+`TEST_DB_PORT` for `scripts/test-setup.sh`. phpunit.xml still forces the
+database *name*, so a shell `DB_DATABASE` cannot wipe the salon you are working
+on.
 
 ### Already running MySQL
 
@@ -172,7 +203,8 @@ DB_CONNECTION=mysql DB_DATABASE=appoint_manager_test \
 
 Override host / user / password with `TEST_DB_HOST`, `TEST_DB_USERNAME`,
 `TEST_DB_PASSWORD` if yours are not root / empty. phpunit.xml still has to
-agree — it forces those three values.
+agree on user and password — it forces those. Port follows the shell
+(`DB_PORT`); host is forced to 127.0.0.1.
 
 Do not run the suite against `appoint_manager`. Do not run it against
 `appoint_manager_e2e`. Those are the local salon and the Playwright seed.
@@ -183,6 +215,18 @@ Do not run the suite against `appoint_manager`. Do not run it against
 MySQL 8. The suite is written against that. A laptop whose brew or pkg
 install is 9.x is a local deviation, not a second target — do not retarget
 compose or production to match the laptop.
+
+Verify, on demand, with `./scripts/test-mysql84.sh`. It refuses to continue if
+`SELECT VERSION()` is not `8.4.*`.
+
+Checked on this laptop (8.4.11 vs 9.5.0): `sql_mode`, `REPEATABLE-READ`,
+`innodb_lock_wait_timeout=50`, and `JSON_EXTRACT` were identical. The
+silent default that differs is collation: brew 9.5 serves
+`utf8mb4_0900_ai_ci`; compose and the brew fallback force
+`utf8mb4_unicode_ci` to match `config/database.php`. Laravel does not use
+generated columns or index hints, so those 8-vs-9 gaps are not in this
+schema. `default_authentication_plugin` is gone in 8.4; both versions
+expose `authentication_policy=*,,`.
 
 If they diverge again, what breaks is anything that is 8-or-9 specific: a
 reserved word that appears in 9, an authentication plugin, a JSON or
@@ -235,15 +279,137 @@ runs with subdomains on, `PathFallbackTest.php` with them off.
 
 ## Demo deposits on test keys
 
-Deposit capture is what this product sells, so the demo tenant has to take one
-end to end — card form, confirmation, the booking flipping to `confirmed` off
-the webhook. Doing that needs four things, and `demo:seed` refuses to run with
+Deposit capture is what this product sells, so a salon has to take one end to
+end — card form, confirmation, the booking flipping to `confirmed` off the
+webhook. Doing that needs four things, and `demo:seed` refuses to run with
 deposits on until all four are present. There is no fake-gateway shortcut:
 `FakeStripeGateway` binds under `testing` and nowhere else (AUDIT C1), so local
 development uses real Stripe **test-mode** keys or it uses `--no-deposits`.
 
 Everything below is test mode. No real card is ever charged and no real money
 moves; test-mode keys cannot touch live data even by mistake.
+
+### Paste this at eleven at night
+
+Do these in order. Do not skip the listen window. The booking does not confirm
+until the webhook arrives.
+
+**1. Keys, into `.env`. Test mode toggle on, top right of the dashboard.**
+
+<https://dashboard.stripe.com/test/apikeys>
+
+```
+STRIPE_KEY=pk_test_…
+STRIPE_SECRET=sk_test_…
+```
+
+Prefixes must be `pk_test_` / `sk_test_`. `pk_live_` / `sk_live_` never belong
+in a local `.env`. Restart `php artisan serve` after saving.
+
+**2. Webhook, left running in its own terminal.**
+
+```bash
+brew install stripe/stripe-cli/stripe    # once
+stripe login                             # once, opens the browser
+stripe listen --forward-to http://127.0.0.1:8000/stripe/webhook
+```
+
+Copy the `whsec_…` it prints into `.env` as `STRIPE_WEBHOOK_SECRET=whsec_…`.
+Leave the listen running. If it is not running, a paid deposit stays `pending`
+and is released after fifteen minutes.
+
+**3. One test-mode connected account, created once, reused forever.**
+
+With the keys from step 1 already in `.env`:
+
+```bash
+php artisan tinker --execute="
+  \$stripe = new Stripe\StripeClient(config('services.stripe.secret'));
+  \$account = \$stripe->accounts->create([
+      'type' => 'express',
+      'country' => 'GB',
+      'email' => 'demo@example.com',
+      'capabilities' => ['card_payments' => ['requested' => true], 'transfers' => ['requested' => true]],
+  ]);
+  echo \$account->id, PHP_EOL;
+"
+```
+
+That prints `acct_…`. Finish onboarding — a new Express account cannot take a
+charge until `charges_enabled` is true:
+
+```bash
+php artisan tinker --execute="
+  \$stripe = new Stripe\StripeClient(config('services.stripe.secret'));
+  echo \$stripe->accountLinks->create([
+      'account' => 'acct_…',
+      'type' => 'account_onboarding',
+      'refresh_url' => 'http://127.0.0.1:8000/settings/payments',
+      'return_url' => 'http://127.0.0.1:8000/settings/payments',
+  ])->url, PHP_EOL;
+"
+```
+
+Open the URL. In test mode Stripe offers to prefill the form; the test phone
+code is `000000`; GB bank is sort code `10-88-00`, account number `00012345`.
+
+```bash
+php artisan tinker --execute="
+  echo (new Stripe\StripeClient(config('services.stripe.secret')))
+      ->accounts->retrieve('acct_…')->charges_enabled ? 'ready' : 'not ready yet';
+"
+```
+
+You want `ready`. Keep the `acct_…`. Creating a second one does nothing useful.
+
+**4. Put the rebooking demo tenant into a connected state.**
+
+```bash
+php artisan tinker --execute="
+  \$t = App\Models\Tenant::where('slug', 'rebooking-demo')->firstOrFail();
+  \$t->forceFill([
+      'stripe_account_id' => 'acct_…',
+      'stripe_onboarding_complete' => true,
+  ])->save();
+  echo \$t->fresh()->takesDeposits() ? 'connected' : 'not connected';
+"
+```
+
+You want `connected`. (`takesDeposits()` is `stripe_onboarding_complete` and a
+non-empty `stripe_account_id`. If you skipped the hosted flow, this prints
+`connected` locally and Stripe still refuses the PaymentIntent — check step 3
+says `ready`.)
+
+A new salon rather than the rebooking demo:
+
+```bash
+php artisan demo:seed willow-street-grooming --stripe-account=acct_…
+```
+
+**5. Open the booking page and pay.**
+
+```
+http://127.0.0.1:8000/book/rebooking-demo
+```
+
+Pick **Full groom — small dog** (£35, £10 due today). Any future date. Any
+expiry, any CVC, any postcode.
+
+| Paste this | What you should see |
+|---|---|
+| `4242 4242 4242 4242` | Card accepted. Listen window logs `payment_intent.succeeded` and answers `200`. Booking goes `pending → confirmed`. You land on the manage page, not the form. |
+| `4000 0000 0000 9995` | Declined on the form, insufficient funds. No booking confirmed. Listen window does not get `payment_intent.succeeded`. |
+| `4000 0025 0000 3155` | 3D Secure prompt. Complete it to succeed; cancel it to stay unconfirmed. |
+
+If the form never appears, the tenant is not connected (step 4) or `STRIPE_KEY`
+is empty (step 1). If the card succeeds and the booking stays pending, the
+listen window is not running (step 2).
+
+Platform billing (`STRIPE_PRICE_MONTHLY`, `STRIPE_BILLING_WEBHOOK_SECRET`) is a
+different endpoint and is not required for a deposit.
+
+The longer version of the same four preconditions, including why the placeholder
+`acct_demo_not_a_real_account` is rejected, is below.
 
 ### 1. The two API keys
 

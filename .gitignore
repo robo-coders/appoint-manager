@@ -31,4 +31,5 @@ Homestead.json
 auth.json
 tests/e2e/.auth/
 tests/e2e/.output/
+public/hot.aside
 .DS_Store

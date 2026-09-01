@@ -150,6 +150,10 @@ export default defineConfig({
      * command when a server is already up, and these specs write real bookings —
      * a suite that silently reuses the previous run's data is a suite that
      * passes once and then fails for reasons nobody can reproduce.
+     *
+     * `scripts/e2e-playwright.sh` moves `public/hot` aside for the run so this
+     * process uses the Vite manifest. A leftover `npm run dev` would otherwise
+     * leave every page blank.
      */
     webServer: {
         command: `php artisan serve --host=127.0.0.1 --port=${PORT}`,

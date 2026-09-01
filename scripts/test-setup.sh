@@ -24,7 +24,7 @@ mysql_args=(-h "$HOST" -P "$PORT" -u "$USER")
 
 if ! mysqladmin "${mysql_args[@]}" ping >/dev/null 2>&1; then
     echo "test-setup: MySQL is not reachable at $HOST:$PORT."
-    echo "test-setup: start it with \`docker compose up -d\`, then rerun this."
+    echo "test-setup: start it with \`docker compose up -d\`, or run \`./scripts/test-mysql84.sh\` for 8.4 on 33084."
     echo "test-setup: do not point the suite at SQLite — lockForUpdate() is a no-op there."
     exit 1
 fi

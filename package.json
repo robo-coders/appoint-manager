@@ -12,7 +12,7 @@
         "check:name": "node scripts/check-name.mjs",
         "check:php": "vendor/bin/pint --test",
         "dev": "vite",
-        "test:e2e": "./scripts/e2e-setup.sh && playwright test",
+        "test:e2e": "./scripts/e2e-setup.sh && ./scripts/e2e-playwright.sh",
         "test:php": "vendor/bin/pest --parallel",
         "test:unit": "vitest run",
         "test:unit:watch": "vitest"

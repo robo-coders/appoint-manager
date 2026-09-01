@@ -19,9 +19,10 @@
 #   ./scripts/test-setup.sh   # no-op if the databases already exist
 #   ./vendor/bin/pest
 #
-# If port 3306 is already taken by a local mysqld, either stop that daemon or
-# change the left-hand port below and set DB_PORT in .env and phpunit.xml to
-# match. phpunit.xml forces its own values, so a .env-only change is not enough.
+# If port 3306 is already taken by a local mysqld, do not retarget this file.
+# Run `./scripts/test-mysql84.sh` instead: it brings 8.4 up on 33084 and
+# points the suite there. phpunit.xml defaults to 3306 and does not force
+# the port, so a shell DB_PORT is what the tests open.
 
 services:
     mysql:

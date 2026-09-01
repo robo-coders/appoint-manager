@@ -2922,10 +2922,10 @@ it. Do not re-open these as "found broken" unless the reason changes.
   test red. What would close it: send `_token` on every POST/PATCH/DELETE and
   bind the Stripe fake without relying on `testing`. Canaries exist
   (`ErrorPageTest`, `AuthenticationTest`).
-- **This laptop runs MySQL 9.5.** Reason: brew/pkg on this machine, not a
-  product choice. Authoritative is 8.4. What would close it: point this
-  machine at the compose 8.4 instance, or install 8.4 locally. Not a code
-  change.
+- **This laptop runs MySQL 9.5 for day-to-day.** Reason: brew/pkg on this
+  machine, not a product choice. Authoritative is 8.4. What closes the
+  verification gap: `./scripts/test-mysql84.sh` (8.4 on 33084, serial then
+  parallel). Day-to-day `./vendor/bin/pest` still hits whatever is on 3306.
 - **`QUEUE_CONNECTION=sync` in the suite.** Reason: every notification test
   asserts side effects that only happen because the job ran inside the
   request. What would close it: rewrite those tests against a real queue, plus
