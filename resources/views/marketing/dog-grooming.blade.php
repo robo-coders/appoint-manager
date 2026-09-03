@@ -1,248 +1,181 @@
 @extends('marketing.layout')
 
 {{--
-    The trade page.
+    The dog grooming trade page.
 
-    This is why the marketing site is Blade and not Vue: the words below are a
-    vertical's words, and a vertical's copy has no business being bundled into
-    the admin SPA (REBUILD.md, phase 11).
+    **This file is copy and example data. The page itself is
+    `marketing/partials/vertical-page.blade.php`.** That split is the whole
+    point: the product is multi-vertical from day one, and the second trade page
+    has to be a copy of this file with new strings rather than a second layout
+    to keep in step with this one.
 
-    What makes it a trade page rather than the home page with "dog" substituted
-    in is that the specifics are real and come from `config/verticals.php` — the
-    price list a grooming tenant is actually seeded with, and the fields its
-    booking page actually asks for. Both are read through
-    `App\Support\MarketingFigures`, so neither can drift from what a new salon
-    gets on day one.
+    So adding `/barbers` is:
+      1. a route and a controller method,
+      2. a copy of this file with `'barber'` as the vertical key,
+      3. new strings in `$copy`, and one entry in `App\Support\MarketingNav`.
 
-    The old version of this page ran "a medium full groom at £45, two no-shows on
-    a Saturday is £90". That arithmetic is not carried forward: nothing on this
-    page multiplies a slot price by an invented number of missed appointments.
+    Nothing in `vertical-page.blade.php` changes, and neither does the header or
+    the footer.
+
+    What makes this a trade page rather than the home page with "dog"
+    substituted in is that the specifics are real. The price list, the service
+    lengths, the deposits and the extra fields the booking page asks for all
+    come from the groomer row in `verticals`, read through
+    `App\Support\VerticalFigures`, so none of it can drift from what a new salon
+    is actually given on day one.
+
+    This is also why the marketing site is Blade and not Vue: a vertical's copy
+    has no business being bundled into the admin SPA (REBUILD.md, phase 11).
 --}}
 
 @section('content')
 
-    @php($words = $figures->verticalWords())
-
-    <section class="hero">
-        <div class="wrap split">
-            <div class="claim">
-                <h1 class="text-34">Saturday's cancellation, sold twice.</h1>
-                <p class="sub text-17 text-ink-2">
-                    A {{ $words['subject'] }} drops out of your Saturday. Everybody waiting for
-                    that service, on that day, gets a text — and the hour goes to whoever answers
-                    first instead of sitting empty in the wash bay.
-                </p>
-                @include('marketing.partials.cta', [
-                    'label' => 'Start free trial',
-                    'note' => $figures->trialDays().' days. No card.',
-                ])
-            </div>
-
-            <div class="evidence">
-                @include('marketing.partials.refill-sum')
-            </div>
-        </div>
-    </section>
+    {{--
+        Read once, here, so the copy below can quote the salon's real service
+        lengths rather than restating them. `$vertical` is the same object the
+        template gets.
+    --}}
+    @php($groomer = $figures->vertical('groomer'))
 
     {{--
-        The real seeded price list. Not an illustration — this is the list
-        `config/verticals.php` gives a grooming tenant, prices and durations
-        included.
-
-        Three columns rather than four: the deposit is £10 on everything except
-        the nail clip, which takes none, and that is one sentence underneath
-        rather than a fourth figure column squeezed into 375px.
+        The length of the longest appointment on the seeded list, as a phrase.
+        Guarded, because a vertical with no services has no longest one and this
+        page must render short rather than 500 if that row ever goes missing.
     --}}
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">You do not start from an empty diary</h2>
-                <p class="lede">
-                    This is the price list already in there when you sign in for the first time.
-                    Change any of it, or none of it.
-                </p>
-            </div>
-            <div class="evidence">
-                <table class="bill">
-                    <caption>The grooming price list we set you up with</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">Service</th>
-                            {{--
-                                "Minutes", not "Time" with "min" in every cell.
-                                Mono is for figures only, so a unit printed
-                                inside a figure cell is prose in the wrong
-                                typeface — the unit belongs in the heading,
-                                which is Geist because headings always are.
-                            --}}
-                            <th scope="col" class="fig">Minutes</th>
-                            <th scope="col" class="fig">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($figures->seededPriceList() as $service)
-                            <tr>
-                                <th scope="row">{{ $service['name'] }}</th>
-                                <td class="fig">{{ $service['minutes'] }}</td>
-                                <td class="fig">{{ $service['price']->formatted() }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+    @php($longest = $groomer->hasPriceList() ? $groomer->slotMinutes().' minutes' : 'the length it takes')
 
-                <p class="footnote">
-                    Every groom holds a
-                    <span class="font-mono">{{ $figures->deposit()->formatted() }}</span> deposit
-                    that comes off the bill on the day. The nail clip does not take one — it is
-                    fifteen minutes and asking for a deposit on it would be silly.
-                </p>
-            </div>
-        </div>
-    </section>
+    @include('marketing.partials.vertical-page', [
+        'vertical' => $groomer,
 
-    {{-- The mechanism, in the trade's own terms. --}}
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">Who gets the text</h2>
-                <p class="lede">
-                    Not the whole waitlist. The ones who wanted that service, on a day they said
-                    they could do.
-                </p>
-            </div>
-            <div class="evidence">
-                <dl class="facts">
-                    <div>
-                        <dt>The same service, not merely the same salon.</dt>
-                        <dd>
-                            A cancelled full groom does not text somebody waiting for a nail clip.
-                            The hour that came free is {{ $figures->slotMinutes() }} minutes long
-                            and it goes to somebody who needs {{ $figures->slotMinutes() }} minutes.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>On a day and at a time they can actually make.</dt>
-                        <dd>
-                            When somebody joins the waitlist they say which days suit and whether
-                            they want mornings or afternoons. A Tuesday morning slot does not text
-                            the {{ $words['customer'] }} who can only do weekends.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>{{ $figures->offerBatch() }} at a time, for {{ $figures->offerMinutes() }} minutes.</dt>
-                        <dd>
-                            Then the next {{ $figures->offerBatch() }}, if the first round goes
-                            quiet. Sending to one person and waiting is how a Saturday morning slot
-                            stays empty until Saturday.
-                        </dd>
-                    </div>
-                </dl>
+        'copy' => [
+            'headline' => 'Saturday\'s cancellation, sold twice.',
+            'sub' => 'A dog drops out of your Saturday. Everybody waiting for that service, on '
+                .'that day, gets a text, and the hour goes to whoever answers first instead of '
+                .'sitting empty in the wash bay.',
 
-                <div class="mt-8">
-                    @include('marketing.partials.messages')
-                </div>
-            </div>
-        </div>
-    </section>
+            'diary' => [
+                'day' => 'Saturday, 6 September',
+                'status' => '1 slot reclaimed today',
+                'caption' => 'A Saturday in a two-groomer salon. The 10:30 was cancelled at 9:14 '
+                    .'and taken at 9:18.',
+                'rows' => [
+                    ['time' => '9:00', 'name' => 'Bella', 'service' => 'Full groom, cocker spaniel'],
+                    ['time' => '10:30', 'name' => 'Max', 'service' => 'Full groom, labradoodle', 'state' => 'reclaimed', 'tag' => 'Waitlist · filled in 4 min'],
+                    ['time' => '12:00', 'name' => 'Coco', 'service' => 'Bath and blow dry'],
+                    ['time' => '12:45', 'name' => 'Open — waitlist notified', 'service' => '', 'state' => 'open'],
+                ],
+            ],
 
-    {{-- What the product knows about a dog, from the vertical's own fields. --}}
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">It knows the {{ $words['subject'] }}, not just the booking</h2>
-                <p class="lede">
-                    A grooming diary that only records a name and a time is a calendar with your
-                    logo on it.
-                </p>
-            </div>
-            <div class="evidence">
-                <p class="max-w-measure text-15">
-                    Your booking page asks the owner for the {{ $words['subject'] }}'s details once
-                    and remembers them: {{ $figures->subjectFieldList() }}. Next time she books,
-                    none of it is asked again.
-                </p>
-                <p class="mt-4 max-w-measure text-15">
-                    The temperament note is the one that earns its place. "Nervous with clippers"
-                    appears on the appointment, on the day, next to the time — so whoever is on the
-                    table at 10:30 knows before the {{ $words['subject'] }} is on it.
-                </p>
-            </div>
-        </div>
-    </section>
+            'scenarioHeading' => 'Three Saturdays you have already had.',
+            'scenarios' => [
+                [
+                    'label' => 'The night before',
+                    'body' => 'It is nine at night and a full groom cancels for the morning. '
+                        .'<b>The text goes out while you are still reading the message.</b> By '
+                        .'the time you are up, the slot has a name on it.',
+                ],
+                [
+                    'label' => 'A puppy\'s first visit',
+                    'body' => 'First time in, nervous, needs longer than the price list says. '
+                        .'<b>You set the length on the appointment, not on the service.</b> The '
+                        .'owner books online and still gets the hour you actually need.',
+                ],
+                [
+                    'label' => 'A doodle in a spaniel slot',
+                    'body' => 'The breeds do not take the same time and the diary knows it. '
+                        .'<b>Each service carries its own length, so a long groom never lands '
+                        .'in a short gap.</b>',
+                ],
+            ],
 
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <div class="price">
-                    <span class="amt">{{ $figures->monthlyBare() }}</span>
-                    <span class="text-17 text-ink-2">a month</span>
-                </div>
-                <p class="lede">
-                    One price for the whole salon. {{ $figures->trialDays() }} days free, no card
-                    to start.
-                </p>
-                <div class="mt-8">
-                    @include('marketing.partials.cta', ['label' => 'Start free trial'])
-                </div>
-            </div>
-            <div class="evidence">
-                <p class="max-w-measure text-15">
-                    No per-booking charge to you, and nothing at all charged to the owners who book
-                    with you — no fee on their deposit, no fee on the day.
-                </p>
-                <p class="mt-4">
-                    <a class="m-link text-14" href="{{ route('marketing.pricing') }}">Why we charge you instead</a>
-                </p>
-            </div>
-        </div>
-    </section>
+            'sumHeading' => 'One refilled groom pays for the month.',
+            'sumLede' => 'Not a projection. Two numbers you can check, one taken away from the '
+                .'other.',
+            'sumCaption' => 'One refilled appointment, against one month of software',
 
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">Questions from groomers</h2>
-                <p class="lede">The setup ones, mostly.</p>
-            </div>
-            <div class="evidence">
-                <dl class="qa">
-                    <div>
-                        <dt>What about the book I already have?</dt>
-                        <dd>
-                            We import names, {{ $words['subjects'] }} and the next fortnight from a
-                            spreadsheet before your booking page goes live. For the first ten salons
-                            we will come and do it with you.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>What if owners are not on their phones?</dt>
-                        <dd>
-                            They open a link. There is no account to make and no app to install —
-                            a text with a link is the whole interface, which is also why the
-                            waitlist works at all.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Two of us work Saturdays. Does it handle that?</dt>
-                        <dd>
-                            Yes. Services are assigned to whoever can do them, and a freed hour is
-                            offered against the groomer whose hour it was — so a cancellation in
-                            your column does not text people about a slot in somebody else's.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Will asking for a deposit lose me clients?</dt>
-                        <dd>
-                            The ones who vanish on a Saturday might. A
-                            <span class="font-mono">{{ $figures->deposit()->formatted() }}</span>
-                            hold comes off the bill on the day, and the owners who want the 9am slot
-                            are not the ones who object to it.
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
-    </section>
+            'priceHeading' => 'You do not start from an empty diary.',
+            'priceLede' => 'This is the grooming price list already in there the first time you '
+                .'sign in. Change any of it, or none of it.',
+            'priceCaption' => 'The grooming price list we set you up with',
+            'priceFootnote' => 'The deposit comes off the bill on the day. The nail clip takes '
+                .'none, because it is fifteen minutes and asking for a deposit on it would be '
+                .'silly.',
 
-    @include('marketing.partials.no-proof', ['heading' => 'From groomers using it'])
+            'textHeading' => 'Who gets the text.',
+            'textLede' => 'Not the whole waitlist. The ones who wanted that service, on a day '
+                .'they said they could do.',
+            'facts' => [
+                [
+                    'dt' => 'The same service, not merely the same salon.',
+                    'dd' => 'A cancelled full groom does not text somebody waiting for a nail '
+                        .'clip. The hour that came free is '.$longest.' long, and it goes to '
+                        .'somebody who needs '.$longest.'.',
+                ],
+                [
+                    'dt' => 'On a day and at a time they can actually make.',
+                    'dd' => 'When somebody joins the waitlist they say which days suit and '
+                        .'whether they want mornings or afternoons. A Tuesday morning slot does '
+                        .'not text the client who can only do weekends.',
+                ],
+                [
+                    'dt' => $figures->offerBatch().' at a time, for '.$figures->offerMinutes().' minutes.',
+                    'dd' => 'Then the next '.$figures->offerBatch().', if the first round goes '
+                        .'quiet. Texting one person and waiting is how a Saturday morning slot '
+                        .'stays empty until Saturday.',
+                ],
+            ],
+
+            'subjectHeading' => 'It knows the dog, not just the booking.',
+            'subjectLede' => 'A grooming diary that records only a name and a time is a calendar '
+                .'with your logo on it.',
+            'subjectBody' => [
+                'The temperament note is the one that earns its place. <b>"Nervous with '
+                    .'clippers" sits on the appointment, on the day, next to the time</b>, so '
+                    .'whoever is on the table at 10:30 knows before the dog is on it.',
+                'Same for the coat. A matted double coat is not the same job as a trim, and the '
+                    .'note is on the booking rather than in somebody\'s head.',
+            ],
+
+            'questionHeading' => 'Questions from groomers.',
+            'questionLede' => 'The setup ones, mostly.',
+            'questions' => [
+                [
+                    'q' => 'What about the book I already have?',
+                    'a' => 'We import names, dogs and the next fortnight from a spreadsheet '
+                        .'before your booking page goes live. For the first ten salons we will '
+                        .'come and do it with you.',
+                ],
+                [
+                    'q' => 'What if owners are not on their phones?',
+                    'a' => 'They open a link. There is no account to make and no app to install. '
+                        .'A text with a link is the whole interface, which is also why the '
+                        .'waitlist works at all.',
+                ],
+                [
+                    'q' => 'Two of us work Saturdays. Does it handle that?',
+                    'a' => 'Yes. Services are assigned to whoever can do them, and a freed hour '
+                        .'is offered against the groomer whose hour it was. A cancellation in '
+                        .'your column does not text people about a slot in somebody else\'s.',
+                ],
+                [
+                    'q' => 'Will asking for a deposit lose me clients?',
+                    'a' => 'The ones who vanish on a Saturday might. The hold comes off the bill '
+                        .'on the day, and the owners who want the 9am slot are not the ones who '
+                        .'object to it.',
+                ],
+                [
+                    'q' => 'Do I have to take deposits on everything?',
+                    'a' => 'No. It is set per service, and you can set it to nothing. The seeded '
+                        .'list already does that on the nail clip.',
+                ],
+            ],
+
+            'proofHeading' => 'From groomers using it',
+
+            'ctaHeading' => 'Put your own Saturday in it.',
+            'ctaNote' => 'Based near East Kilbride? We will come to the salon and set it up with '
+                .'you.',
+        ],
+    ])
 
 @endsection

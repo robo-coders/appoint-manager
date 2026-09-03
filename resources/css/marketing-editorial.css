@@ -70,6 +70,34 @@ a {
     transform: none;
 }
 
+/*
+ * One focus rule for the whole surface.
+ *
+ * It was five copies of `outline: 2px solid var(--accent)`, one per control,
+ * which meant a control added later had no ring at all until somebody
+ * remembered to add a sixth. Written once, against every focusable thing, so a
+ * new link or a new input inherits it. `outline: none` only after the shadow
+ * is set, never on its own.
+ *
+ * A box-shadow rather than an outline because the ring is asserted: the e2e
+ * suite tabs through every focusable element on every page and reads
+ * `box-shadow` back. An outline is invisible to that, so it is a ring nobody
+ * can prove is drawn.
+ *
+ * No `border-radius` here on purpose. The ring follows whatever radius the
+ * control already has, and forcing one would square off the pills.
+ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:not([tabindex='-1']):focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
 /* ---- Nav ----------------------------------------------------------- */
 
 header.top {
@@ -137,58 +165,59 @@ header.top {
     box-sizing: border-box;
 }
 
-.pill:focus-visible,
-.pill-ghost:focus-visible,
-.navlinks a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
 
 /* ---- Shared hero --------------------------------------------------- */
 
+/*
+ * Every hero on the surface, and every scale below it, is written as a default
+ * plus one override for the two pages that lead with a full-bleed display line
+ * and a diary under it.
+ *
+ * It used to be one rule per `data-page`, listing pages by name, which meant a
+ * page added later fell through to no padding, no orb size and no h1 size at
+ * all. That is how /about, /contact, /privacy and /terms arrived on this shell
+ * with a hero that had none of it.
+ */
 .hero {
     position: relative;
     overflow: hidden;
     text-align: center;
-}
-
-[data-page='home'] .hero {
-    padding: var(--space-16) var(--space-4) var(--space-12);
-}
-
-[data-page='pricing'] .hero,
-[data-page='how-it-works'] .hero {
     padding: var(--space-8) var(--space-4) var(--space-6);
+}
+
+[data-page='home'] .hero,
+[data-page='vertical'] .hero {
+    padding: var(--space-16) var(--space-4) var(--space-12);
 }
 
 .orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(var(--orb-blur));
+    filter: blur(var(--orb-blur-pricing));
     pointer-events: none;
 }
 
-[data-page='pricing'] .orb,
-[data-page='how-it-works'] .orb {
-    filter: blur(var(--orb-blur-pricing));
+[data-page='home'] .orb,
+[data-page='vertical'] .orb {
+    filter: blur(var(--orb-blur));
 }
 
 .orb-1 {
-    width: 560px;
-    height: 560px;
-    background: var(--orb-a);
-    top: -220px;
-    left: 50%;
-    transform: translateX(-62%);
-}
-
-[data-page='pricing'] .orb-1,
-[data-page='how-it-works'] .orb-1 {
     width: 480px;
     height: 480px;
     background: var(--orb-a-pricing);
     top: -200px;
+    left: 50%;
     transform: translateX(-50%);
+}
+
+[data-page='home'] .orb-1,
+[data-page='vertical'] .orb-1 {
+    width: 560px;
+    height: 560px;
+    background: var(--orb-a);
+    top: -220px;
+    transform: translateX(-62%);
 }
 
 .orb-2 {
@@ -209,13 +238,13 @@ header.top {
 
 .hero-inner {
     position: relative;
-    max-width: 760px;
+    max-width: 640px;
     margin: 0 auto;
 }
 
-[data-page='pricing'] .hero-inner,
-[data-page='how-it-works'] .hero-inner {
-    max-width: 640px;
+[data-page='home'] .hero-inner,
+[data-page='vertical'] .hero-inner {
+    max-width: 760px;
 }
 
 .eyebrow {
@@ -227,34 +256,37 @@ header.top {
 h1 {
     font-family: var(--font-display);
     font-weight: 300;
-    line-height: 1.02;
+    font-size: 56px;
+    line-height: 1.05;
     letter-spacing: -0.02em;
-    margin: 0 0 var(--space-3);
+    margin: 0 0 var(--space-2);
 }
 
 [data-page='home'] h1 {
     font-size: 78px;
+    line-height: 1.02;
+    margin: 0 0 var(--space-3);
 }
 
-[data-page='pricing'] h1,
-[data-page='how-it-works'] h1 {
-    font-size: 56px;
-    line-height: 1.05;
-    margin: 0 0 var(--space-2);
+[data-page='vertical'] h1 {
+    font-size: 64px;
+    line-height: 1.04;
+    margin: 0 0 var(--space-3);
 }
 
 p.sub {
-    font-size: 19px;
+    font-size: 18px;
     line-height: 1.55;
     color: var(--ink-2);
     max-width: 520px;
-    margin: 0 auto var(--space-4);
+    margin: 0 auto;
 }
 
-[data-page='pricing'] p.sub,
-[data-page='how-it-works'] p.sub {
-    font-size: 18px;
-    margin: 0 auto;
+[data-page='home'] p.sub,
+[data-page='vertical'] p.sub {
+    font-size: 19px;
+    max-width: 560px;
+    margin: 0 auto var(--space-4);
 }
 
 .hero-cta {
@@ -357,7 +389,7 @@ p.sub {
 .slot.open {
     border: 1px dashed var(--rule);
     background: transparent;
-    color: var(--ink-3);
+    color: var(--ink-2);
     justify-content: center;
     font-size: 13px;
 }
@@ -372,12 +404,13 @@ p.sub {
 /* ---- Home: three rows ---------------------------------------------- */
 
 .section {
-    padding: var(--space-16) var(--space-4);
+    padding: var(--space-12) var(--space-4);
     border-top: 1px solid var(--rule);
 }
 
-[data-page='pricing'] .section {
-    padding: var(--space-12) var(--space-4);
+[data-page='home'] .section,
+[data-page='vertical'] .section {
+    padding: var(--space-16) var(--space-4);
 }
 
 .section-inner {
@@ -490,10 +523,6 @@ p.sub {
     color: var(--white);
 }
 
-.interval-group button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
 
 .price-card {
     background: var(--white);
@@ -551,10 +580,6 @@ p.sub {
     text-decoration: none;
 }
 
-.price-card .cta:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
 
 .included {
     text-align: left;
@@ -578,10 +603,42 @@ p.sub {
     color: var(--accent);
 }
 
+/*
+ * The comparison table scrolls inside its own box rather than widening the
+ * page. Two prose columns at 375 cannot be made to fit, and a body that
+ * scrolls sideways is the one layout failure the e2e suite fails the build for.
+ */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .compare {
     width: 100%;
+    min-width: 460px;
     border-collapse: collapse;
     font-size: 15px;
+    table-layout: fixed;
+}
+
+/*
+ * Fixed columns, because the automatic ones balanced against the longest cell
+ * — a two-line paragraph in the last column — and broke "£29 / month" over two
+ * lines in the process. The price is the one cell on this table that must read
+ * as a single figure.
+ */
+.compare th:first-child,
+.compare td:first-child {
+    width: 32%;
+}
+
+.compare th:nth-child(2),
+.compare td:nth-child(2) {
+    width: 20%;
+}
+
+.compare td.you {
+    white-space: nowrap;
 }
 
 .compare th {
@@ -613,6 +670,20 @@ p.sub {
 .faq-inner {
     max-width: 640px;
     margin: 0 auto;
+}
+
+.section p.lead.compare-note {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin: var(--space-3) auto 0;
+    text-align: left;
+}
+
+.q .answer a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--rule-loud);
 }
 
 .faq h2 {
@@ -735,6 +806,27 @@ p.sub {
     font-size: 13px;
     align-self: flex-start;
     max-width: 80%;
+    line-height: 1.45;
+}
+
+/*
+ * The second message: the one sent to everybody who was not first. It is the
+ * step most systems skip, so it is drawn as its own bubble on the other side
+ * rather than described. Sunk rather than ink-filled, because it is the quieter
+ * of the pair.
+ */
+.art .msg-later {
+    background: var(--canvas-sunk);
+    color: var(--ink);
+    align-self: flex-end;
+}
+
+.art .msg .quiet {
+    color: var(--ink-3);
+}
+
+.art .msg-later .quiet {
+    color: var(--ink-2);
 }
 
 .cta-band {
@@ -751,6 +843,17 @@ p.sub {
     margin: 0 0 var(--space-4);
 }
 
+.cta-band .hero-price {
+    margin: var(--space-3) 0 0;
+}
+
+.cta-band .cta-note {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin: 6px auto 0;
+    max-width: 56ch;
+}
+
 .cta-band a {
     background: var(--ink);
     color: var(--white);
@@ -764,60 +867,22 @@ p.sub {
     align-items: center;
 }
 
-.cta-band a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-/* ---- Footer -------------------------------------------------------- */
-
-footer.foot {
-    border-top: 1px solid var(--rule);
-    padding: var(--space-6) var(--space-4);
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-3) var(--space-4);
-    max-width: 1180px;
-    width: 100%;
-    margin-top: auto;
-    margin-inline: auto;
-    font-size: 13px;
-    color: var(--ink-2);
-}
-
-footer.foot nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-4);
-}
-
-footer.foot a {
-    color: var(--ink-2);
-    text-decoration: none;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-}
-
-footer.foot a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
 
 main {
     flex: 1;
 }
 
 @media (max-width: 760px) {
+    h1 {
+        font-size: 36px;
+    }
+
     [data-page='home'] h1 {
         font-size: 44px;
     }
 
-    [data-page='pricing'] h1,
-    [data-page='how-it-works'] h1 {
-        font-size: 36px;
+    [data-page='vertical'] h1 {
+        font-size: 40px;
     }
 
     .section h2 {
@@ -854,12 +919,18 @@ main {
 
     header.top {
         flex-wrap: wrap;
-        gap: var(--space-2);
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
     }
 
     .navlinks {
         flex-wrap: wrap;
-        gap: var(--space-2) var(--space-3);
+        gap: 0 var(--space-2);
+    }
+
+    .pill,
+    .pill-ghost {
+        padding: 10px 14px;
     }
 }
 
@@ -867,11 +938,739 @@ main {
     .price-line .amount {
         font-size: 48px;
     }
+
+    /*
+     * Stacked, full width. Side by side at 375 each label wrapped to two lines
+     * inside its own pill, which is two ragged blocks rather than two buttons.
+     */
+    .hero-cta,
+    .gone-ways {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .orb {
         filter: none;
         opacity: 0.35;
+    }
+}
+
+/* ---- The price, quietly, next to the trial button ------------------- */
+
+/*
+ * Small and grey, under the buttons. It is a reassurance, not a second
+ * headline: somebody who has just read "the empty slot fills itself" wants to
+ * know what it costs before they click, and making them go to /pricing to find
+ * out is how you lose them. Mono only on the figure itself, because mono is
+ * for numerals and "a month, 30-day free trial" is prose.
+ */
+.hero-price {
+    margin: var(--space-3) 0 0;
+    font-size: 14px;
+    color: var(--ink-2);
+}
+
+.hero-price .fig {
+    font-family: var(--font-mono);
+    color: var(--ink);
+}
+
+/*
+ * A note on --ink-3, which appears rarely below.
+ *
+ * It is 2.45:1 on the canvas, which is under WCAG AA for text. It is the
+ * mockup's value and it stays, because it is the right weight for the two
+ * things it is left on: the diary illustration's time gutter, the em-dash
+ * bullet on a list, and the label inside the empty logo slot. None of the three
+ * carries information a reader needs to take in.
+ *
+ * **Everything a person actually has to read is --ink-2**, at 5.12:1 — the
+ * footnotes, the hints, the placeholders, the table captions, the copyright.
+ * Several of those were --ink-3 first and were moved, which is why this is
+ * written down rather than left as a convention.
+ */
+
+/* ---- Footer -------------------------------------------------------- */
+
+/*
+ * One footer, on every page.
+ *
+ * Three groups of links rather than one long row: the product pages, the
+ * company pages and the legal ones are three different reasons to be down
+ * here, and at 375 a single row of nine links wraps into an unreadable block.
+ *
+ * The logo slot is empty and says so. There is no wordmark asset yet, and a
+ * placeholder that looks like a logo is worse than a marked space — somebody
+ * ships it. It is a dashed hairline box, labelled, and it comes out in one
+ * commit when there is a real mark to put in it.
+ */
+footer.foot {
+    border-top: 1px solid var(--rule);
+    margin-top: auto;
+    padding: var(--space-8) var(--space-4) var(--space-6);
+    font-size: 14px;
+    color: var(--ink-2);
+}
+
+.foot-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--space-8);
+}
+
+.foot-brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.foot-mark {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-slot {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border: 1px dashed var(--rule);
+    border-radius: var(--radius-slot);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+}
+
+.foot-wordmark {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.foot-blurb {
+    margin: 0;
+    max-width: 30ch;
+    line-height: 1.55;
+}
+
+.foot-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.foot-nav h2 {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.foot-nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.foot-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    color: var(--ink-2);
+    text-decoration: none;
+}
+
+.foot-nav a:hover {
+    color: var(--ink);
+}
+
+.foot-base {
+    max-width: 1180px;
+    margin: var(--space-6) auto 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-4);
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.foot-base a {
+    color: var(--ink-2);
+    text-decoration: none;
+}
+
+/* ---- Prose pages: about, privacy, terms ---------------------------- */
+
+/*
+ * One measure, hairlines between sections, no cards. These pages are read
+ * rather than scanned, so the only structure they get is a rule and a heading.
+ */
+.doc {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.doc-lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: var(--measure-tight);
+    margin: 0 0 var(--space-6);
+}
+
+.doc section {
+    border-top: 1px solid var(--rule);
+    padding: var(--space-6) 0 0;
+    margin: 0 0 var(--space-6);
+}
+
+.doc h2 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 28px;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--space-2);
+}
+
+.doc h3 {
+    font-size: 15px;
+    font-weight: 500;
+    margin: var(--space-4) 0 var(--space-1);
+}
+
+.doc p,
+.doc li {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    max-width: var(--measure);
+}
+
+.doc p {
+    margin: 0 0 var(--space-2);
+}
+
+.doc ul {
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    list-style: none;
+}
+
+.doc ul li {
+    padding: 6px 0 6px 20px;
+    position: relative;
+}
+
+.doc ul li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--ink-3);
+}
+
+.doc b,
+.doc strong {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.doc a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--rule-loud);
+}
+
+.doc .fig {
+    font-family: var(--font-mono);
+    color: var(--ink);
+}
+
+/*
+ * The solicitor note.
+ *
+ * A left rule in the accent rather than a tinted box: it is the one moment of
+ * colour on a legal page, and a filled callout on this canvas reads as a
+ * different product. It sits at the top of the page, before the policy,
+ * because a reader who only reads one thing should read this.
+ */
+.doc-caveat {
+    border-left: 2px solid var(--accent);
+    padding: 2px 0 2px var(--space-3);
+    margin: 0 0 var(--space-6);
+    max-width: var(--measure);
+}
+
+.doc-caveat p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-2);
+}
+
+.doc-updated {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-2);
+    margin: 0 0 var(--space-6);
+}
+
+/* ---- Contact form -------------------------------------------------- */
+
+.contact-grid {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-4) var(--space-12);
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-8);
+    align-items: start;
+}
+
+.form {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.field {
+    display: grid;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.field .hint {
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.field input,
+.field textarea {
+    font: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--white);
+    border: 1px solid var(--rule-loud);
+    border-radius: var(--radius-slot);
+    padding: 12px 14px;
+    min-height: 44px;
+    width: 100%;
+}
+
+.field textarea {
+    min-height: 132px;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+    color: var(--ink-2);
+}
+
+.field-error {
+    font-size: 13px;
+    color: var(--accent);
+}
+
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+    border-color: var(--accent);
+}
+
+.form-submit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin-top: var(--space-1);
+}
+
+.form-submit button {
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--ink);
+    color: var(--white);
+    border: 0;
+    padding: 14px 28px;
+    border-radius: var(--radius-pill);
+    min-height: 44px;
+}
+
+.form-submit .note {
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+/*
+ * The honeypot. Hidden from people, not from the DOM: `display: none` is the
+ * one thing a bot filling every field will skip.
+ *
+ * Clipped in place rather than parked at `left: -9999px`. Both hide it, but the
+ * off-screen version puts a real element 9999px outside the viewport, and the
+ * e2e suite fails a page for having an element outside the viewport — correctly,
+ * because that is also what a broken layout looks like.
+ */
+.trap {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.aside h2 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--space-2);
+}
+
+.aside p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin: 0 0 var(--space-2);
+    max-width: 38ch;
+}
+
+.aside .block {
+    border-top: 1px solid var(--rule);
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.aside a {
+    color: var(--ink);
+}
+
+.flash {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+}
+
+.flash p {
+    border-left: 2px solid var(--accent);
+    padding: 2px 0 2px var(--space-3);
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink);
+    max-width: var(--measure);
+}
+
+/* ---- Vertical (trade) page ----------------------------------------- */
+
+/*
+ * The shared two-column spine: the claim on the left, the evidence on the
+ * right. Every section on the trade template uses it, so a new vertical page
+ * is copy and example data rather than layout.
+ */
+.split {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-12) var(--space-4);
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    gap: var(--space-8);
+    align-items: start;
+}
+
+.split h2 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 34px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--space-2);
+    max-width: 18ch;
+}
+
+.split .lede {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin: 0;
+    max-width: 34ch;
+}
+
+.split .prose {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin: 0 0 var(--space-2);
+    max-width: var(--measure-tight);
+}
+
+.split .prose b {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.footnote {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin: var(--space-3) 0 0;
+    max-width: 52ch;
+}
+
+.footnote .fig,
+.split .fig-inline {
+    font-family: var(--font-mono);
+    color: var(--ink-2);
+}
+
+/* The seeded price list, and the refill sum. Figures right, mono, tabular. */
+table.bill {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+table.bill caption {
+    text-align: left;
+    font-size: 13px;
+    color: var(--ink-2);
+    padding-bottom: var(--space-2);
+}
+
+table.bill th {
+    text-align: left;
+    font-weight: 400;
+    color: var(--ink);
+}
+
+table.bill thead th {
+    font-size: 13px;
+    color: var(--ink-2);
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--rule);
+}
+
+table.bill tbody th,
+table.bill tbody td {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: baseline;
+}
+
+table.bill .fig {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+    padding-left: var(--space-3);
+}
+
+table.bill thead th.fig {
+    text-align: right;
+}
+
+table.bill tr.sum th,
+table.bill tr.sum td {
+    border-bottom: 0;
+    padding-top: var(--space-3);
+    font-weight: 500;
+    color: var(--ink);
+}
+
+table.bill .big {
+    font-size: 24px;
+    color: var(--accent);
+}
+
+/* Facts and questions. A description list, ruled, no cards. */
+dl.facts,
+dl.qa {
+    margin: 0;
+}
+
+dl.facts > div,
+dl.qa > div {
+    border-top: 1px solid var(--rule);
+    padding: var(--space-3) 0;
+}
+
+dl.facts > div:first-child,
+dl.qa > div:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+dl.facts dt,
+dl.qa dt {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 4px;
+}
+
+dl.facts dd,
+dl.qa dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    max-width: 52ch;
+}
+
+/* The two quoted texts. The offer is white; the follow-up is the sunk step. */
+.thread {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.thread .msg {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-slot);
+    padding: 12px 14px;
+    max-width: 44ch;
+}
+
+.thread .msg-later {
+    background: var(--canvas-sunk);
+}
+
+.msg-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: 12px;
+    color: var(--ink-2);
+    margin: 0 0 4px;
+}
+
+.thread .msg p.body {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.thread .quiet {
+    color: var(--ink-2);
+}
+
+/* ---- 404 ------------------------------------------------------------ */
+
+.gone {
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-16) var(--space-4);
+    text-align: center;
+}
+
+.gone-inner {
+    position: relative;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
+[data-page='not-found'] h1 {
+    font-size: 56px;
+}
+
+[data-page='not-found'] .orb-1 {
+    width: 360px;
+    height: 360px;
+    top: -140px;
+}
+
+.gone p {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0 auto var(--space-6);
+    max-width: 42ch;
+}
+
+.gone .code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-bottom: var(--space-2);
+}
+
+.gone-ways {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* ---- Narrow ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .foot-inner {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-6);
+    }
+
+    .contact-grid,
+    .split {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-4);
+    }
+
+    .split h2,
+    .split .lede {
+        max-width: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .foot-nav {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-4) var(--space-3);
+    }
+
+    .doc h2 {
+        font-size: 24px;
+    }
+
+    .split h2 {
+        font-size: 28px;
+    }
+
+    [data-page='not-found'] h1 {
+        font-size: 38px;
+    }
+
+    .split {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    table.bill,
+    dl.facts dd,
+    dl.qa dd,
+    .doc p,
+    .doc li {
+        font-size: 15px;
     }
 }

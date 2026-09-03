@@ -1,25 +1,25 @@
 {{--
-    The marketing shell.
+    The marketing shell. One layout for the whole surface.
 
-    Converted from `.design/mockups/directions/direction-a-ledger.html`. What
-    the mockup holds in one file, this splits three ways: this shell, the
-    masthead and the footer. The split follows the seam the mockup itself draws
-    — everything outside `<main>` is chrome that every page carries identically,
-    and everything inside it is the page's argument.
+    Binding target: `.design/mockups/direction-a-editorial.html` and its two
+    siblings, `direction-a-pricing.html` and `direction-a-how-it-works.html`.
+    Type scale, canvas, ink and the single clay accent come from those files by
+    way of `resources/css/marketing-editorial-tokens.css`.
 
-    `data-surface="marketing"` is the whole reason `--page`, `--gutter` and
-    `--arg` could move into `tokens.css`. It is set here, once, on the surface's
-    root, which is the same rule `data-density` follows.
+    **There used to be two of these.** Home, pricing and how-it-works were on
+    the editorial shell and the other five pages were still on a ledger-style
+    one with its own stylesheet and its own masthead and footer — two type
+    scales, two footers and two sets of tokens on one domain. Everything is on
+    this one now, and `marketing.css`, `tailwind.marketing.config.js` and the
+    ledger partials are gone rather than left to rot.
 
-    No `data-density`. The three densities exist so one component library can
-    serve three surfaces at three sizes; this surface uses none of that library,
-    so setting one would be a value nothing reads.
+    `data-surface="marketing"` stays: the caches, the CSP and the nav tests key
+    off it. `data-page` switches the type scale and the hero padding per page,
+    which is the only thing that varies between them.
 
-    The body is a full-height flex column with `<main>` taking the slack, which
-    is what `public-shell.blade.php` does and for the same reason: /about is
-    370px of content, and without it the footer sits where the content stops and
-    350px of bare paper hangs underneath it. Verified at five widths — the four
-    prose pages were the ones that showed it.
+    The body is a flex column with `<main>` taking the slack, so /about — which
+    is 400px of content — does not leave the footer floating halfway up the
+    viewport with bare paper underneath it.
 --}}
 <!DOCTYPE html>
 <html lang="en-GB">
@@ -28,23 +28,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }} · {{ config('product.name') }}</title>
     <meta name="description" content="{{ $description }}">
+    <meta property="og:site_name" content="{{ config('product.name') }}">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $url }}">
     <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_GB">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $title }}">
+    <meta name="twitter:description" content="{{ $description }}">
+    @if (($noindex ?? false) === true)
+        <meta name="robots" content="noindex">
+    @endif
     <link rel="canonical" href="{{ $url }}">
     @include('partials.head')
-    @vite(['resources/css/marketing.css'])
+    <meta name="theme-color" content="#FBF9F5"> {{-- design-tokens-ignore: editorial canvas, not --paper; HTML meta cannot hold a CSS variable --}}
+    @vite(['resources/css/marketing-editorial.css'])
     @if (config('services.plausible.domain'))
         <script defer data-domain="{{ config('services.plausible.domain') }}" src="https://plausible.io/js/script.js"></script>
     @endif
 </head>
-<body data-surface="marketing" class="flex min-h-screen flex-col bg-paper font-sans text-15 text-ink antialiased">
+<body data-surface="marketing" data-page="{{ $page }}">
     <a class="skip-link" href="#main">Skip to content</a>
 
-    @include('marketing.partials.masthead')
+    @include('marketing.partials.nav')
 
-    <main id="main" class="flex-1">
+    <main id="main">
         @yield('content')
     </main>
 

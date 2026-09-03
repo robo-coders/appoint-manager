@@ -172,9 +172,26 @@ final class Concurrent
         $key = 'Tables_in_'.$database;
         $tables = array_map(fn (object $row) => $row->{$key}, DB::select('SHOW TABLES'));
 
+        /*
+         * `verticals` is skipped for the same reason `migrations` is: it is not
+         * application data. Its rows are inserted by
+         * `create_verticals_table` and are reference data every later test
+         * assumes is there — the groomer price list, the subject fields, the
+         * labels.
+         *
+         * This truncation runs **outside a transaction** and is therefore
+         * permanent for the worker's database, so wiping it left every test
+         * that ran afterwards in the same worker looking at an empty table.
+         * It surfaced as `ModelNotFoundException` in the onboarding tests and
+         * as "the groomer vertical has an empty price list" from the trade
+         * page, in whichever suites happened to be scheduled after this one —
+         * which is to say, differently on every run.
+         */
+        $keep = ['migrations', 'verticals'];
+
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         foreach ($tables as $table) {
-            if ($table === 'migrations') {
+            if (in_array($table, $keep, true)) {
                 continue;
             }
             DB::table($table)->truncate();

@@ -54,8 +54,13 @@ export default defineConfig(({ mode }) => {
                      * The marketing site is Blade with no JavaScript entry of
                      * its own, so its stylesheet is named here rather than
                      * imported from a `.ts` file the way `booking.css` is.
+                     *
+                     * One stylesheet, for the whole surface. There were two —
+                     * `marketing.css` for the ledger pages and this one for the
+                     * editorial pages — which meant two type scales, two
+                     * footers and two token files on one domain. The ledger
+                     * half is deleted, not deprecated.
                      */
-                    'resources/css/marketing.css',
                     'resources/css/marketing-editorial.css',
                     'resources/js/app.ts',
                     'resources/js/booking.ts',

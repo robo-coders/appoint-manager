@@ -1,7 +1,14 @@
-@extends('marketing.editorial')
+@extends('marketing.layout')
 
 {{--
-    Editorial home. Binding target: `.design/mockups/direction-a-editorial.html`.
+    Home. Binding target: `.design/mockups/direction-a-editorial.html`.
+
+    **Nothing on this page names a trade.** It is the page every vertical shares,
+    so the diary in the hero shows customer names and appointment lengths rather
+    than a grooming price list, and the trade-specific version of the same
+    visual lives on `/dog-grooming`. The eyebrow used to read "For dog groomers
+    in Scotland", which was the go-to-market message written into the one page
+    that cannot carry it.
 
     The ledger / refill-sum homepage is archived at
     `.design/mockups/archived-ledger-homepage.blade.php`.
@@ -14,13 +21,25 @@
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
         <div class="hero-inner">
-            <div class="eyebrow">For dog groomers in Scotland</div>
+            <div class="eyebrow">Booking software for appointment businesses</div>
             <h1>The empty slot fills itself.</h1>
-            <p class="sub">A cancellation goes straight to your waitlist by text — first to reply gets it. A deposit at booking means no-shows stop costing you.</p>
+            <p class="sub">
+                A cancellation goes straight to your waitlist by text, and the first person to
+                reply gets it. A deposit taken at booking means a no-show stops costing you the
+                hour.
+            </p>
             <div class="hero-cta">
                 <a class="pill" href="{{ app_url('register') }}">Start your free trial</a>
-                <a class="pill-ghost" href="{{ route('marketing.how-it-works') }}">See it in 90 seconds</a>
+                <a class="pill-ghost" href="{{ route('marketing.how-it-works') }}">See how it works</a>
             </div>
+            {{--
+                The price, small, before the click rather than after it. Both
+                figures come from `config/billing.php`; neither is typed here.
+            --}}
+            <p class="hero-price">
+                <span class="fig">{{ $figures->monthlyBare() }}</span>/month,
+                <span class="fig">{{ $figures->trialDays() }}</span>-day free trial. No card to start.
+            </p>
         </div>
 
         <div class="visual">
@@ -37,35 +56,40 @@
                         <div class="trow">12:00</div>
                     </div>
                     <div class="slots">
-                        <div class="srow"><div class="slot"><span class="name">Bella</span><span class="service">Full groom</span></div></div>
-                        <div class="srow"><div class="slot reclaimed"><span class="name">Max</span><span class="service">Full groom</span><span class="tag">Waitlist · filled in 4 min</span></div></div>
-                        <div class="srow"><div class="slot"><span class="name">Coco</span><span class="service">Bath &amp; tidy</span></div></div>
+                        <div class="srow"><div class="slot"><span class="name">Amy Fraser</span><span class="service">60 min</span></div></div>
+                        <div class="srow"><div class="slot reclaimed"><span class="name">Ross Gilmour</span><span class="service">90 min</span><span class="tag">Waitlist · filled in 4 min</span></div></div>
+                        <div class="srow"><div class="slot"><span class="name">Nadia Khan</span><span class="service">45 min</span></div></div>
                         <div class="srow"><div class="slot open">Open — waitlist notified</div></div>
                     </div>
                 </div>
             </div>
-            <p class="caption">Your actual diary. No app to check, no calls to make.</p>
+            <p class="caption">Your diary on the day. Nothing to check, nobody to ring round.</p>
         </div>
     </section>
 
     <section class="section">
         <div class="section-inner">
-            <h2>Three things happen the moment someone books.</h2>
+            <h2>What changes on day one.</h2>
             <div class="rows">
                 <div class="row">
                     <div class="label">01 — At booking</div>
-                    <div class="body">A card is held for a deposit. <b>If they don't show, you're not the one who loses.</b></div>
+                    <div class="body">A deposit is held on the card. <b>If they don't turn up, you are not the one who loses the hour.</b></div>
                 </div>
                 <div class="row">
                     <div class="label">02 — On cancellation</div>
-                    <div class="body">The slot goes to your waitlist automatically. <b>You don't send a single text yourself.</b></div>
+                    <div class="body">The slot goes to your waitlist by text, straight away. <b>You don't write it and you don't send it.</b></div>
                 </div>
                 <div class="row">
                     <div class="label">03 — First to reply</div>
-                    <div class="body">Books the slot instantly. <b>Whoever's fastest gets it — no group chat, no back and forth.</b></div>
+                    <div class="body">Takes the slot there and then. <b>Whoever is quickest gets it. No group chat, no ringing round.</b></div>
                 </div>
             </div>
         </div>
     </section>
+
+    @include('marketing.partials.cta-band', [
+        'heading' => 'Put your own week in it.',
+        'note' => 'Set up your services, open your booking page, see what a cancellation does.',
+    ])
 
 @endsection

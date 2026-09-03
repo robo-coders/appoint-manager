@@ -3,6 +3,7 @@
 use App\Exceptions\OfferUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\SlotUnavailableException;
+use App\Http\Controllers\MarketingController;
 use App\Http\Middleware\ConfigureSurfaceSession;
 use App\Http\Middleware\EnsureAdminIpAllowed;
 use App\Http\Middleware\EnsureOnboardingComplete;
@@ -204,6 +205,41 @@ return Application::configure(basePath: dirname(__DIR__))
                 // noise on a page whose job is to be read quickly.
                 'intended' => $intended === null ? null : (parse_url($intended, PHP_URL_PATH) ?: '/'),
             ], 419);
+        });
+
+        /*
+         * The marketing host's own 404.
+         *
+         * `errors/404.blade.php` stays where it is and keeps serving the other
+         * three surfaces. It is deliberately self-contained — no `@vite`, no
+         * queries — because the same shell renders the 500 and the 503, when
+         * the build or the database may be exactly what is missing. A 404 on
+         * the apex domain has no such excuse: the app is up, and the person
+         * reading it is a stranger who has just fallen out of the marketing
+         * site into a grey framework page.
+         *
+         * Registered against `HttpException` with a status check rather than
+         * `NotFoundHttpException`, for the reason the 419 handler above
+         * documents: `prepareException()` converts before `renderViaCallbacks()`
+         * runs, so a callback type-hinted on the original class silently never
+         * fires. A `ModelNotFoundException` arrives here as a 404
+         * `HttpException` too, which is what we want — the visitor sees the
+         * same page either way.
+         */
+        $exceptions->render(function (HttpException $exception, Request $request) {
+            if ($exception->getStatusCode() !== 404) {
+                return null;
+            }
+
+            if (Surface::current($request->getHost(), $request->path()) !== Surface::Marketing) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            return response()->view('marketing.not-found', MarketingController::notFoundData(), 404);
         });
 
         $exceptions->render(function (SlotUnavailableException $exception, Request $request) {

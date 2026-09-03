@@ -16,6 +16,12 @@
     --ink-3: #a6a197;
     --white: #ffffff;
     --rule: rgb(33 30 25 / 0.09);
+    /*
+     * The one place a hairline is not enough: a form field at 9% has no
+     * visible edge on this canvas, and an input the reader cannot find is a
+     * form nobody fills in. Used for input borders and underlined links only.
+     */
+    --rule-loud: rgb(33 30 25 / 0.18);
     --accent: #a85729;
     --orb-a: rgb(168 87 41 / 0.16);
     --orb-b: rgb(212 176 130 / 0.2);
@@ -46,4 +52,33 @@
     --orb-blur: 60px;
     --orb-blur-pricing: 70px;
     --orb-blur-narrow: 40px;
+
+    /*
+     * The focus ring, drawn as a box-shadow rather than an outline.
+     *
+     * The e2e suite reads `box-shadow` back off every focusable element on
+     * every page, so a ring drawn as an outline is a ring nothing can prove is
+     * there. Two rings: canvas first, then clay, so it reads against the bare
+     * canvas and against the ink-filled pill alike.
+     */
+    --focus-ring: 0 0 0 2px #fbf9f5, 0 0 0 4px #a85729;
+
+    /*
+     * Nothing on this surface animates. These exist so the reduced-motion gate
+     * has the same two values to read here that it reads on every other
+     * surface, and so it can see them zeroed.
+     */
+    --duration-fast: 120ms;
+    --duration: 180ms;
+
+    /* Prose measure. One column of reading, on the pages that are mostly words. */
+    --measure: 68ch;
+    --measure-tight: 58ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration: 0ms;
+    }
 }

@@ -11,7 +11,7 @@
  * a tree it had never opened.
  *
  * Blade needs a rule the Vue rules do not, because Blade hand-rolls controls a
- * different way. `marketing/partials/cta.blade.php` is not a `<button>`: it is
+ * different way. The marketing call to action was not a `<button>`: it was
  * an `<a>` carrying Button.vue's primary-variant class list, copied by hand,
  * with a comment saying so. The tag rules below cannot see that, and a check
  * that only looks for `<button` would pass the marketing tree on its first run
@@ -31,11 +31,11 @@ import { readFileSync, globSync } from 'node:fs';
  * Screens not yet rebuilt, with the phase that would remove them from this list.
  *
  * **It is empty.** Phase 11 rebuilt marketing and cleared the last entry, which
- * was `marketing/partials/cta.blade.php` — an `<a>` wearing Button.vue's
+ * was the marketing call to action — an `<a>` wearing Button.vue's
  * primary-variant utility classes, copied by hand, with a comment saying the
  * classes were copied so the two would not drift. That is the drift the
  * `copied-control` rule exists to catch, and a comment is not a mechanism. The
- * marketing site has one button now, declared once in `resources/css/marketing.css`
+ * marketing site has one button now, declared once in `resources/css/marketing-editorial.css`
  * from the same tokens Button.vue reads, and `copied-control` passes over the
  * whole tree without being weakened to let it through.
  */
@@ -151,12 +151,46 @@ const RULES = [
  */
 const NO_VUE_TABLE = ['resources/views/mail/', 'resources/views/marketing/'];
 
+/*
+ * The form-control rules, waived on the marketing tree only, for exactly the
+ * reason the table rule already is above.
+ *
+ * `ui/TextInput`, `ui/Textarea`, `ui/Select` and `ui/Button` are **Vue**
+ * components, and the marketing site mounts no Vue by construction. So on that
+ * tree these rules are not asking a screen to use the library — the library is
+ * unreachable from it — they are asking a marketing site not to have a contact
+ * form or a monthly/yearly toggle. That is a different and much worse rule, and
+ * it is one this check has been failing on since the pricing toggle shipped:
+ * two `<button>`s nobody could legally remove and no way to record why.
+ *
+ * `mail/` is deliberately **not** in this list. An email has no working
+ * `<input>` or `<button>` in most clients, so one appearing in that tree is a
+ * mistake rather than a medium constraint.
+ *
+ * `copied-control` still applies to marketing and always will: it is the rule
+ * that catches the actual hazard, which is Button.vue's class list typed out by
+ * hand into an `<a>` where nothing keeps the two in step.
+ */
+const NO_VUE_CONTROLS = ['resources/views/marketing/'];
+const NO_VUE_CONTROL_RULES = ['input', 'textarea', 'select', 'button'];
+
 const files = [...globSync('resources/js/**/*.vue'), ...globSync('resources/views/**/*.blade.php')]
     .filter((f) => !ALLOWED_DIRS.some((d) => f.startsWith(d)))
     .sort();
 
-const rulesFor = (file) =>
-    NO_VUE_TABLE.some((dir) => file.startsWith(dir)) ? RULES.filter((r) => r.id !== 'table') : RULES;
+const rulesFor = (file) => {
+    const waived = new Set();
+
+    if (NO_VUE_TABLE.some((dir) => file.startsWith(dir))) {
+        waived.add('table');
+    }
+
+    if (NO_VUE_CONTROLS.some((dir) => file.startsWith(dir))) {
+        NO_VUE_CONTROL_RULES.forEach((id) => waived.add(id));
+    }
+
+    return waived.size === 0 ? RULES : RULES.filter((r) => !waived.has(r.id));
+};
 
 /*
  * Prose is not code.

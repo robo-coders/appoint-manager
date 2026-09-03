@@ -22,6 +22,7 @@ const SHOT_PAGES = [
 const ALL_PAGES = [
     ['home', '/'],
     ['pricing', '/pricing'],
+    ['how-it-works', '/how-it-works'],
     ['dog-grooming', '/dog-grooming'],
     ['about', '/about'],
     ['contact', '/contact'],
@@ -70,10 +71,27 @@ test('no marketing page scrolls sideways at any width', async ({ page }) => {
                 const vw = window.innerWidth;
                 const out: string[] = [];
 
+                /*
+                 * An element inside an `overflow: hidden` ancestor is not an
+                 * overflow — it is a clip, which is the whole point of the
+                 * hero's blurred orbs and of the comparison table's scroller.
+                 * `getBoundingClientRect` reports the unclipped box, so without
+                 * this every page with a decorative orb failed a test about
+                 * layout escaping the viewport.
+                 */
+                const clipped = (el: Element) => {
+                    for (let p = el.parentElement; p; p = p.parentElement) {
+                        const s = getComputedStyle(p);
+                        if (['hidden', 'clip', 'auto', 'scroll'].includes(s.overflowX)) return true;
+                    }
+                    return false;
+                };
+
                 for (const el of document.querySelectorAll('*')) {
                     const r = el.getBoundingClientRect();
                     if (r.width === 0 && r.height === 0) continue;
                     if (r.right > vw + 0.5 || r.left < -0.5) {
+                        if (clipped(el)) continue;
                         const cls = typeof el.className === 'string' && el.className.trim() ? `.${el.className.trim().split(/\s+/).join('.')}` : '';
                         out.push(`${el.tagName.toLowerCase()}${cls}`);
                     }
@@ -109,11 +127,20 @@ test('every focusable element on every marketing page shows the token focus ring
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);
 
-        const total = await page.evaluate(
-            () =>
-                document.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
-                    .length,
-        );
+        /*
+         * Only what a person can actually reach with Tab.
+         *
+         * A bare `input` selector counted two things nobody can focus: the
+         * hidden CSRF field every form carries, and the contact form's
+         * honeypot, which is `tabindex="-1"` precisely so a person never lands
+         * on it. Both are correct, and counting them failed the page for having
+         * a ring on 26 of 28 elements when 26 was the right number.
+         */
+        const focusable =
+            'a[href], button:not([disabled]), input:not([type="hidden"]):not([tabindex="-1"]):not([disabled]), '
+            + 'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+        const total = await page.evaluate((selector) => document.querySelectorAll(selector).length, focusable);
 
         let ringed = 0;
 
@@ -215,44 +242,70 @@ test('nothing animates under prefers-reduced-motion', async ({ browser }) => {
  * a YIQ delta of 8.3 apart and no usable snapshot threshold can tell them
  * apart. See `support.ts`.
  */
-test('the marketing surface is paper, and the footer is the sunk step', async ({ page }) => {
+test('every marketing page is on the editorial canvas', async ({ page }) => {
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);
 
-        await expectSurface(page.locator('body'), 'paper', `the ${name} page`);
-        await expectSurface(page.locator('footer'), 'paperSunk', `the ${name} page footer`);
+        await expectSurface(page.locator('body'), 'canvas', `the ${name} page`);
     }
 
-    // The two quoted text messages are the one place this surface uses --white,
-    // and the second of the pair is the sunk step. A screenshot cannot see
-    // either of them change.
-    await open(page, '/', 1280);
-    await expectSurface(page.locator('.msg').first(), 'white', 'the waitlist offer message');
-    await expectSurface(page.locator('.msg-later').first(), 'paperSunk', 'the slot-taken message');
+    /*
+     * The two quoted text messages on the trade page are the one place this
+     * surface uses --white, and the second of the pair is the sunk step. A
+     * screenshot cannot see either of them change: --canvas and --white are a
+     * YIQ delta of 8.3 and no usable threshold separates them. See support.ts.
+     */
+    await open(page, '/dog-grooming', 1280);
+    await expectSurface(page.locator('.thread .msg').first(), 'white', 'the waitlist offer message');
+    await expectSurface(page.locator('.thread .msg-later').first(), 'canvasSunk', 'the slot-taken message');
 });
 
-/* The page frame comes from tokens.css, gated on the surface attribute. */
-test('the marketing page frame is the promoted tokens', async ({ page }) => {
-    await open(page, '/', 1280);
+/**
+ * One header and one footer, drawn from one component, on every page.
+ *
+ * The feature suite compares the two regions byte for byte. This is the other
+ * half of that: the rendered thing is the same size and in the same place, which
+ * a string comparison cannot see.
+ */
+test('the header and footer are the same component on every page', async ({ page }) => {
+    const shapes: Record<string, string> = {};
 
-    await expect(page.locator('body')).toHaveAttribute('data-surface', 'marketing');
+    for (const [name, path] of ALL_PAGES) {
+        await open(page, path, 1280);
 
-    const frame = await page.evaluate(() => {
-        const s = getComputedStyle(document.body);
+        const shape = await page.evaluate(() => {
+            const head = document.querySelector('header')!.getBoundingClientRect();
+            const foot = document.querySelector('footer')!;
 
-        return {
-            page: s.getPropertyValue('--page').trim(),
-            gutter: s.getPropertyValue('--gutter').trim(),
-            arg: s.getPropertyValue('--arg').trim(),
-        };
-    });
+            return JSON.stringify({
+                headerHeight: Math.round(head.height),
+                headerLinks: document.querySelectorAll('header a').length,
+                footerLinks: foot.querySelectorAll('a').length,
+                // The empty logo slot, which must stay empty until there is art.
+                logoSlot: foot.querySelectorAll('.logo-slot').length,
+                logoArt: foot.querySelectorAll('img, svg').length,
+            });
+        });
 
-    expect(frame.page).toBe('1152px');
-    // 768 and up takes the wider gutter.
-    expect(frame.gutter).toBe('32px');
-    expect(frame.arg).toBe('19ch');
+        shapes[name] = shape;
+    }
 
-    await open(page, '/', 375);
-    const narrow = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--gutter').trim());
-    expect(narrow).toBe('16px');
+    const first = shapes[ALL_PAGES[0][0]];
+
+    for (const [name] of ALL_PAGES) {
+        expect(shapes[name], `${name}'s chrome differs from the home page's`).toBe(first);
+    }
+
+    expect(JSON.parse(first).logoSlot).toBe(1);
+    expect(JSON.parse(first).logoArt).toBe(0);
+});
+
+/* The surface attribute every other layer keys off. */
+test('the marketing surface is named on the root of every page', async ({ page }) => {
+    for (const [name, path] of ALL_PAGES) {
+        await open(page, path, 1280);
+
+        await expect(page.locator('body'), name).toHaveAttribute('data-surface', 'marketing');
+        await expect(page.locator('body'), name).toHaveAttribute('data-page', /.+/);
+    }
 });

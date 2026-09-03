@@ -18,6 +18,14 @@ export const SURFACE = {
     paper: 'rgb(252, 251, 249)',
     paperSunk: 'rgb(244, 242, 238)',
     white: 'rgb(255, 255, 255)',
+    /*
+     * The marketing site is a different palette from the product, on purpose,
+     * and it is not `--paper` with a rounding error: `--canvas` is #FBF9F5 and
+     * `--paper` is #FCFBF9. They are two surfaces from two token files, and a
+     * spec that asserted one against the other would pass by accident.
+     */
+    canvas: 'rgb(251, 249, 245)',
+    canvasSunk: 'rgb(243, 240, 234)',
 } as const;
 
 /**
