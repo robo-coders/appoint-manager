@@ -2,11 +2,14 @@
 
 namespace App\Support;
 
+use App\Models\Vertical;
+
 /**
  * Turns a vertical's `{value, unit}` interval into days.
  *
- * Units live in `config/verticals.php` so a dentist tenant can say months and
- * a groomer can say weeks without a code change. Storage is always days.
+ * Units live on the vertical's seeded services so a dentist tenant can say
+ * months and a groomer can say weeks without a code change. Storage is always
+ * days.
  */
 final class VerticalInterval
 {
@@ -34,7 +37,7 @@ final class VerticalInterval
 
     public static function daysForNamedService(string $verticalKey, string $name): ?int
     {
-        foreach (config('verticals.'.$verticalKey.'.default_services', []) as $service) {
+        foreach (Vertical::definitionFor($verticalKey)['default_services'] ?? [] as $service) {
             if (($service['name'] ?? '') === $name) {
                 return self::toDays($service['rebook_interval'] ?? null);
             }

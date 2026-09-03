@@ -5,6 +5,7 @@ use App\Models\AvailabilityRule;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 
 it('redirects incomplete tenants to onboarding after login', function () {
     $user = User::factory()
@@ -90,7 +91,7 @@ it('sends default services as bound values, not empty placeholders', function ()
         ->for(Tenant::factory()->onboardingIncomplete())
         ->create();
 
-    $defaults = config('verticals.groomer.default_services');
+    $defaults = Vertical::query()->where('key', 'groomer')->firstOrFail()->default_services;
 
     actingAsTenant($user)
         ->get(route('onboarding.show', ['step' => 'services']))

@@ -5,27 +5,15 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import type { Step } from '@/Components/ui/StepProgress.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
-/**
- * Step one of five, and it says so.
- *
- * This screen used to present itself as the whole of signing up — five fields
- * and "Create account" — and then dropped the person into a four-step setup
- * they had not agreed to and could not see the end of. The flow was always five
- * screens; only this one pretended otherwise.
- *
- * So the progress rail starts here (`GuestLayout`'s `steps`), which means the
- * page can be honest about the cost before anybody spends it, and the person
- * who continues has already seen what "Services" and "Opening hours" are.
- *
- * `business_name` is first and it is not an afterthought: it is the only field
- * on this form that is about *them* rather than about an account, it becomes
- * the tenant's name and its public booking slug, and asking for it first is
- * what makes this read as setting up a business rather than as making a login.
- */
-defineProps<{ terms: string; steps: Step[] }>();
+defineProps<{
+    terms: string;
+    steps: Step[];
+    businessTypes: { value: string; label: string }[];
+}>();
 
 const form = useForm({
     business_name: '',
+    business_type: '',
     name: '',
     email: '',
     password: '',
@@ -61,6 +49,25 @@ const submit = () => {
                 required
                 autofocus
             />
+
+            <div>
+                <label class="block text-13 text-ink-2 mb-1" for="business_type">What kind of business?</label>
+                <select
+                    id="business_type"
+                    v-model="form.business_type"
+                    required
+                    class="w-full rounded-[6px] border border-rule bg-paper px-3 py-2 text-14 text-ink"
+                >
+                    <option value="" disabled>Choose one</option>
+                    <option v-for="type in businessTypes" :key="type.value" :value="type.value">
+                        {{ type.label }}
+                    </option>
+                </select>
+                <p v-if="form.errors.business_type" class="mt-1 text-12 text-red-600">
+                    {{ form.errors.business_type }}
+                </p>
+            </div>
+
             <TextInput
                 v-model="form.name"
                 label="Your name"

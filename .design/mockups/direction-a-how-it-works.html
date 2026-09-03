@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiaryDesk — How it works (Editorial)</title>
+<style>
+:root{
+  --canvas:#FBF9F5; --canvas-sunk:#F3F0EA;
+  --ink:#211E19; --ink-2:#6E6A61; --ink-3:#A6A197; --white:#FFFFFF;
+  --rule:rgb(33 30 25 / 0.09);
+  --accent:#A85729;
+  --orb-a:rgb(168 87 41 / 0.15); --orb-b:rgb(120 140 120 / 0.10);
+  --font-display:'Inter Tight','Inter',ui-sans-serif,sans-serif;
+  --font-body:'Inter',ui-sans-serif,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-6:48px; --sp-8:64px; --sp-12:96px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+nav.top{display:flex;justify-content:space-between;align-items:center;padding:var(--sp-3) var(--sp-4);max-width:1180px;margin:0 auto;}
+.logo{font-size:16px;font-weight:500;}
+.navlinks{display:flex;gap:var(--sp-4);align-items:center;font-size:14px;}
+.navlinks a{color:var(--ink-2);}
+.navlinks a.active{color:var(--ink);}
+.pill{background:var(--ink);color:var(--white);padding:10px 20px;border-radius:999px;font-size:14px;font-weight:500;}
+.pill-ghost{border:1px solid var(--rule);padding:10px 20px;border-radius:999px;font-size:14px;}
+
+.hero{position:relative;overflow:hidden;padding:var(--sp-8) var(--sp-4) var(--sp-6);text-align:center;}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;}
+.orb-1{width:480px;height:480px;background:var(--orb-a);top:-200px;left:50%;transform:translateX(-50%);}
+.hero-inner{position:relative;max-width:640px;margin:0 auto;}
+.eyebrow{font-size:14px;color:var(--ink-2);margin-bottom:var(--sp-2);}
+h1{font-family:var(--font-display);font-weight:300;font-size:56px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 var(--sp-2);}
+p.sub{font-size:18px;line-height:1.55;color:var(--ink-2);margin:0;}
+
+/* three numbered steps, each with a small quiet illustration in place of a screenshot */
+.steps{max-width:900px;margin:var(--sp-12) auto 0;padding:0 var(--sp-4);}
+.step{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-8);align-items:center;padding:var(--sp-8) 0;border-top:1px solid var(--rule);}
+.step:first-child{border-top:none;padding-top:0;}
+.step:nth-child(even) .art{order:2;}
+.step .index{font-family:var(--font-mono);font-size:14px;color:var(--accent);margin-bottom:var(--sp-2);}
+.step h2{font-family:var(--font-display);font-weight:300;font-size:32px;letter-spacing:-0.015em;margin:0 0 var(--sp-2);}
+.step p{font-size:16px;line-height:1.6;color:var(--ink-2);max-width:38ch;}
+
+.art{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:var(--sp-4);aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:center;gap:10px;}
+.art .card{background:var(--canvas-sunk);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;justify-content:space-between;}
+.art .card b{font-weight:500;}
+.art .highlight{background:rgb(168 87 41 / 0.08);border:1px solid rgb(168 87 41 / 0.25);}
+.art .highlight .tag{color:var(--accent);font-size:11px;}
+.art .msg{background:var(--ink);color:var(--white);border-radius:8px;padding:12px 14px;font-size:13px;align-self:flex-start;max-width:80%;}
+
+.cta-band{padding:var(--sp-12) var(--sp-4);text-align:center;border-top:1px solid var(--rule);}
+.cta-band h2{font-family:var(--font-display);font-weight:300;font-size:36px;letter-spacing:-0.015em;margin:0 0 var(--sp-4);}
+.cta-band a{background:var(--ink);color:var(--white);padding:14px 28px;border-radius:999px;font-size:15px;font-weight:500;}
+
+@media (max-width:760px){
+  h1{font-size:36px;}
+  .step{grid-template-columns:1fr;gap:var(--sp-3);}
+  .step:nth-child(even) .art{order:0;}
+}
+</style>
+</head>
+<body>
+<nav class="top">
+  <div class="logo">DiaryDesk</div>
+  <div class="navlinks">
+    <a class="active" href="#">How it works</a>
+    <a href="#">Pricing</a>
+    <a class="pill-ghost" href="#">Log in</a>
+    <a class="pill" href="#">Start free trial</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="hero-inner">
+    <div class="eyebrow">How it works</div>
+    <h1>Three steps. No manual work.</h1>
+    <p class="sub">From booking to refill, DiaryDesk handles the part that used to cost you money.</p>
+  </div>
+</section>
+
+<div class="steps">
+  <div class="step">
+    <div>
+      <div class="index">01</div>
+      <h2>A deposit is held at booking</h2>
+      <p>Your customer pays a deposit the moment they book, straight to your Stripe account. If they don't show, you're not out of pocket.</p>
+    </div>
+    <div class="art">
+      <div class="card"><span>Bella — Full groom</span><b>£10 held</b></div>
+      <div class="card"><span>Coco — Bath &amp; tidy</span><b>£8 held</b></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div>
+      <div class="index">02</div>
+      <h2>A cancellation texts your waitlist</h2>
+      <p>The moment a slot opens up, everyone on your waitlist for that day gets a text. You don't write it, you don't send it.</p>
+    </div>
+    <div class="art">
+      <div class="msg">Max's 10am opened up — reply YES to take it</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div>
+      <div class="index">03</div>
+      <h2>First to reply gets the slot</h2>
+      <p>Whoever answers first is booked automatically. No group chats, no double-booking, no calls back and forth.</p>
+    </div>
+    <div class="art">
+      <div class="card highlight"><span>Max's 10am — Full groom</span><span class="tag">Filled · 4 min</span></div>
+    </div>
+  </div>
+</div>
+
+<section class="cta-band">
+  <h2>Try it with your own diary.</h2>
+  <a href="#">Start your free trial</a>
+</section>
+</body>
+</html>

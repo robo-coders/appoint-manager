@@ -15,6 +15,7 @@
 
 use App\Http\Controllers\Admin\AdminSessionController;
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
+use App\Http\Controllers\SuperAdmin\VerticalController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -30,6 +31,8 @@ Route::middleware(['auth', 'super-admin'])->group(function (): void {
     Route::get('/', [SuperAdminController::class, 'index'])->name('super-admin.index');
     Route::get('/messages', [SuperAdminController::class, 'messages'])->name('super-admin.messages');
     Route::get('/failures', [SuperAdminController::class, 'failures'])->name('super-admin.failures');
+    Route::get('/verticals', [VerticalController::class, 'index'])->name('super-admin.verticals');
+    Route::post('/verticals', [VerticalController::class, 'store'])->name('super-admin.verticals.store');
     Route::post('/tenants/{tenant}/impersonate', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
     Route::post('/tenants/{tenant}/extend-trial', [SuperAdminController::class, 'extendTrial'])->name('super-admin.extend-trial');
     Route::post('/tenants/{tenant}/trial', [SuperAdminController::class, 'setTrial'])->name('super-admin.trial');

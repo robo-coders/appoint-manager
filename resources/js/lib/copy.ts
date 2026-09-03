@@ -1,7 +1,7 @@
 /**
  * Turning configuration into copy.
  *
- * `config/verticals.php` holds the words a vertical uses for its own nouns —
+ * The Vertical model holds the words a vertical uses for its own nouns —
  * `subject_singular: 'dog'`, `subject_plural: 'dogs'`, `customer_singular:
  * 'client'`. They are lower case there **on purpose**: most of their uses are
  * mid-sentence ("Who is the appointment for?", "full groom for Bramble"), and a

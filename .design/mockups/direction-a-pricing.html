@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiaryDesk — Pricing (Editorial)</title>
+<style>
+:root{
+  --canvas:#FBF9F5; --canvas-sunk:#F3F0EA;
+  --ink:#211E19; --ink-2:#6E6A61; --ink-3:#A6A197; --white:#FFFFFF;
+  --rule:rgb(33 30 25 / 0.09);
+  --accent:#A85729;
+  --orb-a:rgb(168 87 41 / 0.15); --orb-b:rgb(212 176 130 / 0.18);
+  --font-display:'Inter Tight','Inter',ui-sans-serif,sans-serif;
+  --font-body:'Inter',ui-sans-serif,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-6:48px; --sp-8:64px; --sp-12:96px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+nav.top{display:flex;justify-content:space-between;align-items:center;padding:var(--sp-3) var(--sp-4);max-width:1180px;margin:0 auto;}
+.logo{font-size:16px;font-weight:500;}
+.navlinks{display:flex;gap:var(--sp-4);align-items:center;font-size:14px;}
+.navlinks a{color:var(--ink-2);}
+.navlinks a.active{color:var(--ink);}
+.pill{background:var(--ink);color:var(--white);padding:10px 20px;border-radius:999px;font-size:14px;font-weight:500;}
+.pill-ghost{border:1px solid var(--rule);padding:10px 20px;border-radius:999px;font-size:14px;}
+
+.hero{position:relative;overflow:hidden;padding:var(--sp-8) var(--sp-4) var(--sp-6);text-align:center;}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;}
+.orb-1{width:480px;height:480px;background:var(--orb-a);top:-200px;left:50%;transform:translateX(-50%);}
+.hero-inner{position:relative;max-width:640px;margin:0 auto;}
+.eyebrow{font-size:14px;color:var(--ink-2);margin-bottom:var(--sp-2);}
+h1{font-family:var(--font-display);font-weight:300;font-size:56px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 var(--sp-2);}
+p.sub{font-size:18px;line-height:1.55;color:var(--ink-2);margin:0;}
+
+/* single price card, no tier grid */
+.price-wrap{max-width:520px;margin:var(--sp-8) auto 0;padding:0 var(--sp-4);}
+.price-card{background:var(--white);border:1px solid var(--rule);border-radius:16px;padding:var(--sp-6);text-align:center;}
+.price-line{display:flex;justify-content:center;align-items:baseline;gap:8px;margin-bottom:var(--sp-2);}
+.price-line .amount{font-family:var(--font-mono);font-size:64px;font-weight:400;}
+.price-line .period{font-size:16px;color:var(--ink-2);}
+.price-card .trial{font-size:14px;color:var(--ink-2);margin-bottom:var(--sp-4);}
+.price-card .cta{display:block;background:var(--ink);color:var(--white);padding:14px;border-radius:8px;font-size:15px;font-weight:500;margin-bottom:var(--sp-4);}
+.included{text-align:left;border-top:1px solid var(--rule);padding-top:var(--sp-4);}
+.included li{list-style:none;font-size:15px;color:var(--ink);padding:8px 0;display:flex;gap:10px;}
+.included li::before{content:'—';color:var(--accent);}
+
+/* who pays comparison, hairline table not a card grid */
+.section{padding:var(--sp-12) var(--sp-4);border-top:1px solid var(--rule);}
+.section-inner{max-width:760px;margin:0 auto;}
+.section h2{font-family:var(--font-display);font-weight:300;font-size:34px;letter-spacing:-0.015em;text-align:center;margin:0 0 var(--sp-2);}
+.section p.lead{font-size:16px;color:var(--ink-2);text-align:center;max-width:50ch;margin:0 auto var(--sp-8);}
+table{width:100%;border-collapse:collapse;font-size:15px;}
+th{text-align:left;font-weight:500;color:var(--ink-2);font-size:13px;padding:0 0 var(--sp-2);border-bottom:1px solid var(--rule);}
+td{padding:16px 0;border-bottom:1px solid var(--rule);}
+td.you{font-weight:500;}
+td.them{color:var(--ink-2);}
+
+.faq{padding:var(--sp-12) var(--sp-4);}
+.faq-inner{max-width:640px;margin:0 auto;}
+.faq h2{font-family:var(--font-display);font-weight:300;font-size:30px;margin:0 0 var(--sp-6);}
+.q{padding:var(--sp-4) 0;border-top:1px solid var(--rule);}
+.q:first-of-type{border-top:none;}
+.q .question{font-size:16px;font-weight:500;margin-bottom:8px;}
+.q .answer{font-size:15px;line-height:1.6;color:var(--ink-2);}
+
+@media (max-width:640px){
+  h1{font-size:36px;}
+  .price-line .amount{font-size:48px;}
+}
+</style>
+</head>
+<body>
+<nav class="top">
+  <div class="logo">DiaryDesk</div>
+  <div class="navlinks">
+    <a class="active" href="#">Pricing</a>
+    <a class="pill-ghost" href="#">Log in</a>
+    <a class="pill" href="#">Start free trial</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="hero-inner">
+    <div class="eyebrow">Pricing</div>
+    <h1>One price. Everything included.</h1>
+    <p class="sub">No tiers to grow into, no fee added to your customer's booking.</p>
+  </div>
+
+  <div class="price-wrap">
+    <div class="price-card">
+      <div class="price-line"><span class="amount">£39</span><span class="period">/ month</span></div>
+      <div class="trial">30-day free trial · no card required to start</div>
+      <a class="cta" href="#">Start your free trial</a>
+      <ul class="included">
+        <li>Unlimited bookings and staff</li>
+        <li>Deposit capture on every booking</li>
+        <li>Automated waitlist texting</li>
+        <li>200 SMS included, £8 per 200 more</li>
+        <li>Public booking page for your business</li>
+        <li>Cancel any time</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <h2>Who actually pays</h2>
+    <p class="lead">Some booking tools are free to you and charge your customer at checkout. DiaryDesk charges you, once, and nothing else.</p>
+    <table>
+      <tr><th></th><th>DiaryDesk</th><th>Typical competitor</th></tr>
+      <tr><td>Monthly cost to you</td><td class="you">£39</td><td class="them">£0</td></tr>
+      <tr><td>Fee added to customer's booking</td><td class="you">None</td><td class="them">Yes, per booking</td></tr>
+      <tr><td>Deposit capture</td><td class="you">Included</td><td class="them">Included</td></tr>
+      <tr><td>Waitlist auto-fill</td><td class="you">Included</td><td class="them">Included</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="faq-inner">
+    <h2>Questions</h2>
+    <div class="q">
+      <div class="question">What happens after the 200 included texts?</div>
+      <div class="answer">Top up with another 200 for £8. There's a hard ceiling per account so you're never billed for a runaway usage spike.</div>
+    </div>
+    <div class="q">
+      <div class="question">Can I cancel during the trial?</div>
+      <div class="answer">Yes, any time, no charge. Your data stays available if you come back within 30 days.</div>
+    </div>
+    <div class="q">
+      <div class="question">Do my customers pay anything to DiaryDesk directly?</div>
+      <div class="answer">No. Deposits go to your account via Stripe. DiaryDesk only charges you the monthly fee.</div>
+    </div>
+  </div>
+</section>
+</body>
+</html>

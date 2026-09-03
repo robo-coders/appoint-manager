@@ -16,6 +16,7 @@ use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use App\Services\Rebooking\RebookMessenger;
 use App\Services\Sms\SmsConsent;
 use App\Support\PhoneNumber;
@@ -294,7 +295,7 @@ class SeedRebookingDemo extends Command
     }
 
     /**
-     * The price list, straight out of `config/verticals.php` — the same rows a
+     * The price list, straight out of the groomer vertical — the same rows a
      * real new tenant is set up with, including the `rebook_interval` each one
      * carries. Nothing here invents a price.
      *
@@ -304,7 +305,7 @@ class SeedRebookingDemo extends Command
     {
         $services = [];
 
-        foreach ((array) config('verticals.groomer.default_services') as $index => $row) {
+        foreach ((array) Vertical::definitionFor('groomer')['default_services'] as $index => $row) {
             $service = Service::withoutGlobalScopes()
                 ->where('tenant_id', current_tenant_id())
                 ->where('name', $row['name'])

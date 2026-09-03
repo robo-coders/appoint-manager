@@ -187,7 +187,7 @@ class Tenant extends Model
      */
     public function vertical(): array
     {
-        return config('verticals.'.$this->type, config('verticals.groomer'));
+        return Vertical::definitionFor($this->type);
     }
 
     /**

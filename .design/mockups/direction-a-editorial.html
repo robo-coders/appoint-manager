@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiaryDesk — Direction A: Editorial calm</title>
+<style>
+/* ============ TOKENS ============
+   Off-white canvas + warm ink, light-weight display type, one atmospheric
+   gradient orb (terracotta/peach) as the only colour moment. No neon,
+   no gradient elsewhere, no shadows beyond a 1px hairline.
+*/
+:root{
+  --canvas:#FBF9F5;
+  --canvas-sunk:#F3F0EA;
+  --ink:#211E19;
+  --ink-2:#6E6A61;
+  --ink-3:#A6A197;
+  --white:#FFFFFF;
+  --rule: rgb(33 30 25 / 0.09);
+  --accent:#A85729;         /* same clay used in the product, kept as the one accent */
+  --orb-a: rgb(168 87 41 / 0.16);
+  --orb-b: rgb(212 176 130 / 0.20);
+  --orb-c: rgb(120 140 120 / 0.10);
+
+  --font-display:'Inter Tight','Inter',ui-sans-serif,sans-serif; /* light weight = editorial signature */
+  --font-body:'Inter',ui-sans-serif,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+
+  --space-1:8px; --space-2:16px; --space-3:24px; --space-4:32px;
+  --space-6:48px; --space-8:64px; --space-12:96px; --space-16:128px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{color:inherit;}
+.wrap{max-width:1180px;margin:0 auto;padding:0 var(--space-4);}
+
+/* ---- Nav ---- */
+nav.top{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);}
+.logo{font-size:16px;font-weight:500;letter-spacing:-0.01em;}
+.navlinks{display:flex;gap:var(--space-4);align-items:center;}
+.navlinks a{font-size:14px;color:var(--ink-2);text-decoration:none;}
+.pill{background:var(--ink);color:var(--white);padding:10px 20px;border-radius:999px;font-size:14px;text-decoration:none;font-weight:500;}
+.pill-ghost{border:1px solid var(--rule);padding:10px 20px;border-radius:999px;font-size:14px;text-decoration:none;color:var(--ink);}
+
+/* ---- Hero: atmospheric orb behind light display type ---- */
+.hero{position:relative;overflow:hidden;padding:var(--space-16) var(--space-4) var(--space-12);text-align:center;}
+.orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;}
+.orb-1{width:560px;height:560px;background:var(--orb-a);top:-220px;left:50%;transform:translateX(-62%);}
+.orb-2{width:420px;height:420px;background:var(--orb-b);top:-40px;right:8%;}
+.orb-3{width:340px;height:340px;background:var(--orb-c);top:120px;left:6%;}
+.hero-inner{position:relative;max-width:760px;margin:0 auto;}
+.eyebrow{font-size:14px;color:var(--ink-2);margin-bottom:var(--space-2);}
+h1{
+  font-family:var(--font-display);
+  font-weight:300;
+  font-size:78px;
+  line-height:1.02;
+  letter-spacing:-0.02em;
+  margin:0 0 var(--space-3);
+}
+p.sub{font-size:19px;line-height:1.55;color:var(--ink-2);max-width:520px;margin:0 auto var(--space-4);}
+.hero-cta{display:flex;gap:12px;justify-content:center;}
+
+/* ---- Product visual: the diary, rendered quiet and small, floating on canvas (no card chrome) ---- */
+.visual{position:relative;max-width:900px;margin:var(--space-8) auto 0;padding:0 var(--space-4);}
+.diary{
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-radius:14px;
+  overflow:hidden;
+}
+.diary-head{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--rule);}
+.diary-head .day{font-size:14px;font-weight:500;}
+.diary-head .status{font-size:13px;color:var(--accent);}
+.diary-body{display:grid;grid-template-columns:56px 1fr;}
+.times{border-right:1px solid var(--rule);}
+.trow{height:60px;display:flex;justify-content:flex-end;align-items:flex-start;padding:6px 12px 0 0;font-size:12px;color:var(--ink-3);font-family:var(--font-mono);}
+.srow{height:60px;border-bottom:1px solid var(--rule);position:relative;}
+.slot{position:absolute;inset:6px 20px;background:var(--canvas-sunk);border-radius:8px;display:flex;align-items:center;padding:0 16px;font-size:14px;}
+.slot .name{font-weight:500;margin-right:8px;}
+.slot .service{color:var(--ink-2);}
+.slot.reclaimed{background:rgb(168 87 41 / 0.07);border:1px solid rgb(168 87 41 / 0.25);}
+.slot.reclaimed .tag{margin-left:auto;font-size:12px;color:var(--accent);}
+.slot.open{border:1px dashed var(--rule);background:transparent;color:var(--ink-3);justify-content:center;font-size:13px;}
+.caption{text-align:center;font-size:14px;color:var(--ink-2);margin-top:var(--space-3);}
+
+/* ---- Supporting section: three quiet statements, no cards, no icons ---- */
+.section{padding:var(--space-16) var(--space-4);border-top:1px solid var(--rule);}
+.section-inner{max-width:920px;margin:0 auto;}
+.section h2{
+  font-family:var(--font-display);
+  font-weight:300;
+  font-size:40px;
+  letter-spacing:-0.015em;
+  line-height:1.2;
+  max-width:14ch;
+  margin:0 0 var(--space-8);
+}
+.rows{display:grid;gap:0;}
+.row{display:grid;grid-template-columns:1fr 2fr;gap:var(--space-6);padding:var(--space-6) 0;border-top:1px solid var(--rule);}
+.row:first-child{border-top:none;}
+.row .label{font-size:14px;color:var(--ink-2);}
+.row .body{font-size:19px;line-height:1.5;font-weight:400;max-width:52ch;}
+.row .body b{font-weight:500;color:var(--ink);}
+
+@media (max-width:760px){
+  h1{font-size:44px;}
+  .section h2{font-size:30px;}
+  .row{grid-template-columns:1fr;gap:var(--space-2);}
+  .orb-1,.orb-2,.orb-3{filter:blur(40px);}
+  .diary-body{grid-template-columns:40px 1fr;}
+  .slot .service{display:none;}
+}
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="logo">DiaryDesk</div>
+  <div class="navlinks">
+    <a href="#">Pricing</a>
+    <a class="pill-ghost" href="#">Log in</a>
+    <a class="pill" href="#">Start free trial</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="hero-inner">
+    <div class="eyebrow">For dog groomers in Scotland</div>
+    <h1>The empty slot fills itself.</h1>
+    <p class="sub">A deposit at booking means no-shows stop costing you. A cancellation goes straight to your waitlist by text — first to reply gets it.</p>
+    <div class="hero-cta">
+      <a class="pill" href="#">Start your free trial</a>
+      <a class="pill-ghost" href="#">See it in 90 seconds</a>
+    </div>
+  </div>
+
+  <div class="visual">
+    <div class="diary">
+      <div class="diary-head">
+        <span class="day">Thursday, 4 September</span>
+        <span class="status">1 slot reclaimed today</span>
+      </div>
+      <div class="diary-body">
+        <div class="times">
+          <div class="trow">9:00</div>
+          <div class="trow">10:00</div>
+          <div class="trow">11:00</div>
+          <div class="trow">12:00</div>
+        </div>
+        <div class="slots">
+          <div class="srow"><div class="slot"><span class="name">Bella</span><span class="service">Full groom</span></div></div>
+          <div class="srow"><div class="slot reclaimed"><span class="name">Max</span><span class="service">Full groom</span><span class="tag">Waitlist · filled in 4 min</span></div></div>
+          <div class="srow"><div class="slot"><span class="name">Coco</span><span class="service">Bath &amp; tidy</span></div></div>
+          <div class="srow"><div class="slot open">Open — waitlist notified</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Your actual diary. No app to check, no calls to make.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <h2>Three things happen the moment someone books.</h2>
+    <div class="rows">
+      <div class="row">
+        <div class="label">01 — At booking</div>
+        <div class="body">A card is held for a deposit. <b>If they don't show, you're not the one who loses.</b></div>
+      </div>
+      <div class="row">
+        <div class="label">02 — On cancellation</div>
+        <div class="body">The slot goes to your waitlist automatically. <b>You don't send a single text yourself.</b></div>
+      </div>
+      <div class="row">
+        <div class="label">03 — First to reply</div>
+        <div class="body">Books the slot instantly. <b>Whoever's fastest gets it — no group chat, no back and forth.</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

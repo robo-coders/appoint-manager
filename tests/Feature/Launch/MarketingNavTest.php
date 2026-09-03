@@ -2,6 +2,7 @@
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use App\Support\MarketingFigures;
 
 /**
@@ -239,7 +240,7 @@ it('states the real waitlist batch size and window', function () {
 it('shows the seeded grooming price list on the trade page', function () {
     $html = $this->get('/dog-grooming')->assertOk()->getContent();
 
-    foreach (config('verticals.groomer.default_services') as $service) {
+    foreach (Vertical::query()->where('key', 'groomer')->firstOrFail()->default_services as $service) {
         expect($html)->toContain($service['name']);
     }
 });

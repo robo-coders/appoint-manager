@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Vertical;
 use Illuminate\Support\Arr;
 use RuntimeException;
 
@@ -34,7 +35,7 @@ final class MarketingFigures
      *
      * A medium full groom is the modal grooming appointment and the one the
      * vertical seeds at 90 minutes, so it is the slot a cancellation actually
-     * costs. Matched by name against `config('verticals')` rather than copied,
+     * costs. Matched by name against the groomer vertical rather than copied,
      * so this cannot drift from what a new tenant is given on day one.
      */
     private const SLOT_SERVICE = 'Full groom — medium dog';
@@ -119,7 +120,7 @@ final class MarketingFigures
      * The whole seeded grooming price list, for the trade page.
      *
      * This is the actual list a new grooming tenant is given on day one, read
-     * from `config/verticals.php`. The trade page shows it rather than a
+     * from the groomer vertical. The trade page shows it rather than a
      * plausible-looking invention, which means the page and the product cannot
      * disagree about what a salon starts with.
      *
@@ -127,7 +128,7 @@ final class MarketingFigures
      */
     public function seededPriceList(): array
     {
-        $services = (array) config('verticals.'.self::VERTICAL.'.default_services', []);
+        $services = (array) Vertical::definitionFor(self::VERTICAL)['default_services'];
 
         return array_map(fn (array $service) => [
             'name' => (string) $service['name'],
@@ -145,7 +146,7 @@ final class MarketingFigures
      */
     public function verticalWords(): array
     {
-        $vertical = (array) config('verticals.'.self::VERTICAL, []);
+        $vertical = Vertical::definitionFor(self::VERTICAL);
 
         return [
             'label' => (string) ($vertical['label'] ?? 'Dog grooming'),
@@ -166,7 +167,7 @@ final class MarketingFigures
      */
     public function subjectFieldList(): string
     {
-        $fields = (array) config('verticals.'.self::VERTICAL.'.subject_fields', []);
+        $fields = (array) Vertical::definitionFor(self::VERTICAL)['subject_fields'];
 
         $labels = array_map(
             fn (array $field) => lcfirst((string) $field['label']),
@@ -181,7 +182,7 @@ final class MarketingFigures
      */
     private function seededService(): array
     {
-        $services = (array) config('verticals.'.self::VERTICAL.'.default_services', []);
+        $services = (array) Vertical::definitionFor(self::VERTICAL)['default_services'];
 
         foreach ($services as $service) {
             if (($service['name'] ?? null) === self::SLOT_SERVICE) {
@@ -196,7 +197,7 @@ final class MarketingFigures
          * has visited yet.
          */
         throw new RuntimeException(
-            sprintf('config/verticals.php has no "%s" in the %s price list.', self::SLOT_SERVICE, self::VERTICAL),
+            sprintf('the %s vertical has no "%s" in its price list.', self::VERTICAL, self::SLOT_SERVICE),
         );
     }
 }

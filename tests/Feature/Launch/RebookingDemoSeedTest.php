@@ -11,6 +11,7 @@ use App\Models\RebookSend;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
+use App\Models\Vertical;
 use App\Services\Rebooking\OverdueSubjects;
 use App\Services\Rebooking\RebookMessenger;
 use App\Support\TenantContext;
@@ -94,7 +95,7 @@ it('seeds the price list from config rather than inventing prices', function () 
     $tenant = seedTestTenant();
 
     $seeded = Service::withoutGlobalScopes()->where('tenant_id', $tenant->id)->get();
-    $configured = (array) config('verticals.groomer.default_services');
+    $configured = Vertical::query()->where('key', 'groomer')->firstOrFail()->default_services;
 
     expect($seeded)->toHaveCount(count($configured));
 

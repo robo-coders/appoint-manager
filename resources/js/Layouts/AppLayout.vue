@@ -59,6 +59,7 @@ const links = computed<NavLink[]>(() => {
             { href: route('super-admin.index'), label: 'Tenants', glyph: 'Te', hint: '' },
             { href: route('super-admin.messages'), label: 'Send log', glyph: 'Sl', hint: '' },
             { href: route('super-admin.failures'), label: 'Failures', glyph: 'Fa', hint: '' },
+            { href: route('super-admin.verticals'), label: 'Verticals', glyph: 'Ve', hint: '' },
         ];
     }
 

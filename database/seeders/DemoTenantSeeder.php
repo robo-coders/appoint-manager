@@ -8,6 +8,7 @@ use App\Models\AvailabilityRule;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use App\Support\TenantContext;
 use App\Support\VerticalInterval;
 use Illuminate\Database\Seeder;
@@ -56,7 +57,7 @@ class DemoTenantSeeder extends Seeder
 
         $services = [];
 
-        foreach (config('verticals.groomer.default_services') as $index => $service) {
+        foreach (Vertical::definitionFor('groomer')['default_services'] as $index => $service) {
             $services[] = Service::query()->create([
                 'name' => $service['name'],
                 'duration_minutes' => $service['duration_minutes'],

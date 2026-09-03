@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
 
@@ -17,6 +18,7 @@ test('registration creates a tenant and owner atomically and redirects to onboar
 
     $response = $this->post('/register', [
         'business_name' => 'Willow Street Grooming',
+        'business_type' => 'groomer',
         'name' => 'Maya Chen',
         'email' => 'maya@example.com',
         'password' => 'password',
@@ -56,6 +58,7 @@ test('slug receives a numeric suffix when the base slug is taken', function () {
 
     $this->post('/register', [
         'business_name' => 'Acme Grooming',
+        'business_type' => 'groomer',
         'name' => 'Alex Owner',
         'email' => 'alex@example.com',
         'password' => 'password',
@@ -76,6 +79,7 @@ test('a failed owner insert does not leave a tenant behind', function () {
 
     expect(fn () => $this->post('/register', [
         'business_name' => 'Rollback Salon',
+        'business_type' => 'groomer',
         'name' => 'Alex Owner',
         'email' => 'rollback@example.com',
         'password' => 'password',
@@ -84,4 +88,24 @@ test('a failed owner insert does not leave a tenant behind', function () {
 
     expect(Tenant::query()->where('name', 'Rollback Salon')->exists())->toBeFalse()
         ->and(User::query()->where('email', 'rollback@example.com')->exists())->toBeFalse();
+});
+
+test('registration stores a newly created vertical as the tenant type', function () {
+    Vertical::factory()->create([
+        'key' => 'barber',
+        'label' => 'Barber',
+        'subject_singular' => 'client',
+        'subject_plural' => 'clients',
+    ]);
+
+    $this->post('/register', [
+        'business_name' => 'Cut & Co',
+        'business_type' => 'barber',
+        'name' => 'Alex Owner',
+        'email' => 'alex@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertRedirect(route('onboarding.show', absolute: false));
+
+    expect(Tenant::query()->where('name', 'Cut & Co')->first()?->type)->toBe('barber');
 });

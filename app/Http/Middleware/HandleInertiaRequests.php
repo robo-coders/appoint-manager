@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use App\Models\WaitlistEntry;
 use App\Services\Billing\SmsAllowance;
 use App\Services\Rebooking\OverdueSubjects;
@@ -113,7 +114,7 @@ class HandleInertiaRequests extends Middleware
             'navCounts' => fn () => $tenant ? $this->navCounts($tenant) : null,
             'impersonating' => (bool) $request->session()->get('impersonator_id'),
             'impersonatedTenant' => $request->session()->get('impersonator_id') ? $tenant?->name : null,
-            'vertical' => config('verticals.'.$verticalKey),
+            'vertical' => fn () => Vertical::definitionFor($verticalKey),
             'today' => $tenant
                 ? CarbonImmutable::now($tenant->timezone)->toDateString()
                 : CarbonImmutable::now()->toDateString(),
