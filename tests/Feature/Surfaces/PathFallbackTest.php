@@ -22,6 +22,7 @@ it('serves every surface from one host', function (string $path, int $status) {
 })->with([
     ['/', 200],
     ['/pricing', 200],
+    ['/how-it-works', 200],
     ['/dog-grooming', 200],
     ['/health', 200],
 ]);
@@ -80,7 +81,7 @@ it('builds in-request paths, not APP_URL, so a host alias cannot drop the sessio
 
 it('resolves every named route', function () {
     $missing = collect([
-        'marketing.home', 'marketing.pricing', 'login', 'register', 'dashboard', 'diary.index',
+        'marketing.home', 'marketing.pricing', 'marketing.how-it-works', 'login', 'register', 'dashboard', 'diary.index',
         'bookings.index', 'customers.index', 'services.index', 'staff.index', 'settings.edit',
         'public.booking.show', 'booking.manage.show', 'offer.show', 'booking.preview',
         'super-admin.index', 'admin.login', 'impersonation.start', 'impersonation.stop',

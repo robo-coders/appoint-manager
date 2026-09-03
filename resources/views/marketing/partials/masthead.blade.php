@@ -18,6 +18,7 @@
     <div class="wrap">
         <a class="wordmark text-17 font-medium no-underline" href="{{ route('marketing.home') }}">{{ config('product.name') }}</a>
         <nav class="m-nav text-13" aria-label="Main">
+            <a class="m-quiet" href="{{ route('marketing.how-it-works') }}">How it works</a>
             <a class="m-quiet" href="{{ route('marketing.pricing') }}">Pricing</a>
             <a class="m-quiet" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>
             <a class="m-quiet" href="{{ app_url('login') }}">Log in</a>

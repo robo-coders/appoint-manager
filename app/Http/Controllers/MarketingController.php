@@ -12,18 +12,31 @@ class MarketingController extends Controller
     public function home(): View
     {
         return view('marketing.home', $this->meta(
-            'One refilled slot covers the month',
-            'A client cancels, your waitlist gets a text, and the hour sells twice. '
+            'The empty slot fills itself',
+            'A cancellation goes straight to your waitlist by text — first to reply gets it. '
+                .'A deposit at booking means no-shows stop costing you. '
                 .$this->figures->monthlyBare().' a month, '.$this->figures->trialDays().' days free, no card.',
+            'home',
         ));
     }
 
     public function pricing(): View
     {
         return view('marketing.pricing', $this->meta(
-            'Free is not free. It is billed to your clients.',
-            'One price, '.$this->figures->monthlyBare().' a month, paid by you and not by the people who book with you. '
+            'One price. Everything included.',
+            'No tiers to grow into, no fee added to your customer\'s booking. '
+                .$this->figures->monthlyBare().' a month or '.$this->figures->yearlyBare().' a year. '
                 .$this->figures->trialDays().'-day trial, no card.',
+            'pricing',
+        ));
+    }
+
+    public function howItWorks(): View
+    {
+        return view('marketing.how-it-works', $this->meta(
+            'Three steps. No manual work.',
+            'From booking to refill, '.config('product.name').' handles the part that used to cost you money.',
+            'how-it-works',
         ));
     }
 
@@ -65,19 +78,20 @@ class MarketingController extends Controller
     /**
      * The shell's variables, plus the figures every page is allowed to print.
      *
-     * `figures` goes to all seven pages rather than only the three that use it
+     * `figures` goes to every page rather than only the ones that use it
      * today. It is one object with no query behind it, and the alternative is
      * remembering to add it the first time a legal page needs to name the price.
      *
-     * @return array{title: string, description: string, url: string, figures: MarketingFigures}
+     * @return array{title: string, description: string, url: string, figures: MarketingFigures, page: string}
      */
-    private function meta(string $title, string $description): array
+    private function meta(string $title, string $description, string $page = 'ledger'): array
     {
         return [
             'title' => $title,
             'description' => $description,
             'url' => url()->current(),
             'figures' => $this->figures,
+            'page' => $page,
         ];
     }
 
@@ -86,6 +100,7 @@ class MarketingController extends Controller
         $urls = [
             route('marketing.home'),
             route('marketing.pricing'),
+            route('marketing.how-it-works'),
             route('marketing.dog-grooming'),
             route('marketing.about'),
             route('marketing.contact'),

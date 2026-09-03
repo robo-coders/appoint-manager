@@ -17,15 +17,19 @@ class StripeBillingGateway implements BillingGateway
     public function checkoutUrl(Tenant $tenant, string $interval): string
     {
         $customerId = $this->ensureCustomer($tenant);
-        $pence = BillingPrice::forTenant($tenant);
-        $priceId = (string) config('billing.monthly_price_id');
+        $yearly = in_array($interval, ['yearly', 'year'], true)
+            && $tenant->monthly_price_override_pence === null;
+        $priceId = (string) config($yearly ? 'billing.yearly_price_id' : 'billing.monthly_price_id');
+        $pence = $yearly
+            ? BillingPrice::listYearlyPence()
+            : BillingPrice::forTenant($tenant);
 
         $lineItem = $tenant->monthly_price_override_pence !== null || $priceId === ''
             ? [
                 'price_data' => [
                     'currency' => 'gbp',
                     'unit_amount' => $pence,
-                    'recurring' => ['interval' => 'month'],
+                    'recurring' => ['interval' => $yearly ? 'year' : 'month'],
                     'product_data' => ['name' => config('product.name')],
                 ],
                 'quantity' => 1,
@@ -47,7 +51,7 @@ class StripeBillingGateway implements BillingGateway
             'line_items' => [$lineItem],
             'metadata' => [
                 'tenant_id' => (string) $tenant->id,
-                'interval' => 'monthly',
+                'interval' => $yearly ? 'yearly' : 'monthly',
             ],
             'subscription_data' => [
                 'metadata' => ['tenant_id' => (string) $tenant->id],

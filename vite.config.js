@@ -56,6 +56,7 @@ export default defineConfig(({ mode }) => {
                      * imported from a `.ts` file the way `booking.css` is.
                      */
                     'resources/css/marketing.css',
+                    'resources/css/marketing-editorial.css',
                     'resources/js/app.ts',
                     'resources/js/booking.ts',
                     'resources/js/manage.ts',

@@ -2442,11 +2442,11 @@ Config keys in `config/billing.php`, defaults:
 - `sms_warning_thresholds` `[80, 100]`
 - `owner_alert_email` from `BILLING_OWNER_EMAIL`, else `MAIL_FROM_ADDRESS`
 
-`yearly_price_pence` and `yearly_price_id` are gone. The site does not
-sell an annual plan. Existing yearly Stripe subscriptions, if any, still
-arrive as webhooks; we no longer create them. `STRIPE_PRICE_YEARLY` may
-still sit in `.env.example`. The marketing pricing comment still names
-the old key — left alone, marketing is out of scope.
+`yearly_price_pence` is 29000 (£290) and `yearly_price_id` reads
+`STRIPE_PRICE_YEARLY`. That is ten months at the £29 list price — the
+"2 months free" label. Checkout still opens the monthly Stripe price
+unless it is asked for yearly. The live `/pricing` page sells both
+intervals from those keys.
 
 **Top-up rollover.** Purchased top-ups and granted credit roll over
 across billing cycles. The included 200 resets with the cycle. They paid

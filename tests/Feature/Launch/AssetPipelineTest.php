@@ -26,6 +26,7 @@ it('resolves every asset the marketing pages ask for', function (string $path) {
 })->with([
     '/',
     '/pricing',
+    '/how-it-works',
     '/dog-grooming',
     '/about',
     '/contact',

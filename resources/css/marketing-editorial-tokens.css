@@ -1,0 +1,49 @@
+/*
+ * Editorial marketing tokens.
+ *
+ * A different surface from the operator app. The binding mockups
+ * (`.design/mockups/direction-a-*.html`) own these values: off-white canvas,
+ * warm ink, one clay accent, light display type. `tokens.css` is not edited.
+ * This file is the exemption `check:design` allows, the same way `tokens.css`
+ * is — raw values live here, and `marketing-editorial.css` only reads vars.
+ */
+
+:root {
+    --canvas: #fbf9f5;
+    --canvas-sunk: #f3f0ea;
+    --ink: #211e19;
+    --ink-2: #6e6a61;
+    --ink-3: #a6a197;
+    --white: #ffffff;
+    --rule: rgb(33 30 25 / 0.09);
+    --accent: #a85729;
+    --orb-a: rgb(168 87 41 / 0.16);
+    --orb-b: rgb(212 176 130 / 0.2);
+    --orb-c: rgb(120 140 120 / 0.1);
+    --orb-a-pricing: rgb(168 87 41 / 0.15);
+    --reclaimed-fill: rgb(168 87 41 / 0.07);
+    --reclaimed-rule: rgb(168 87 41 / 0.25);
+    --highlight-fill: rgb(168 87 41 / 0.08);
+
+    --font-display: 'Inter Tight', 'Geist', ui-sans-serif, sans-serif;
+    --font-body: 'Inter', 'Geist', ui-sans-serif, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    --space-1: 8px;
+    --space-2: 16px;
+    --space-3: 24px;
+    --space-4: 32px;
+    --space-6: 48px;
+    --space-8: 64px;
+    --space-12: 96px;
+    --space-16: 128px;
+
+    --radius-slot: 8px;
+    --radius-diary: 14px;
+    --radius-card: 16px;
+    --radius-pill: 999px;
+
+    --orb-blur: 60px;
+    --orb-blur-pricing: 70px;
+    --orb-blur-narrow: 40px;
+}

@@ -3,7 +3,7 @@
 
     **There is no monthly volume in this sum, and that is the point.** The
     previous home page led with a ledger comparing a competitor's per-booking fee
-    against our £39, and that argument only wins above roughly 32 appointments a
+    against our £29, and that argument only wins above roughly 32 appointments a
     month — so the groomer this product is for, doing twenty, read it and
     correctly concluded we were the expensive option. This sum is true at twenty
     appointments and at eighty, because volume is not in it.

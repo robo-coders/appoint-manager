@@ -1,170 +1,143 @@
-@extends('marketing.layout')
+@extends('marketing.editorial')
 
 {{--
-    Pricing.
+    Editorial pricing. Binding target: `.design/mockups/direction-a-pricing.html`.
 
-    One price, stated once: £39 a month, read from `config('billing')` rather
-    than typed. No tiers, no volume floor, no annual discount, no "from £39".
+    Figures come from `config('billing')` via MarketingFigures. The yearly
+    toggle is plain JS reading those same values off data attributes, so a
+    price change cannot leave the card stating one number and the script
+    another.
 
-    **The annual price still exists in the product and is deliberately not sold
-    here.** `config('billing.yearly_price_pence')` is 39000 and `STRIPE_PRICE_YEARLY`
-    is still wired, so a salon can be on an annual subscription; this page simply
-    does not offer one, because a second price on a pricing page is a decision
-    the reader has to make before she has decided the first thing. Recorded in
-    DECISIONS.md so the gap between the config and the page is written down
-    rather than discovered.
-
-    The ledger is the evidence column of the hero. It came off the home page,
-    where it was losing, and it is reframed here: not a cost comparison but the
-    answer to "why do you charge me when they are free?". See
-    `partials/ledger.blade.php` for the reasoning and for the one unverified
-    figure on this surface.
+    The Tuft column is the published list as of the mockup. It is named
+    because a generic "typical competitor" row was the thing we replaced.
 --}}
 
 @section('content')
 
     <section class="hero">
-        <div class="wrap split">
-            <div class="claim">
-                <h1 class="text-34">Free is not free. It is billed to your clients.</h1>
-                <div class="price mt-8">
-                    <span class="amt">{{ $figures->monthlyBare() }}</span>
-                    <span class="text-17 text-ink-2">a month</span>
-                </div>
-                <p class="lede">
-                    {{ $figures->trialDays() }} days free. No card to start. One plan, and it is
-                    this one.
-                </p>
-                @include('marketing.partials.cta', ['label' => 'Start free trial'])
-            </div>
-
-            <div class="evidence">
-                @include('marketing.partials.ledger')
-            </div>
+        <div class="orb orb-1"></div>
+        <div class="hero-inner">
+            <div class="eyebrow">Pricing</div>
+            <h1>One price. Everything included.</h1>
+            <p class="sub">No tiers to grow into, no fee added to your customer's booking.</p>
         </div>
-    </section>
 
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">One plan, and everything is in it</h2>
-                <p class="lede">
-                    There is no tier where deposits are switched off, and nothing here is metered.
-                </p>
-            </div>
-            <div class="evidence">
-                <dl class="facts">
-                    <div>
-                        <dt>Every appointment, every client, every dog.</dt>
-                        <dd>
-                            No cap and no per-booking charge, to you or to them. Take twenty
-                            appointments a month or eight hundred; it is the same
-                            {{ $figures->monthly()->formatted() }}.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Deposits, the waitlist, reminders and your booking page.</dt>
-                        <dd>
-                            Not add-ons. The waitlist that refills a cancelled hour is the reason
-                            this product exists, so putting it behind a higher tier would be
-                            selling the empty version.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Text messages are included.</dt>
-                        <dd>
-                            Confirmations, reminders and waitlist offers all go out by SMS and we
-                            do not bill you per message. There is no bundle to run out of
-                            mid-Saturday.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Card processing is Stripe's, at Stripe's rate.</dt>
-                        <dd>
-                            It is charged to your own Stripe account by Stripe, and we do not add
-                            anything to it. We never touch your clients' money.
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
-    </section>
-
-    {{-- The confidence move: publish the exit, including what she cannot take. --}}
-    <section class="sec sec-airy">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">How you leave</h2>
-                <p class="lede">
-                    We would rather write this down now than have you find it out later.
-                </p>
-            </div>
-            <div class="evidence">
-                <div class="prose text-15">
-                    <p>
-                        There is no contract and no notice period. It is a monthly subscription and
-                        you end it in settings, in one place, without emailing anybody. Your client
-                        list and your appointment history export to a spreadsheet on the way out.
-                        The Stripe account leaves with you, because it was always yours.
-                    </p>
-                    <p>
-                        What you cannot take is the booking page itself. That lives here, and if you
-                        go, the link stops working — so keep your own note of where you sent your
-                        clients. Everything you brought, you keep.
-                    </p>
+        <div
+            class="price-wrap"
+            id="price-root"
+            data-monthly="{{ $figures->monthlyBare() }}"
+            data-yearly="{{ $figures->yearlyBare() }}"
+            data-saving="{{ $figures->yearlyLabel() }}"
+        >
+            <div class="interval">
+                <div class="interval-group" role="group" aria-label="Billing interval">
+                    <button type="button" id="bill-monthly" aria-pressed="true">Monthly</button>
+                    <button type="button" id="bill-yearly" aria-pressed="false">Yearly</button>
                 </div>
             </div>
+            <div class="price-card">
+                <div class="price-line">
+                    <span class="amount" id="price-amount">{{ $figures->monthlyBare() }}</span>
+                    <span class="period" id="price-period">/ month</span>
+                </div>
+                <div class="saving" id="price-saving" hidden>{{ $figures->yearlyLabel() }}</div>
+                <div class="trial">{{ $figures->trialDays() }}-day free trial · no card required to start</div>
+                <a class="cta" href="{{ app_url('register') }}">Start your free trial</a>
+                <ul class="included">
+                    <li>Unlimited bookings and staff</li>
+                    <li>Deposit capture on every booking</li>
+                    <li>Automated waitlist texting</li>
+                    <li>{{ $figures->smsIncluded() }} SMS included, {{ $figures->smsTopupBare() }} per {{ $figures->smsTopupSize() }} more</li>
+                    <li>Public booking page for your business</li>
+                    <li>Cancel any time</li>
+                </ul>
+            </div>
         </div>
     </section>
 
-    <section class="sec">
-        <div class="wrap split">
-            <div class="claim">
-                <h2 class="text-24">What people ask about the price</h2>
-                <p class="lede">Including the one where the free plan wins.</p>
+    <section class="section">
+        <div class="section-inner">
+            <h2>Who actually pays</h2>
+            <p class="lead">Some booking tools are free to you and charge your customer at checkout. {{ config('product.name') }} charges you, once, and nothing else.</p>
+            <table class="compare">
+                <tr>
+                    <th></th>
+                    <th>{{ config('product.name') }}</th>
+                    <th>Tuft</th>
+                </tr>
+                <tr>
+                    <td>What you pay</td>
+                    <td class="you" id="compare-you">{{ $figures->monthlyBare() }} / month</td>
+                    <td class="them">
+                        Essential £0<br>
+                        Pro £27.50/mo annual or £32.99/mo rolling<br>
+                        Pro Multi £38.50/mo annual
+                    </td>
+                </tr>
+                <tr>
+                    <td>Fee added to customer's booking</td>
+                    <td class="you">None</td>
+                    <td class="them">Yes, per booking</td>
+                </tr>
+                <tr>
+                    <td>Deposit capture</td>
+                    <td class="you">Included</td>
+                    <td class="them">Included</td>
+                </tr>
+                <tr>
+                    <td>Waitlist auto-fill</td>
+                    <td class="you">Included</td>
+                    <td class="them">Included</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
+    <section class="faq">
+        <div class="faq-inner">
+            <h2>Questions</h2>
+            <div class="q">
+                <h3 class="question">What happens after the {{ $figures->smsIncluded() }} included texts?</h3>
+                <p class="answer">Top up with another {{ $figures->smsTopupSize() }} for {{ $figures->smsTopupBare() }}. There's a hard ceiling per account so you're never billed for a runaway usage spike.</p>
             </div>
-            <div class="evidence">
-                <dl class="qa">
-                    <div>
-                        <dt>Is there a cheaper plan for a quiet book?</dt>
-                        <dd>
-                            No, and there is not going to be. A cheaper tier with the waitlist taken
-                            out would be the version that does not do the thing we built, sold to
-                            the people who need it most. If
-                            {{ $figures->monthly()->formatted() }} a month is more than a refilled
-                            cancellation is worth to you, the free plans are genuinely the better
-                            deal and we will not pretend otherwise.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>What if they stop charging my clients?</dt>
-                        <dd>
-                            Then the bill above stops being an argument, and you would be choosing
-                            on the rest of it: your own booking page, your own Stripe account, your
-                            own client list, and nobody's marketplace standing between you and the
-                            people who already know you. We would rather you knew this particular
-                            argument has an expiry date on it.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Do I pay more as I get busier?</dt>
-                        <dd>
-                            No. There is no volume floor and no volume ceiling — no appointment
-                            count anywhere in what you pay us.
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>What happens at the end of the trial?</dt>
-                        <dd>
-                            You are asked for a card. Nothing is charged before then and nothing is
-                            charged if you walk away — there is no card on file to charge. If you do
-                            nothing, the admin app goes read-only and your clients' booking page
-                            keeps working.
-                        </dd>
-                    </div>
-                </dl>
+            <div class="q">
+                <h3 class="question">Can I cancel during the trial?</h3>
+                <p class="answer">Yes, any time, no charge. Your data stays available if you come back within {{ $figures->trialDays() }} days.</p>
+            </div>
+            <div class="q">
+                <h3 class="question">Do my customers pay anything to {{ config('product.name') }} directly?</h3>
+                <p class="answer">No. Deposits go to your account via Stripe. {{ config('product.name') }} only charges you the monthly fee.</p>
             </div>
         </div>
     </section>
+
+    <script>
+    (function () {
+        var root = document.getElementById('price-root');
+        if (!root) return;
+
+        var monthly = document.getElementById('bill-monthly');
+        var yearly = document.getElementById('bill-yearly');
+        var amount = document.getElementById('price-amount');
+        var period = document.getElementById('price-period');
+        var saving = document.getElementById('price-saving');
+        var compare = document.getElementById('compare-you');
+
+        var monthlyPrice = root.getAttribute('data-monthly');
+        var yearlyPrice = root.getAttribute('data-yearly');
+
+        function setInterval(isYearly) {
+            monthly.setAttribute('aria-pressed', isYearly ? 'false' : 'true');
+            yearly.setAttribute('aria-pressed', isYearly ? 'true' : 'false');
+            amount.textContent = isYearly ? yearlyPrice : monthlyPrice;
+            period.textContent = isYearly ? '/ year' : '/ month';
+            saving.hidden = !isYearly;
+            compare.textContent = isYearly ? yearlyPrice + ' / year' : monthlyPrice + ' / month';
+        }
+
+        monthly.addEventListener('click', function () { setInterval(false); });
+        yearly.addEventListener('click', function () { setInterval(true); });
+    })();
+    </script>
 
 @endsection

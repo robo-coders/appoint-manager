@@ -42,7 +42,7 @@ final class MarketingFigures
 
     private const VERTICAL = 'groomer';
 
-    /** What we charge, a month. `£39.00`. */
+    /** What we charge, a month. `£29.00`. */
     public function monthly(): Money
     {
         return new Money((int) config('billing.monthly_price_pence'));
@@ -61,6 +61,42 @@ final class MarketingFigures
     public function trialDays(): int
     {
         return (int) config('billing.trial_days');
+    }
+
+    /** What we charge, a year. `£290.00`. */
+    public function yearly(): Money
+    {
+        return new Money((int) config('billing.yearly_price_pence'));
+    }
+
+    public function yearlyBare(): string
+    {
+        return '£'.number_format(intdiv($this->yearly()->amount, 100));
+    }
+
+    public function yearlyLabel(): string
+    {
+        return (string) config('billing.yearly_label');
+    }
+
+    public function smsIncluded(): int
+    {
+        return (int) config('billing.sms_included');
+    }
+
+    public function smsTopupSize(): int
+    {
+        return (int) config('billing.sms_topup_size');
+    }
+
+    public function smsTopupBare(): string
+    {
+        return '£'.number_format(intdiv((int) config('billing.sms_topup_price_pence'), 100));
+    }
+
+    public function depositBare(): string
+    {
+        return '£'.number_format(intdiv($this->deposit()->amount, 100));
     }
 
     /** The seeded price of one medium full groom. `£45.00`. */
@@ -193,7 +229,7 @@ final class MarketingFigures
 
         /*
          * Loud rather than zero. A silent fallback here prints "£0.00 covers
-         * £39.00" on the home page, which is worse than a 500 on a page nobody
+         * £29.00" on the home page, which is worse than a 500 on a page nobody
          * has visited yet.
          */
         throw new RuntimeException(

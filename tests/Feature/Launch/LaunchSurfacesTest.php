@@ -32,11 +32,9 @@ it('gates super admin and logs impersonation', function () {
 });
 
 it('renders marketing pages without mentioning other verticals on dog grooming', function () {
-    // Headlines updated in phase 11: the home page leads with recovered revenue
-    // rather than no-shows, and the ledger it used to lead with is on /pricing.
-    // The point of this test is the vertical isolation below, not the wording.
-    $this->get('/')->assertOk()->assertSee('One refilled slot covers the month.');
-    $this->get('/pricing')->assertOk()->assertSee('£39');
+    $this->get('/')->assertOk()->assertSee('The empty slot fills itself.');
+    $this->get('/pricing')->assertOk()->assertSee('£29');
+    $this->get('/how-it-works')->assertOk()->assertSee('Three steps. No manual work.');
 
     $grooming = $this->get('/dog-grooming')->assertOk();
 

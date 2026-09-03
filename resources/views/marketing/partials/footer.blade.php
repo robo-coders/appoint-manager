@@ -9,6 +9,7 @@
     <div class="wrap">
         <span>{{ config('product.name') }}</span>
         <nav aria-label="Footer">
+            <a class="m-quiet" href="{{ route('marketing.how-it-works') }}">How it works</a>
             <a class="m-quiet" href="{{ route('marketing.pricing') }}">Pricing</a>
             <a class="m-quiet" href="{{ route('marketing.dog-grooming') }}">Dog grooming</a>
             <a class="m-quiet" href="{{ route('marketing.about') }}">About</a>

@@ -23,7 +23,10 @@ import tailwind from '../tailwind.config.js';
  * to live, and it is the file every other value resolves back to.
  */
 const TOKENS = 'resources/css/tokens.css';
-const FILES = globSync('resources/**/*.{vue,ts,js,mjs,css,blade.php,svg}').filter((f) => f !== TOKENS);
+const EDITORIAL_TOKENS = 'resources/css/marketing-editorial-tokens.css';
+const FILES = globSync('resources/**/*.{vue,ts,js,mjs,css,blade.php,svg}').filter(
+    (f) => f !== TOKENS && f !== EDITORIAL_TOKENS,
+);
 
 const PALETTE =
     'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
@@ -183,7 +186,18 @@ for (const mirror of MIRRORS) {
  * glob would have skipped it. All five files pass as they stand; nothing in
  * them was edited to make that true.
  */
-const MOCKUPS = globSync('.design/mockups/**/*.html');
+/*
+ * Product mockups (dashboard, bookings-table, …) copy tokens.css. The
+ * editorial marketing direction and the archived ledger homepage are a
+ * different token system on purpose — they must not be forced onto --paper.
+ */
+const MOCKUPS = globSync('.design/mockups/**/*.html').filter((f) => {
+    const skip = f.includes('/directions/')
+        || /direction-a-/.test(f)
+        || /archived-/.test(f);
+
+    return !skip;
+});
 
 // Whitespace and a leading zero are formatting, not value. The mockups are
 // written condensed; tokens.css is not.

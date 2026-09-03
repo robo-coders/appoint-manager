@@ -4,11 +4,18 @@ return [
     /*
      * List price. What we charge a tenant that has no override.
      * Tenant-level truth is `tenants.monthly_price_override_pence`.
+     *
+     * One tier. Yearly is ten months — £290 instead of 12 × £29 — which is
+     * the "2 months free" on the pricing mockup. Checkout still defaults to
+     * monthly; yearly is the Stripe price sitting next to it.
      */
-    'monthly_price_pence' => 3900,
+    'monthly_price_pence' => 2900,
+    'yearly_price_pence' => 29000,
+    'yearly_label' => '2 months free',
     'trial_days' => 30,
     'dunning_days' => 7,
     'monthly_price_id' => env('STRIPE_PRICE_MONTHLY'),
+    'yearly_price_id' => env('STRIPE_PRICE_YEARLY'),
     'billing_webhook_secret' => env('STRIPE_BILLING_WEBHOOK_SECRET'),
 
     /*

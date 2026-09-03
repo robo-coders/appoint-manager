@@ -3,7 +3,7 @@
 Tick or defer with a reason. First real salon does not go live until every open item is closed or deferred here.
 
 ## Product
-- [x] 30-day trial, no card, £39/month or £390/year Checkout on the platform Stripe account
+- [x] 30-day trial, no card, £29/month or £290/year Checkout on the platform Stripe account
 - [x] Admin read-only on unpaid/expired trial; public booking still works
 - [x] Dunning emails day 0 / 3 / 7 (`billing:dunning`)
 - [x] Cancel asks why and offers pause

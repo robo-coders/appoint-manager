@@ -17,6 +17,7 @@ use App\Support\MarketingFigures;
 const MARKETING_PATHS = [
     '/',
     '/pricing',
+    '/how-it-works',
     '/dog-grooming',
     '/about',
     '/contact',
@@ -98,26 +99,27 @@ it('reaches pricing and the trade page from every page', function (string $path)
         ->and($html)->toContain(route('marketing.dog-grooming'));
 })->with(MARKETING_PATHS);
 
-it('puts pricing and the trade page in the masthead, not only the footer', function () {
+it('puts how it works and pricing in the masthead, and the trade page in the footer', function () {
     $html = $this->get('/')->assertOk()->getContent();
     $header = substr($html, strpos($html, '<header'), strpos($html, '</header>') - strpos($html, '<header'));
+    $footer = substr($html, strpos($html, '<footer'), strpos($html, '</footer>') - strpos($html, '<footer'));
 
     expect($header)->toContain(route('marketing.pricing'))
-        ->and($header)->toContain(route('marketing.dog-grooming'))
+        ->and($header)->toContain(route('marketing.how-it-works'))
         ->and($header)->toContain('Pricing')
-        ->and($header)->toContain('Dog grooming')
-        ->and($header)->not->toContain('off-phone');
+        ->and($header)->toContain('How it works')
+        ->and($header)->not->toContain('off-phone')
+        ->and($footer)->toContain(route('marketing.dog-grooming'))
+        ->and($footer)->toContain('Dog grooming');
 });
 
 it('does not invent a salon name on the quoted waitlist texts', function () {
-    foreach (['/', '/dog-grooming'] as $path) {
-        $html = $this->get($path)->assertOk()->getContent();
+    $html = $this->get('/dog-grooming')->assertOk()->getContent();
 
-        expect($html)
-            ->toContain('the salon’s name')
-            ->not->toContain('Willow Street')
-            ->not->toContain('Willow Street Grooming');
-    }
+    expect($html)
+        ->toContain('the salon’s name')
+        ->not->toContain('Willow Street')
+        ->not->toContain('Willow Street Grooming');
 });
 
 it('keeps the trial the louder of the two', function () {
@@ -174,8 +176,8 @@ it('puts a skip link first inside the body of every page', function (string $pat
 it('prints the price the product actually charges', function () {
     $figures = new MarketingFigures;
 
-    expect($figures->monthlyBare())->toBe('£39')
-        ->and($figures->monthly()->formatted())->toBe('£39.00')
+    expect($figures->monthlyBare())->toBe('£29')
+        ->and($figures->monthly()->formatted())->toBe('£29.00')
         ->and($figures->trialDays())->toBe(30);
 
     $html = $this->get('/pricing')->assertOk()->getContent();
@@ -196,7 +198,7 @@ it('builds the refill sum from the seeded price list and subtracts it', function
     expect($figures->surplus()->amount)->toBe($figures->slot()->amount - $figures->monthly()->amount)
         ->and($figures->oneRefillCovers())->toBeTrue();
 
-    $html = $this->get('/')->assertOk()->getContent();
+    $html = $this->get('/dog-grooming')->assertOk()->getContent();
 
     expect($html)->toContain($figures->slot()->formatted())
         ->and($html)->toContain($figures->surplus()->formatted());
@@ -222,16 +224,14 @@ it('quotes the waitlist texts exactly as the Notifier sends them', function () {
     expect($source)->toContain("': a slot is free. Claim: '")
         ->and($source)->toContain("': that slot was taken. We will text if another opens.'");
 
-    foreach (['/', '/dog-grooming'] as $path) {
-        $html = $this->get($path)->assertOk()->getContent();
+    $html = $this->get('/dog-grooming')->assertOk()->getContent();
 
-        expect($html)->toContain('a slot is free. Claim:')
-            ->and($html)->toContain('that slot was taken. We will text if another opens.');
-    }
+    expect($html)->toContain('a slot is free. Claim:')
+        ->and($html)->toContain('that slot was taken. We will text if another opens.');
 });
 
 it('states the real waitlist batch size and window', function () {
-    $html = $this->get('/')->assertOk()->getContent();
+    $html = $this->get('/dog-grooming')->assertOk()->getContent();
 
     expect($html)->toContain((string) config('booking.waitlist_offer_batch'))
         ->and($html)->toContain(config('booking.waitlist_offer_minutes').' minutes');
@@ -245,43 +245,30 @@ it('shows the seeded grooming price list on the trade page', function () {
     }
 });
 
-it('marks the one unverified figure and does not name the competitor', function () {
+it('prints both list prices from billing config', function () {
+    $figures = new MarketingFigures;
+
+    expect($figures->yearlyBare())->toBe('£290')
+        ->and($figures->yearlyLabel())->toBe('2 months free');
+
     $html = $this->get('/pricing')->assertOk()->getContent();
 
-    // The marker ships in the HTML, on the page, next to the figure.
-    expect($html)->toContain('<!-- UNVERIFIED: competitor per-booking fee, rate and plan scope not confirmed -->')
-        ->and($html)->toContain('£1.25');
-
-    // The marker is immediately before the figure, not filed at the top of the
-    // file where nobody reading the figure would see it.
-    //
-    // Asserted as "nothing but comments and whitespace in between" rather than a
-    // character count. A count is a number somebody has to keep raising: adding
-    // the second comment — the one naming what would verify the figure — took
-    // the gap from 90 characters to 366 and failed a `< 200` bound that was
-    // never really about distance. What it was about is that no markup, and in
-    // particular no other table cell, gets between the caveat and the number it
-    // is caveating.
-    $marker = strpos($html, '<!-- UNVERIFIED: competitor per-booking fee');
-    $figure = strpos($html, '£1.25');
-
-    expect($marker)->toBeLessThan($figure);
-
-    $between = substr($html, $marker, $figure - $marker);
-
-    // Strip the comments, and what is left should be whitespace and the one
-    // opening `<td>` the figure sits in.
-    $bare = trim(preg_replace(['/<!--.*?-->/s', '/<td[^>]*>/'], '', $between));
-
-    expect($bare)->toBe('', "markup sits between the UNVERIFIED marker and £1.25: {$bare}");
+    expect($html)->toContain($figures->monthlyBare())
+        ->and($html)->toContain($figures->yearlyBare())
+        ->and($html)->toContain($figures->yearlyLabel())
+        ->and($html)->toContain((string) $figures->smsIncluded())
+        ->and($html)->toContain($figures->smsTopupBare());
 });
 
-it('names no competitor anywhere on the surface', function (string $path) {
+it('names no competitor except Tuft on the pricing comparison', function (string $path) {
     $html = $this->get($path)->assertOk()->getContent();
 
-    // The rejected direction named one in its copy and its FAQ.
-    foreach (['Tuft', 'Treatwell', 'Fresha', 'Booksy', 'Timely', 'Vagaro'] as $name) {
+    foreach (['Treatwell', 'Fresha', 'Booksy', 'Timely', 'Vagaro'] as $name) {
         expect($html)->not->toContain($name);
+    }
+
+    if ($path !== '/pricing') {
+        expect($html)->not->toContain('Tuft');
     }
 })->with(MARKETING_PATHS);
 
@@ -303,12 +290,10 @@ it('draws no interface it does not own, and no test card', function (string $pat
     }
 })->with(MARKETING_PATHS);
 
-it('sells one price and no annual plan', function () {
+it('does not sell a from-price or a second tier', function () {
     $html = $this->get('/pricing')->assertOk()->getContent();
 
-    // The yearly plan is no longer in config. Marketing must not sell one, and is deliberately not
-    // offered here. See DECISIONS.md.
-    foreach (['£390', 'a year', 'yearly', 'Yearly', 'annual', 'Annually', 'two months free', 'from £39'] as $banned) {
+    foreach (['from £29', 'from £', 'Essential plan', 'Pro plan'] as $banned) {
         expect($html)->not->toContain($banned);
     }
 });

@@ -18,6 +18,11 @@ final class BillingPrice
         return (int) config('billing.monthly_price_pence');
     }
 
+    public static function listYearlyPence(): int
+    {
+        return (int) config('billing.yearly_price_pence');
+    }
+
     public static function forTenant(Tenant $tenant): int
     {
         return $tenant->monthly_price_override_pence ?? self::listMonthlyPence();
@@ -28,7 +33,7 @@ final class BillingPrice
         return (int) config('billing.sms_topup_price_pence');
     }
 
-    /** Whole pounds where the price is whole pounds. `£39`, not `£39.00`. */
+    /** Whole pounds where the price is whole pounds. `£29`, not `£29.00`. */
     public static function formatPence(int $pence): string
     {
         return '£'.($pence % 100 === 0
