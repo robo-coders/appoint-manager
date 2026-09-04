@@ -7,16 +7,15 @@ import PhoneLink from '@/Components/ui/PhoneLink.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { sentenceCase } from '@/lib/copy';
+import type { Paginated } from '@/types/models';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 /**
  * Customers, on the shared table.
  *
- * The search is client-side because the whole list is already here — the server
- * sends every customer with their counts — and a round trip per keystroke to
- * filter a list you are already holding is a round trip for nothing. When this
- * list is big enough to paginate, the search moves to the server with it.
+ * Search, sort and page all go to the server. The list is no longer loaded
+ * whole, so a local filter would only see the current page.
  *
  * The empty *search result* is a different state from the empty *table*, and
  * `bookings-table.html` is explicit about it: "No bookings match 'otto'" with a
@@ -36,19 +35,39 @@ import { computed, ref } from 'vue';
  * columns below for why the two contact details are split rather than sharing a
  * line.
  */
+type CustomerRow = {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    subjects_count: number;
+    bookings_count: number;
+};
+
 const props = defineProps<{
-    customers: Array<{
-        id: number;
-        name: string;
-        email: string | null;
-        phone: string | null;
-        subjects_count: number;
-        bookings_count: number;
-    }>;
+    filters: { search: string; sort: string; direction: 'asc' | 'desc' };
+    customers: Paginated<CustomerRow>;
 }>();
 
 const page = usePage();
-const query = ref('');
+const query = ref(props.filters.search);
+
+const visit = (overrides: Record<string, string | number> = {}) =>
+    router.get(route('customers.index'), { ...props.filters, search: query.value, ...overrides }, { preserveState: true, replace: true });
+
+const onSort = (next: { key: string; direction: 'asc' | 'desc' }) =>
+    visit({ sort: next.key, direction: next.direction, page: 1 });
+
+let searchWait: ReturnType<typeof setTimeout> | undefined;
+
+watch(query, (value) => {
+    if (searchWait) clearTimeout(searchWait);
+    searchWait = setTimeout(() => visit({ search: value, page: 1 }), 300);
+});
+
+onUnmounted(() => {
+    if (searchWait) clearTimeout(searchWait);
+});
 
 /*
  * `subject_plural` is 'dogs' in config/verticals.php — lower case, because most
@@ -95,19 +114,7 @@ const columns = computed<Column[]>(() => [
     { key: 'bookings_count', label: 'Bookings', align: 'right', numeric: true, sortable: true, width: 'staff' },
 ]);
 
-const rows = computed(() => {
-    const needle = query.value.trim().toLowerCase();
-
-    if (needle === '') return props.customers.map((customer) => ({ ...customer }));
-
-    return props.customers
-        .filter((customer) =>
-            [customer.name, customer.email ?? '', customer.phone ?? ''].some((field) =>
-                field.toLowerCase().includes(needle),
-            ),
-        )
-        .map((customer) => ({ ...customer }));
-});
+const rows = computed(() => props.customers.data.map((customer) => ({ ...customer })));
 </script>
 
 <template>
@@ -122,14 +129,16 @@ const rows = computed(() => {
         <Table
             :columns="columns"
             :rows="rows"
+            :sort="{ key: filters.sort, direction: filters.direction }"
             label="Customers"
             :row-label="(row) => `Actions for ${row.name}`"
-            :empty-title="query ? `No customers match “${query}”` : 'No customers yet'"
+            :empty-title="filters.search ? `No customers match “${filters.search}”` : 'No customers yet'"
             :empty-description="
-                query
+                filters.search
                     ? 'Search covers names, emails and phone numbers — not booking notes.'
                     : 'People appear here the first time they book, whether that is online or one you add yourself.'
             "
+            @sort="onSort"
         >
             <template #cell:name="{ row }">
                 {{ row.name }}
@@ -156,13 +165,31 @@ const rows = computed(() => {
             </template>
 
             <template #footer>
-                Showing <span class="numeral">{{ rows.length }}</span> of
-                <span class="numeral">{{ customers.length }}</span>
+                Showing
+                <span class="numeral">{{ customers.from ?? 0 }}</span>–<span class="numeral">{{ customers.to ?? 0 }}</span>
+                of <span class="numeral">{{ customers.total }}</span>
             </template>
 
             <template #empty-action>
-                <Button v-if="query" variant="ghost" @click="query = ''">Clear the search</Button>
+                <Button v-if="filters.search" variant="ghost" @click="query = ''">Clear the search</Button>
             </template>
         </Table>
+
+        <div v-if="customers.last_page > 1" class="mt-2 flex gap-2">
+            <Button
+                variant="secondary"
+                :disabled="customers.prev_page_url === null"
+                @click="visit({ page: customers.current_page - 1 })"
+            >
+                Previous
+            </Button>
+            <Button
+                variant="secondary"
+                :disabled="customers.next_page_url === null"
+                @click="visit({ page: customers.current_page + 1 })"
+            >
+                Next
+            </Button>
+        </div>
     </AppLayout>
 </template>

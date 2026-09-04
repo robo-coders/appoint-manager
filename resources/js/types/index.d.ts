@@ -55,6 +55,29 @@ export type PageProps<
     vertical: Vertical;
     today: string | null;
     toast: string | null;
+    /**
+     * Set after a manual diary booking. The diary swaps the optimistic row
+     * in place by `correlation_id` instead of dropping it and waiting for
+     * the redirected bookings list.
+     */
+    createdBooking: {
+        correlation_id: string | null;
+        booking: {
+            id: number;
+            staff_id: number;
+            staff_name: string;
+            service_name: string;
+            customer_name: string;
+            subject_name: string | null;
+            starts_at_local: string;
+            ends_at_local: string;
+            status: string;
+            deposit_status: string;
+            source: string;
+            duration_minutes: number | null;
+            cancellation_reason: string | null;
+        };
+    } | null;
     sms: {
         used: number;
         included: number;

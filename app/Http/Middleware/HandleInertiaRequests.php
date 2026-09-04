@@ -119,6 +119,11 @@ class HandleInertiaRequests extends Middleware
                 ? CarbonImmutable::now($tenant->timezone)->toDateString()
                 : CarbonImmutable::now()->toDateString(),
             'toast' => fn () => $request->session()->get('toast'),
+            /*
+             * The diary's optimistic row is reconciled from this, not from
+             * waiting for the redirected page's bookings list to replace it.
+             */
+            'createdBooking' => fn () => $request->session()->get('created_booking'),
             'sms' => fn () => $tenant ? app(SmsAllowance::class)->snapshot($tenant) : null,
         ];
     }

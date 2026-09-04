@@ -29,6 +29,7 @@ class StoreManualBookingRequest extends FormRequest
             'subject_name' => ['nullable', 'string', 'max:255'],
             'subject_attributes' => ['nullable', 'array'],
             'rebook_interval_days' => ['nullable', 'integer', 'min:1', 'max:730'],
+            'correlation_id' => ['nullable', 'string', 'uuid'],
         ];
 
         foreach (current_tenant()?->vertical()['subject_fields'] ?? [] as $field) {

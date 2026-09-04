@@ -7,6 +7,8 @@ export type StaffMember = { id: number; name: string; colour: string | null; is_
 
 export type DiaryBooking = {
     id: number;
+    /** Client-generated; present on optimistic rows until the store response lands. */
+    correlation_id?: string;
     staff_id: number;
     staff_name: string;
     service_name: string;

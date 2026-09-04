@@ -16,6 +16,7 @@ use App\Services\Booking\BookingService;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\BookingPayload;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,6 +24,18 @@ use Inertia\Response;
 
 class BookingController extends Controller
 {
+    private const PAGE_SIZE = 25;
+
+    /** @var array<string, string> */
+    private const SORTS = [
+        'when' => 'starts_at',
+        'customer' => 'customer',
+        'service' => 'service',
+        'staff' => 'staff',
+        'status' => 'status',
+        'amount' => 'price_at_booking',
+    ];
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Booking::class);
@@ -33,8 +46,15 @@ class BookingController extends Controller
         $status = $request->string('status')->toString();
         $from = $request->string('from')->toString();
         $to = $request->string('to')->toString();
+        $sort = $request->string('sort')->toString();
+        $direction = $request->string('direction')->toString() === 'asc' ? 'asc' : 'desc';
 
-        $query = Booking::query()->with(['staff', 'service', 'customer', 'subject'])->orderByDesc('starts_at');
+        if (! isset(self::SORTS[$sort])) {
+            $sort = 'when';
+            $direction = $request->filled('direction') ? $direction : 'desc';
+        }
+
+        $query = Booking::query()->with(['staff', 'service', 'customer', 'subject']);
 
         if (in_array($status, array_column(BookingStatus::cases(), 'value'), true)) {
             $query->where('status', $status);
@@ -48,16 +68,43 @@ class BookingController extends Controller
             $query->where('starts_at', '<', CarbonImmutable::parse($to, $tenant->timezone)->addDay()->startOfDay()->utc());
         }
 
+        $this->applySort($query, $sort, $direction);
+
         return Inertia::render('Bookings/Index', [
             'filters' => [
                 'status' => $status,
                 'from' => $from,
                 'to' => $to,
+                'sort' => $sort,
+                'direction' => $direction,
             ],
-            'bookings' => $query->limit(200)->get()->map(
-                fn (Booking $booking) => BookingPayload::toArray($booking, $tenant->timezone)
-            )->values(),
+            'bookings' => $query
+                ->paginate(self::PAGE_SIZE)
+                ->withQueryString()
+                ->through(fn (Booking $booking) => BookingPayload::toArray($booking, $tenant->timezone)),
         ]);
+    }
+
+    /**
+     * @param  Builder<Booking>  $query
+     */
+    private function applySort(Builder $query, string $sort, string $direction): void
+    {
+        match ($sort) {
+            'customer' => $query->orderBy(
+                Customer::query()->select('name')->whereColumn('customers.id', 'bookings.customer_id'),
+                $direction,
+            ),
+            'service' => $query->orderBy(
+                Service::query()->select('name')->whereColumn('services.id', 'bookings.service_id'),
+                $direction,
+            ),
+            'staff' => $query->orderBy(
+                User::query()->select('name')->whereColumn('users.id', 'bookings.staff_id'),
+                $direction,
+            ),
+            default => $query->orderBy(self::SORTS[$sort], $direction),
+        };
     }
 
     public function show(Booking $booking): Response
@@ -144,7 +191,7 @@ class BookingController extends Controller
         $subject = $this->resolveSubject($customer, $request);
 
         try {
-            $bookings->create(
+            $booking = $bookings->create(
                 $tenant,
                 $service,
                 $staff,
@@ -162,7 +209,10 @@ class BookingController extends Controller
 
         return redirect()->route('diary.index', [
             'date' => $startsAt->timezone($tenant->timezone)->toDateString(),
-        ])->with('toast', 'Booking saved.');
+        ])->with('toast', 'Booking saved.')->with('created_booking', [
+            'correlation_id' => $request->input('correlation_id'),
+            'booking' => BookingPayload::toArray($booking, $tenant->timezone),
+        ]);
     }
 
     private function createCustomer(StoreManualBookingRequest $request): Customer

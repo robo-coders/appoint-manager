@@ -7,7 +7,7 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Select from '@/Components/ui/Select.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
-import type { Money } from '@/types/models';
+import type { Money, Paginated } from '@/types/models';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 
@@ -40,13 +40,22 @@ type BookingRow = {
 };
 
 const props = defineProps<{
-    filters: { status: string; from: string; to: string };
-    bookings: BookingRow[];
+    filters: { status: string; from: string; to: string; sort: string; direction: 'asc' | 'desc' };
+    bookings: Paginated<BookingRow>;
 }>();
 
 const filters = reactive({ ...props.filters });
 
-const apply = () => router.get(route('bookings.index'), { ...filters }, { preserveState: true, replace: true });
+const visit = (overrides: Record<string, string | number> = {}) =>
+    router.get(route('bookings.index'), { ...filters, ...overrides }, { preserveState: true, replace: true });
+
+const apply = () => visit({ page: 1 });
+
+const onSort = (next: { key: string; direction: 'asc' | 'desc' }) => {
+    filters.sort = next.key;
+    filters.direction = next.direction;
+    visit({ sort: next.key, direction: next.direction, page: 1 });
+};
 
 /*
  * `narrow` is the phone layout. At 375px this table put the amount and the row
@@ -80,13 +89,12 @@ const columns: Column[] = [
 ];
 
 /*
- * Sorting is the table's own, over rows the server has already narrowed to the
- * filtered range — so the shape the rows are sorted into is `sortable`, and
- * `when` sorts on the raw local timestamp rather than on "10 Mar 09:00", which
- * would sort alphabetically and put March before February.
+ * The table no longer sorts these itself. `sort` is passed through so a click
+ * asks the server for the next page of that order — the same contract as the
+ * status and date filters above.
  */
 const rows = computed(() =>
-    props.bookings.map((booking) => ({
+    props.bookings.data.map((booking) => ({
         ...booking,
         when: booking.starts_at_local,
         customer: booking.customer_name,
@@ -151,10 +159,12 @@ const rowLabel = (row: Record<string, unknown>) =>
         <Table
             :columns="columns"
             :rows="rows"
+            :sort="{ key: filters.sort, direction: filters.direction }"
             label="Bookings"
             :row-label="rowLabel"
             empty-title="No bookings in this range"
             empty-description="Widen the dates, clear the status filter, or open the diary and add one."
+            @sort="onSort"
         >
             <template #cell:when="{ row }">
                 <span class="numeral">{{ whenLabel(String(row.starts_at_local)) }}</span>
@@ -192,13 +202,31 @@ const rowLabel = (row: Record<string, unknown>) =>
             </template>
 
             <template #footer>
-                Showing <span class="numeral">{{ rows.length }}</span>
-                booking{{ rows.length === 1 ? '' : 's' }}
+                Showing
+                <span class="numeral">{{ bookings.from ?? 0 }}</span>–<span class="numeral">{{ bookings.to ?? 0 }}</span>
+                of <span class="numeral">{{ bookings.total }}</span>
             </template>
 
             <template #empty-action>
                 <Button variant="ghost" @click="router.get(route('bookings.index'))">Clear the filters</Button>
             </template>
         </Table>
+
+        <div v-if="bookings.last_page > 1" class="mt-2 flex gap-2">
+            <Button
+                variant="secondary"
+                :disabled="bookings.prev_page_url === null"
+                @click="visit({ page: bookings.current_page - 1 })"
+            >
+                Previous
+            </Button>
+            <Button
+                variant="secondary"
+                :disabled="bookings.next_page_url === null"
+                @click="visit({ page: bookings.current_page + 1 })"
+            >
+                Next
+            </Button>
+        </div>
     </AppLayout>
 </template>

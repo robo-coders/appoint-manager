@@ -87,6 +87,7 @@ const form = useForm({
     customer_phone: '',
     subject_name: '',
     rebook_interval_days: (props.services[0]?.suggested_interval_days ?? '') as string | number,
+    correlation_id: '',
 });
 
 const intervalLabel = (days: number) => {
@@ -121,7 +122,12 @@ const intervalOptions = computed(() => {
     ];
 });
 
-const shown = computed(() => annotate([...props.bookings, ...optimistic.value], props.is_today ? nowLocal.value : null));
+const shown = computed(() => {
+    const serverIds = new Set(props.bookings.map((booking) => booking.id));
+    const extras = optimistic.value.filter((booking) => !serverIds.has(booking.id));
+
+    return annotate([...props.bookings, ...extras], props.is_today ? nowLocal.value : null);
+});
 
 const gaps = computed<Gap[]>(() => {
     if (props.view !== 'day') return [];
@@ -220,9 +226,14 @@ const submit = () => {
     const [hour, minute] = (time ?? '09:00').split(':').map(Number);
     const end = hour * 60 + minute + (service?.duration_minutes ?? 60);
 
-    // Optimistic, and local-only until `bookings.store` answers. See DECISIONS.md.
+    // Optimistic until `bookings.store` answers, then swapped in place by
+    // `correlation_id` so the row never disappears between temp and real id.
+    const correlationId = crypto.randomUUID();
+    form.correlation_id = correlationId;
+
     const temp: DiaryBooking = {
         id: -Date.now(),
+        correlation_id: correlationId,
         staff_id: form.staff_id,
         staff_name: person?.name ?? '',
         service_name: service?.name ?? '',
@@ -243,13 +254,25 @@ const submit = () => {
 
     form.post(route('bookings.store'), {
         preserveScroll: true,
+        preserveState: true,
         onError: () => {
-            optimistic.value = optimistic.value.filter((booking) => booking.id !== temp.id);
+            optimistic.value = optimistic.value.filter((booking) => booking.correlation_id !== correlationId);
             formError.value = form.errors.starts_at || 'That time isn’t free. Pick another slot.';
             createOpen.value = true;
         },
-        onSuccess: () => {
-            optimistic.value = optimistic.value.filter((booking) => booking.id !== temp.id);
+        onSuccess: (visit) => {
+            const created = visit.props.createdBooking;
+            const index = optimistic.value.findIndex((booking) => booking.correlation_id === correlationId);
+
+            if (created?.booking && created.correlation_id === correlationId && index !== -1) {
+                optimistic.value[index] = {
+                    ...created.booking,
+                    correlation_id: correlationId,
+                };
+            } else if (index !== -1) {
+                optimistic.value.splice(index, 1);
+            }
+
             form.reset();
             form.service_id = props.services[0]?.id ?? 0;
             form.rebook_interval_days = props.services[0]?.suggested_interval_days ?? '';

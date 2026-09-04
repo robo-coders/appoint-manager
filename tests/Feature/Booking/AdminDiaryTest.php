@@ -63,8 +63,8 @@ it('shows the diary, bookings list and customer detail for the current tenant on
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Bookings/Index')
-            ->has('bookings', 1)
-            ->where('bookings.0.customer_name', 'Pat Quinn'));
+            ->has('bookings.data', 1)
+            ->where('bookings.data.0.customer_name', 'Pat Quinn'));
 
     $this->get(route('bookings.show', $booking))->assertOk();
     $this->get(route('bookings.show', $foreignBooking))->assertNotFound();
@@ -73,8 +73,8 @@ it('shows the diary, bookings list and customer detail for the current tenant on
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Customers/Index')
-            ->has('customers', 1)
-            ->where('customers.0.name', 'Pat Quinn'));
+            ->has('customers.data', 1)
+            ->where('customers.data.0.name', 'Pat Quinn'));
 
     $this->get(route('customers.show', $customer))->assertOk();
     $this->get(route('customers.show', $foreign))->assertNotFound();
@@ -95,7 +95,7 @@ it('creates a manual diary booking without a deposit', function () {
         'end_time' => '17:00:00',
     ]);
 
-    actingAsTenant($owner)
+    $stored = actingAsTenant($owner)
         ->post(route('bookings.store'), [
             'service_id' => $service->id,
             'staff_id' => $owner->id,
@@ -103,8 +103,18 @@ it('creates a manual diary booking without a deposit', function () {
             'customer_name' => 'Sam Lee',
             'customer_email' => 'sam@example.com',
             'subject_name' => 'Ash',
+            'correlation_id' => '11111111-1111-4111-8111-111111111111',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('created_booking.correlation_id', '11111111-1111-4111-8111-111111111111')
+        ->assertSessionHas('created_booking.booking.customer_name', 'Sam Lee')
+        ->assertSessionHas('created_booking.booking.id');
+
+    actingAsTenant($owner)
+        ->get($stored->headers->get('Location'))
+        ->assertInertia(fn ($page) => $page
+            ->where('createdBooking.correlation_id', '11111111-1111-4111-8111-111111111111')
+            ->where('createdBooking.booking.customer_name', 'Sam Lee'));
 
     $booking = Booking::query()->first();
 
