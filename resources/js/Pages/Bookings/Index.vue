@@ -101,6 +101,7 @@ const STATUS_LABELS: Record<string, string> = {
     pending: 'Awaiting deposit',
     confirmed: 'Confirmed',
     cancelled: 'Cancelled',
+    declined: 'Declined',
     completed: 'Completed',
     no_show: 'No show',
 };
@@ -137,6 +138,7 @@ const rowLabel = (row: Record<string, unknown>) =>
                     { value: 'pending', label: 'Awaiting deposit' },
                     { value: 'confirmed', label: 'Confirmed' },
                     { value: 'cancelled', label: 'Cancelled' },
+                    { value: 'declined', label: 'Declined' },
                     { value: 'completed', label: 'Completed' },
                     { value: 'no_show', label: 'No show' },
                 ]"

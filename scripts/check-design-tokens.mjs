@@ -24,8 +24,28 @@ import tailwind from '../tailwind.config.js';
  */
 const TOKENS = 'resources/css/tokens.css';
 const EDITORIAL_TOKENS = 'resources/css/marketing-editorial-tokens.css';
+
+/*
+ * The logo files, and the third exemption from the raw-colour rule.
+ *
+ * They are artwork, not markup. An SVG loaded through `<img src>` — which is
+ * how every one of them is used — is its own document: it cannot see the page's
+ * stylesheet, so it cannot read `var(--ink)`, and a fill written that way
+ * renders as nothing at all. The colours have to be literals in the file.
+ *
+ * So they are exempt from `raw-hex` and gated by BRAND_ARTWORK below instead,
+ * which is the stricter rule of the two: it does not merely allow a literal, it
+ * requires every literal in these files to be one of the three token values the
+ * brand is drawn from. A logo recoloured to something off-palette fails here.
+ *
+ * `icon-on-paper.svg` is in the list and used by nothing. It is the source the
+ * favicons under `public/` were rendered from, kept beside the four the UI
+ * loads so the next render starts from the same file.
+ */
+const BRAND_ARTWORK = globSync('resources/js/assets/*.svg');
+
 const FILES = globSync('resources/**/*.{vue,ts,js,mjs,css,blade.php,svg}').filter(
-    (f) => f !== TOKENS && f !== EDITORIAL_TOKENS,
+    (f) => f !== TOKENS && f !== EDITORIAL_TOKENS && !BRAND_ARTWORK.includes(f),
 );
 
 const PALETTE =
@@ -149,7 +169,34 @@ const MIRRORS = [
     { file: 'app/Support/SurfaceRoutes.php', re: /'background_color'\s*=>\s*'(#[0-9a-fA-F]{3,8})'/, token: 'paper' },
 ];
 
+/*
+ * The three values the logo files are allowed to contain, by the token each one
+ * is. Every hex in every brand asset must be one of them — see BRAND_ARTWORK.
+ *
+ * This is the same bargain as MIRRORS, one level stricter. A mirror names one
+ * value in one file and asserts it has not drifted; this asserts that a whole
+ * file contains nothing *but* values that have not drifted, which is what you
+ * want from a file nobody reads and everybody looks at.
+ */
+const ARTWORK_TOKENS = ['ink', 'paper', 'accent'];
+
 const drift = [];
+
+const artworkPalette = new Map(ARTWORK_TOKENS.map((token) => [tokenValue(token), token]));
+
+for (const asset of BRAND_ARTWORK) {
+    const hexes = readFileSync(asset, 'utf8').match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
+
+    for (const hex of [...new Set(hexes)]) {
+        if (!artworkPalette.has(hex.toLowerCase())) {
+            drift.push(
+                `${asset}: ${hex} is not a brand colour ` +
+                    `(${ARTWORK_TOKENS.map((t) => `--${t} ${tokenValue(t)}`).join(', ')})`,
+            );
+        }
+    }
+}
+
 for (const mirror of MIRRORS) {
     const found = (readFileSync(mirror.file, 'utf8').match(mirror.re) || [, null])[1];
     const expected = tokenValue(mirror.token);
@@ -363,7 +410,8 @@ if (total === 0 && drift.length === 0) {
     console.log(
         `design tokens: clean — ${FILES.length} files under resources/, no off-token values` +
             (ignoredTotal ? `, ${ignoredTotal} explicit opt-out${ignoredTotal === 1 ? '' : 's'}` : '') +
-            `, ${MIRRORS.length} mirrored values and ${MOCKUPS.length} mockup token blocks verified against tokens.css.`,
+            `, ${MIRRORS.length} mirrored values, ${BRAND_ARTWORK.length} logo files ` +
+            `and ${MOCKUPS.length} mockup token blocks verified against tokens.css.`,
     );
     process.exit(0);
 }

@@ -100,6 +100,8 @@ class OnboardingController extends Controller
                 'address_line_2' => $tenant->address_line_2,
                 'city' => $tenant->city,
                 'postcode' => $tenant->postcode,
+                'booking_mode' => $tenant->booking_mode->value,
+                'request_requires_deposit' => $tenant->request_requires_deposit,
             ],
             'services' => $serviceRows,
             'staff' => $staff->map(fn (User $user) => [

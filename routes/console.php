@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('bookings:release-expired')->everyMinute();
+Schedule::command('bookings:expire-requests')->hourly();
 Schedule::command('waitlist:expire-offers')->everyMinute();
 Schedule::command('bookings:daily-agenda')->hourly();
 Schedule::command('billing:dunning')->daily();

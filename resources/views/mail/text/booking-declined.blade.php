@@ -1,0 +1,7 @@
+{!! $heading !!}
+
+{!! $lede !!}
+
+{!! $rowsText !!}
+
+{!! $footer !!}

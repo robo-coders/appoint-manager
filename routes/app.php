@@ -68,6 +68,8 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/approve', [BookingController::class, 'approve'])->name('bookings.approve');
+    Route::post('/bookings/{booking}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
@@ -104,6 +106,7 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('/settings/booking-link/qr', [SettingsController::class, 'qr'])->name('settings.booking-link.qr');
     Route::get('/settings/branding', [BrandingController::class, 'edit'])->name('settings.branding.edit');
     Route::patch('/settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
     Route::get('/settings/payments', [PaymentSettingsController::class, 'show'])->name('settings.payments.show');

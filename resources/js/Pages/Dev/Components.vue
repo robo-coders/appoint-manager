@@ -569,7 +569,7 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </State>
                 </Specimen>
 
-                <Specimen name="AppLogo" note="Mark and wordmark. `tone=&quot;brand&quot;` takes the tenant's colour and is only for the public booking page — it was dead until --brand existed.">
+                <Specimen name="AppLogo" note="Four files, one component: the lockup and the mark, each in a light and a reversed colourway. `tone=&quot;brand&quot;` is gone with the hand-drawn SVG it recoloured — artwork loaded as a file cannot inherit currentColor, and the one surface a tenant's colour was ever for is the public booking page, which wears the salon's initial and not our logo.">
                     <State name="Lockup, mark, and at favicon size">
                         <div class="flex items-center gap-8">
                             <AppLogo :size="24" />
@@ -577,12 +577,11 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                             <AppLogo :size="16" variant="mark" />
                         </div>
                     </State>
-                    <State name="tone=&quot;brand&quot; — defaults to ink, overridden per tenant">
-                        <div class="flex items-center gap-8">
-                            <AppLogo :size="24" tone="brand" />
-                            <span style="--brand: var(--brand-forest)"><AppLogo :size="24" tone="brand" /></span>
-                            <span style="--brand: var(--brand-plum)"><AppLogo :size="24" tone="brand" /></span>
-                            <span style="--brand: var(--brand-navy)"><AppLogo :size="24" tone="brand" /></span>
+                    <State name="reversed — the same two, for a dark ground">
+                        <div class="flex items-center gap-8 rounded bg-ink p-4">
+                            <AppLogo :size="24" reversed />
+                            <AppLogo :size="24" variant="mark" reversed />
+                            <AppLogo :size="16" variant="mark" reversed />
                         </div>
                     </State>
                 </Specimen>

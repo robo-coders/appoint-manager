@@ -92,7 +92,7 @@ const page = usePage();
                 :href="page.props.urls.marketing"
                 class="inline-flex w-fit rounded transition duration-fast ease-product hover:opacity-70"
             >
-                <AppLogo :size="20" />
+                <AppLogo :size="40" />
             </a>
 
             <div class="mt-12 w-full max-w-auth-form md:my-auto md:mt-auto">

@@ -60,7 +60,9 @@ final class ProposalPayload
             'day_label' => $local->format('l j F'),
             'cost_line' => self::costLine($proposal, $tenant),
             'free_until' => self::freeUntil($proposal, $tenant),
-            'action_label' => 'Reserve '.$local->format('l').' at '.$local->format('H:i'),
+            'action_label' => $tenant->isRequestMode()
+                ? 'Request this time'
+                : 'Reserve '.$local->format('l').' at '.$local->format('H:i'),
             /*
              * How the salon's staff are named to a customer: first name only.
              *
@@ -101,7 +103,7 @@ final class ProposalPayload
         $price = $proposal->service->price;
         $deposit = $proposal->service->deposit_amount;
 
-        if (! $tenant->takesDeposits() || $deposit->amount === 0) {
+        if (! $tenant->takesDeposits() || $deposit->amount === 0 || ($tenant->isRequestMode() && ! $tenant->request_requires_deposit)) {
             return $price->formatted().', pay on the day';
         }
 

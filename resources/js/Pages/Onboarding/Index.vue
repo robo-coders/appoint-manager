@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BookingModeFields from '@/Components/BookingModeFields.vue';
 import Button from '@/Components/ui/Button.vue';
 import Callout from '@/Components/ui/Callout.vue';
 import Combobox from '@/Components/ui/Combobox.vue';
@@ -53,6 +54,8 @@ const props = defineProps<{
         address_line_2: string | null;
         city: string | null;
         postcode: string | null;
+        booking_mode: 'automated' | 'request';
+        request_requires_deposit: boolean;
     };
     services: Array<{
         id: number | null;
@@ -105,6 +108,8 @@ const businessForm = useForm({
     address_line_2: props.business.address_line_2 ?? '',
     city: props.business.city ?? '',
     postcode: props.business.postcode ?? '',
+    booking_mode: props.business.booking_mode,
+    request_requires_deposit: props.business.request_requires_deposit,
 });
 
 const timezoneOptions = computed(() => props.timezones.map((zone) => ({ value: zone, label: zone })));
@@ -277,6 +282,10 @@ const saveHours = () => {
                 <TextInput v-model="businessForm.city" label="Town or city" :error="businessForm.errors.city" />
                 <TextInput v-model="businessForm.postcode" label="Postcode" :error="businessForm.errors.postcode" />
             </div>
+            <BookingModeFields
+                v-model:booking-mode="businessForm.booking_mode"
+                v-model:request-requires-deposit="businessForm.request_requires_deposit"
+            />
             <div class="pt-2">
                 <Button type="submit" :loading="businessForm.processing">Save and continue</Button>
             </div>

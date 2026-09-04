@@ -88,6 +88,9 @@ const props = defineProps<{
         timezone: string;
         currency: string;
         takes_deposits: boolean;
+        booking_mode: 'automated' | 'request';
+        request_requires_deposit: boolean;
+        request_sent_message: string;
     };
     stripePublishableKey?: string | null;
     services: Array<{ id: number; name: string; duration_minutes: number; price: Money; deposit_amount: Money }>;
@@ -124,6 +127,10 @@ const waitlistSaved = ref(false);
 const error = ref('');
 const submitting = ref(false);
 const booked = ref(false);
+const requested = ref(false);
+
+const isRequestMode = computed(() => props.tenant.booking_mode === 'request');
+const requestAction = 'Request this time';
 
 /*
  * A notice is not an error.
@@ -242,7 +249,9 @@ const pickSlot = (slot: Slot) => {
         staff_ids: slot.staff_ids,
         reason: 'You chose this time',
         reason_key: 'chosen',
-        action_label: `Reserve ${local.toLocaleDateString(undefined, { weekday: 'long' })} at ${slot.starts_at_local}`,
+        action_label: isRequestMode.value
+            ? requestAction
+            : `Reserve ${local.toLocaleDateString(undefined, { weekday: 'long' })} at ${slot.starts_at_local}`,
         // The refund cut-off moves with the appointment and this page cannot
         // recompute the salon's own window, so it is dropped rather than shown
         // as a date that is no longer true.
@@ -379,9 +388,13 @@ const reserve = async () => {
             return;
         }
 
+        if (data.booking.status === 'pending' && isRequestMode.value) {
+            requested.value = true;
+
+            return;
+        }
+
         if (data.booking.status !== 'confirmed') {
-            // Pending with no client secret means there is no way to pay, and
-            // the hold will quietly expire. Never imply the slot is held.
             error.value = 'We couldn’t set up payment. Nothing has been charged — please try again in a moment.';
 
             return;
@@ -473,6 +486,14 @@ const confirmPay = async () => {
         return;
     }
 
+    if (isRequestMode.value) {
+        clientSecret.value = '';
+        requested.value = true;
+        paying.value = false;
+
+        return;
+    }
+
     window.location.href = manageUrl.value;
 };
 
@@ -511,17 +532,31 @@ const joinWaitlist = async () => {
              Paid. The deposit is the last thing between here and booked.
              ============================================================ -->
         <section v-if="clientSecret" class="space-y-4">
-            <h1 class="text-20 font-medium">Pay the deposit</h1>
+            <h1 class="text-20 font-medium">{{ isRequestMode ? 'Hold the deposit' : 'Pay the deposit' }}</h1>
             <p class="text-15 text-ink-2">
-                {{ proposal?.cost_line }}. The appointment is held for 15 minutes while you pay.
+                {{ proposal?.cost_line }}.
+                {{
+                    isRequestMode
+                        ? 'Your card is held, not charged, until they confirm.'
+                        : 'The appointment is held for 15 minutes while you pay.'
+                }}
             </p>
             <div id="card-element" class="rounded border border-rule bg-white p-3"></div>
-            <Button variant="brand" block :loading="paying" @click="confirmPay">Pay now</Button>
+            <Button variant="brand" block :loading="paying" @click="confirmPay">
+                {{ isRequestMode ? 'Hold and send request' : 'Pay now' }}
+            </Button>
         </section>
 
-        <!-- ============================================================
-             Booked, with nothing to pay.
-             ============================================================ -->
+        <section v-else-if="requested" class="space-y-3">
+            <h1 class="text-34 font-medium">Request sent</h1>
+            <p class="text-15 text-ink-2">
+                {{ tenant.request_sent_message }}
+            </p>
+            <p v-if="proposal" class="text-15 text-ink-2">
+                {{ proposal.day_label }} at <span class="font-mono">{{ proposal.time }}</span>
+            </p>
+        </section>
+
         <section v-else-if="booked" class="space-y-3">
             <h1 class="text-34 font-medium">You’re booked</h1>
             <p class="text-15 text-ink-2">

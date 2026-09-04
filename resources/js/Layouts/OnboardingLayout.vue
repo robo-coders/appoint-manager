@@ -58,7 +58,7 @@ const hrefFor = (key: string) =>
     <div class="flex min-h-screen bg-paper">
         <div class="flex w-full flex-col px-6 py-8 md:px-12 md:py-12 lg:px-16">
             <div class="flex items-center justify-between gap-4">
-                <AppLogo :size="20" />
+                <AppLogo :size="40" />
                 <p class="truncate text-13 text-ink-2">{{ page.props.tenant?.name }}</p>
             </div>
 

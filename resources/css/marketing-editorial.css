@@ -110,11 +110,34 @@ header.top {
     width: 100%;
 }
 
+/*
+ * The masthead lockup.
+ *
+ * It was the product name set at 16px/500. It is `resources/js/assets/logo.svg`
+ * now, at 32px — and the masthead is the same height it was, because its height
+ * has never come from this element. `.navlinks a` carries `min-height: 44px`
+ * for the touch target, and that is what `header.top` measures; anything here
+ * under 44px is free. 32px is the size at which the drawn wordmark sets about
+ * as large as the 16px of live type it replaces, the mark being twice its
+ * x-height.
+ *
+ * Width is left to `auto` from the artwork's 260x64, and both attributes are on
+ * the `<img>` itself, so the box is reserved before the file lands and the nav
+ * does not jump on load.
+ *
+ * Where the file comes from, and why it is not named in this stylesheet, is in
+ * `marketing/partials/nav.blade.php` next to the `Vite::asset()` call.
+ */
 .logo {
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
     text-decoration: none;
+}
+
+.logo img {
+    display: block;
+    height: 32px;
+    width: auto;
 }
 
 .navlinks {
@@ -982,9 +1005,11 @@ main {
  *
  * It is 2.45:1 on the canvas, which is under WCAG AA for text. It is the
  * mockup's value and it stays, because it is the right weight for the two
- * things it is left on: the diary illustration's time gutter, the em-dash
- * bullet on a list, and the label inside the empty logo slot. None of the three
- * carries information a reader needs to take in.
+ * things it is left on: the diary illustration's time gutter and the em-dash
+ * bullet on a list. Neither carries information a reader needs to take in.
+ *
+ * There was a third — the word "Logo" inside the empty footer slot — and it
+ * went when the real mark arrived.
  *
  * **Everything a person actually has to read is --ink-2**, at 5.12:1 — the
  * footnotes, the hints, the placeholders, the table captions, the copyright.
@@ -1001,10 +1026,10 @@ main {
  * company pages and the legal ones are three different reasons to be down
  * here, and at 375 a single row of nine links wraps into an unreadable block.
  *
- * The logo slot is empty and says so. There is no wordmark asset yet, and a
- * placeholder that looks like a logo is worse than a marked space — somebody
- * ships it. It is a dashed hairline box, labelled, and it comes out in one
- * commit when there is a real mark to put in it.
+ * The mark sits where the empty slot was. That slot was a dashed hairline box
+ * with the word "Logo" in it — held that way because a placeholder that looks
+ * like a logo is one somebody ships — and it came out in one commit when there
+ * was real artwork, which is what it was for.
  */
 footer.foot {
     border-top: 1px solid var(--rule);
@@ -1034,18 +1059,16 @@ footer.foot {
     gap: 12px;
 }
 
-.logo-slot {
+/*
+ * 36px, the size of the box it replaces, and `resources/js/assets/icon.svg`
+ * rather than the lockup — the wordmark is the line beside it. No border and no
+ * radius of our own: the mark draws its own rounded square.
+ */
+.foot-icon {
     width: 36px;
     height: 36px;
     flex: none;
-    border: 1px dashed var(--rule);
-    border-radius: var(--radius-slot);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    letter-spacing: 0.02em;
-    color: var(--ink-3);
+    display: block;
 }
 
 .foot-wordmark {

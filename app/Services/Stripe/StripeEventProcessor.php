@@ -76,6 +76,10 @@ final class StripeEventProcessor
             return;
         }
 
+        if ($booking->request_expires_at !== null && $booking->status === BookingStatus::Pending) {
+            return;
+        }
+
         $expected = $booking->deposit_at_booking->amount;
         $received = (int) ($object['amount_received'] ?? $object['amount'] ?? 0);
 

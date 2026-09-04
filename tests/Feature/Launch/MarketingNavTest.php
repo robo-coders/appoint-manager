@@ -400,13 +400,22 @@ it('renders a byte-identical header and footer on every page', function () {
     }
 });
 
-it('leaves the logo slot empty and marked rather than faking a mark', function () {
+it('puts the real mark in the footer, and the placeholder slot is gone', function () {
     $footer = regionOf($this->get('/')->getContent(), 'footer');
 
-    // There is no logo asset. A placeholder that looks like one gets shipped.
-    expect($footer)->toContain('logo-slot')
-        ->and($footer)->not->toContain('<img')
-        ->and($footer)->not->toContain('<svg');
+    /*
+     * This test used to assert the opposite: that the slot was empty and said
+     * so, because a placeholder that looks like a logo is one somebody ships.
+     * There is artwork now, so the assertion inverts — the dashed box must be
+     * gone rather than merely filled, or the two would sit on top of each other.
+     */
+    expect($footer)->not->toContain('logo-slot')
+        ->and($footer)->toContain('foot-icon')
+        ->and($footer)->toContain('icon');
+
+    // The mark is decorative: the wordmark beside it is the accessible name,
+    // and a screen reader that reads both reads the product twice.
+    expect($footer)->toContain('alt=""');
 });
 
 it('carries the legal links, the contact address and a copyright line in the footer', function (string $path) {

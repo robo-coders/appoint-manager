@@ -4,6 +4,7 @@ import DayGrid from '@/Components/Diary/DayGrid.vue';
 import { annotate, gapsIn, minutesOf, timeOf, type DiaryBooking, type Gap } from '@/Components/Diary/diary';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
+import PendingRequests, { type PendingRequest } from '@/Components/PendingRequests.vue';
 import EmptyState from '@/Components/ui/EmptyState.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Select from '@/Components/ui/Select.vue';
@@ -58,6 +59,7 @@ const props = defineProps<{
     /** True when nobody has hours on this day. The grid is not drawn. */
     closed: boolean;
     next_open: string | null;
+    pending_requests: PendingRequest[];
 }>();
 
 const page = usePage();
@@ -295,6 +297,8 @@ watch(
         <PageHeader :title="heading" :description="`${view === 'week' ? 'Week from ' + range_start : timezone}`">
             <Button @click="createOpen = true">New booking</Button>
         </PageHeader>
+
+        <PendingRequests class="mb-6" :requests="pending_requests" />
 
         <div class="mb-4 flex flex-wrap items-center gap-2">
             <Button variant="secondary" @click="go(addDays(date, view === 'week' ? -7 : -1))">Earlier</Button>

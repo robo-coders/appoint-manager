@@ -19,6 +19,7 @@ class ReleaseExpiredPendingBookings extends Command
 
         Booking::withoutGlobalScopes()
             ->where('status', BookingStatus::Pending->value)
+            ->whereNull('request_expires_at')
             ->where('created_at', '<=', $cutoff)
             ->get()
             ->each(fn (Booking $booking) => $bookings->cancel($booking, 'checkout_expired'));

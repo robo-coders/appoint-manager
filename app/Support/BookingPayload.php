@@ -40,6 +40,7 @@ class BookingPayload
             'source' => $booking->source->value,
             'public_token' => $booking->public_token,
             'cancellation_reason' => $booking->cancellation_reason,
+            'request_expires_at' => $booking->request_expires_at?->utc()->toIso8601String(),
             'duration_minutes' => $booking->service?->duration_minutes,
         ], $extra);
     }

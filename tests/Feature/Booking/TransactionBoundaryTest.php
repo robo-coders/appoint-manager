@@ -70,12 +70,22 @@ class TransactionWatchingStripe implements StripeGateway
         return $this->inner->retrieveAccount($accountId);
     }
 
-    public function createPaymentIntent(Tenant $tenant, Booking $booking): array
+    public function createPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): array
     {
         $this->intentLevels[] = DB::transactionLevel();
         $this->inner->throwOnCreate = $this->throwOnCreate;
 
-        return $this->inner->createPaymentIntent($tenant, $booking);
+        return $this->inner->createPaymentIntent($tenant, $booking, $captureMethod);
+    }
+
+    public function capturePaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->inner->capturePaymentIntent($paymentIntentId, $accountId);
+    }
+
+    public function cancelPaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->inner->cancelPaymentIntent($paymentIntentId, $accountId);
     }
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string

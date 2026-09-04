@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BookingLink from '@/Components/BookingLink.vue';
+import BookingModeFields from '@/Components/BookingModeFields.vue';
 import Button from '@/Components/ui/Button.vue';
 import Combobox from '@/Components/ui/Combobox.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
@@ -41,6 +43,14 @@ const props = defineProps<{
         address_line_2: string | null;
         city: string | null;
         postcode: string | null;
+        booking_mode: 'automated' | 'request';
+        request_requires_deposit: boolean;
+    };
+    booking_link: {
+        url: string;
+        live: boolean;
+        qr_url: string | null;
+        qr_download_url: string | null;
     };
     timezones: string[];
 }>();
@@ -54,6 +64,8 @@ const form = useForm({
     address_line_2: props.business.address_line_2 ?? '',
     city: props.business.city ?? '',
     postcode: props.business.postcode ?? '',
+    booking_mode: props.business.booking_mode,
+    request_requires_deposit: props.business.request_requires_deposit,
 });
 
 const savedAt = ref<number | null>(null);
@@ -79,6 +91,14 @@ const submit = () =>
         <PageHeader title="Settings" description="Business details, branding and payments." />
 
         <SettingsNav current="business" />
+
+        <BookingLink
+            class="mt-6 max-w-measure"
+            :url="booking_link.url"
+            :live="booking_link.live"
+            :qr-url="booking_link.qr_url"
+            :qr-download-url="booking_link.qr_download_url"
+        />
 
         <form class="mt-6 max-w-measure space-y-4" @submit.prevent="submit">
             <TextInput
@@ -131,6 +151,11 @@ const submit = () =>
                 <TextInput v-model="form.city" label="Town or city" :error="form.errors.city" />
                 <TextInput v-model="form.postcode" label="Postcode" mono :error="form.errors.postcode" />
             </div>
+
+            <BookingModeFields
+                v-model:booking-mode="form.booking_mode"
+                v-model:request-requires-deposit="form.request_requires_deposit"
+            />
 
             <div class="flex items-center gap-4 pt-2">
                 <Button type="submit" :loading="form.processing">Save</Button>

@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Services\Booking\FreedSlots;
 use App\Services\Rebooking\OverdueSubjects;
 use App\Support\Money;
+use App\Support\PendingRequestPayload;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -49,6 +50,7 @@ class DashboardController extends Controller
                 'no_shows' => $this->noShowRate($monthStart, $nextMonth, $lastMonth),
             ],
             'today' => $this->today($tenant, $freed, $todayStart, $now),
+            'pending_requests' => PendingRequestPayload::forTenant($tenant),
         ]);
     }
 
@@ -79,7 +81,7 @@ class DashboardController extends Controller
             ->whereNotNull('waitlist_entry_id')
             ->where('starts_at', '>=', $from->utc())
             ->where('starts_at', '<', $to->utc())
-            ->where('status', '!=', BookingStatus::Cancelled->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
             ->get(['id', 'status', 'price_at_booking']);
 
         $unconfirmed = $rows->where('status', BookingStatus::Pending)->count();
@@ -108,7 +110,7 @@ class DashboardController extends Controller
     {
         $rows = Booking::query()
             ->where('deposit_status', DepositStatus::Paid->value)
-            ->where('status', '!=', BookingStatus::Cancelled->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
             ->where('starts_at', '>=', CarbonImmutable::now('UTC'))
             ->get(['id', 'deposit_at_booking']);
 
@@ -160,7 +162,7 @@ class DashboardController extends Controller
             ->with('staff')
             ->where('starts_at', '>=', $todayStart->utc())
             ->where('starts_at', '<', $todayStart->addDay()->utc())
-            ->where('status', '!=', BookingStatus::Cancelled->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
             ->get()
             ->map(fn (Booking $booking) => $booking->staff?->name)
             ->filter()

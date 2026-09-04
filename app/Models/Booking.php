@@ -39,6 +39,7 @@ class Booking extends Model
         'rebook_interval_days',
         'stripe_payment_intent_id',
         'waitlist_entry_id',
+        'request_expires_at',
     ];
 
     protected static function booted(): void
@@ -67,12 +68,18 @@ class Booking extends Model
             'deposit_at_booking' => MoneyCast::class,
             'deposit_paid_at' => 'datetime',
             'reminder_cancelled_at' => 'datetime',
+            'request_expires_at' => 'datetime',
         ];
     }
 
     public function occupiesTime(): bool
     {
-        return $this->status !== BookingStatus::Cancelled;
+        return ! in_array($this->status, [BookingStatus::Cancelled, BookingStatus::Declined], true);
+    }
+
+    public function isBookingRequest(): bool
+    {
+        return $this->status === BookingStatus::Pending && $this->request_expires_at !== null;
     }
 
     /**

@@ -281,7 +281,8 @@ test('the header and footer are the same component on every page', async ({ page
                 headerHeight: Math.round(head.height),
                 headerLinks: document.querySelectorAll('header a').length,
                 footerLinks: foot.querySelectorAll('a').length,
-                // The empty logo slot, which must stay empty until there is art.
+                // The mark, which replaced the dashed placeholder slot. One
+                // image, and the slot itself gone rather than emptied.
                 logoSlot: foot.querySelectorAll('.logo-slot').length,
                 logoArt: foot.querySelectorAll('img, svg').length,
             });
@@ -296,8 +297,8 @@ test('the header and footer are the same component on every page', async ({ page
         expect(shapes[name], `${name}'s chrome differs from the home page's`).toBe(first);
     }
 
-    expect(JSON.parse(first).logoSlot).toBe(1);
-    expect(JSON.parse(first).logoArt).toBe(0);
+    expect(JSON.parse(first).logoSlot).toBe(0);
+    expect(JSON.parse(first).logoArt).toBe(1);
 });
 
 /* The surface attribute every other layer keys off. */

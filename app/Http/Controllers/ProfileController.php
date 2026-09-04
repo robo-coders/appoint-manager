@@ -66,7 +66,7 @@ class ProfileController extends Controller
 
         $upcoming = Booking::withoutGlobalScopes()
             ->where('staff_id', $user->id)
-            ->where('status', '!=', BookingStatus::Cancelled->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
             ->where('starts_at', '>=', now())
             ->count();
 

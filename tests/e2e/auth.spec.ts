@@ -198,6 +198,17 @@ test.describe('setting up a business at 375', () => {
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
 
         await page.getByLabel('Business name').fill('Willow Street Grooming');
+        /*
+         * The trade, and it is required — `RegisterRequest` wants a key that
+         * exists in `verticals`, and the control carries `required` so the
+         * browser will not even post without it. This walk-through predates the
+         * field: it filled every other input, clicked Create the account, and
+         * the form silently refused to submit, so the spec sat on step one
+         * waiting for step two's heading until it timed out. A missing select
+         * fails as a timeout somewhere else, which is the worst shape a test
+         * failure can take.
+         */
+        await page.getByLabel('What kind of business?').selectOption('groomer');
         await page.getByLabel('Your name').fill('Maya Chen');
         await page.getByLabel('Email').fill(SIGNUP_EMAIL);
         await page.getByLabel('Password', { exact: false }).first().fill('correct-horse-battery');

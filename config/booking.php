@@ -6,6 +6,7 @@ return [
     'horizon_days' => 60,
     'availability_cache_ttl' => 60,
     'pending_hold_minutes' => 15,
+    'request_expiry_hours' => 24,
     'refund_window_hours' => 48,
 
     /*

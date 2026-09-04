@@ -10,6 +10,7 @@ use App\Models\TimeOff;
 use App\Models\User;
 use App\Services\Booking\FreedSlots;
 use App\Support\BookingPayload;
+use App\Support\PendingRequestPayload;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -119,6 +120,7 @@ class DiaryController extends Controller
                 ])
                 ->values(),
             'bookings' => $bookings,
+            'pending_requests' => PendingRequestPayload::forTenant($tenant),
         ]);
     }
 

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\BookingMode;
 use App\Support\BrandPalette;
+use App\Support\Surface;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -60,6 +62,8 @@ class Tenant extends Model
         'sms_cycle_started_at',
         'sms_warnings_sent',
         'monthly_price_override_pence',
+        'booking_mode',
+        'request_requires_deposit',
     ];
 
     /**
@@ -131,6 +135,8 @@ class Tenant extends Model
             'sms_cycle_started_at' => 'datetime',
             'sms_warnings_sent' => 'array',
             'monthly_price_override_pence' => 'integer',
+            'booking_mode' => BookingMode::class,
+            'request_requires_deposit' => 'boolean',
         ];
     }
 
@@ -256,6 +262,29 @@ class Tenant extends Model
     public function takesDeposits(): bool
     {
         return $this->stripe_onboarding_complete && filled($this->stripe_account_id);
+    }
+
+    public function isRequestMode(): bool
+    {
+        return $this->booking_mode === BookingMode::Request;
+    }
+
+    public function publicBookingUrl(): string
+    {
+        return Surface::bookUrlFor($this);
+    }
+
+    public function requestExpiryHours(): int
+    {
+        return (int) config('booking.request_expiry_hours');
+    }
+
+    public function requestSentMessage(): string
+    {
+        $hours = $this->requestExpiryHours();
+        $window = $hours === 24 ? 'a day' : ($hours === 1 ? 'an hour' : $hours.' hours');
+
+        return 'Request sent. '.$this->name.' will confirm within '.$window.'.';
     }
 
     public function smsEnabled(): bool

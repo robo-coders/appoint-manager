@@ -63,7 +63,7 @@ const submit = () => {
                         {{ type.label }}
                     </option>
                 </select>
-                <p v-if="form.errors.business_type" class="mt-1 text-12 text-red-600">
+                <p v-if="form.errors.business_type" class="mt-1 text-12 text-danger">
                     {{ form.errors.business_type }}
                 </p>
             </div>

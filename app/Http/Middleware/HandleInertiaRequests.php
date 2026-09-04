@@ -148,7 +148,7 @@ class HandleInertiaRequests extends Middleware
             'bookings' => Booking::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->where('starts_at', '>=', $now)
-                ->where('status', '!=', BookingStatus::Cancelled->value)
+                ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
                 ->count(),
             'customers' => Customer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count(),
             'overdue' => app(OverdueSubjects::class)->summary($tenant)['count'],

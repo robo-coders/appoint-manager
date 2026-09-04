@@ -56,7 +56,7 @@ final class StripeConnectGateway implements StripeGateway
         ];
     }
 
-    public function createPaymentIntent(Tenant $tenant, Booking $booking): array
+    public function createPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): array
     {
         $params = [
             'amount' => $booking->deposit_at_booking->amount,
@@ -67,6 +67,10 @@ final class StripeConnectGateway implements StripeGateway
                 'tenant_id' => (string) $tenant->id,
             ],
         ];
+
+        if ($captureMethod === 'manual') {
+            $params['capture_method'] = 'manual';
+        }
 
         $fee = intdiv($booking->deposit_at_booking->amount * $tenant->platform_fee_bps, 10000);
 
@@ -82,6 +86,20 @@ final class StripeConnectGateway implements StripeGateway
             'id' => $intent->id,
             'client_secret' => (string) $intent->client_secret,
         ];
+    }
+
+    public function capturePaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->client()->paymentIntents->capture($paymentIntentId, [], [
+            'stripe_account' => $accountId,
+        ]);
+    }
+
+    public function cancelPaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->client()->paymentIntents->cancel($paymentIntentId, [], [
+            'stripe_account' => $accountId,
+        ]);
     }
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string

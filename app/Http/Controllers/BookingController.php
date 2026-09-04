@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Exceptions\RequestNotPendingException;
 use App\Exceptions\SlotUnavailableException;
 use App\Http\Requests\Bookings\StoreManualBookingRequest;
 use App\Models\Booking;
@@ -83,6 +84,34 @@ class BookingController extends Controller
         $bookings->cancel($booking, $request->string('reason')->toString() ?: 'admin', $offer);
 
         return redirect()->route('bookings.index')->with('toast', 'Booking cancelled.');
+    }
+
+    public function approve(Booking $booking, BookingService $bookings): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        try {
+            $bookings->approve($booking, request()->user());
+        } catch (RequestNotPendingException $exception) {
+            return back()->withErrors(['request' => $exception->getMessage()]);
+        }
+
+        return back()->with('toast', 'Request confirmed.');
+    }
+
+    public function decline(Booking $booking, Request $request, BookingService $bookings): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        $reason = $request->string('reason')->toString() ?: null;
+
+        try {
+            $bookings->decline($booking, $reason, $request->user());
+        } catch (RequestNotPendingException $exception) {
+            return back()->withErrors(['request' => $exception->getMessage()]);
+        }
+
+        return back()->with('toast', 'Request declined.');
     }
 
     /**

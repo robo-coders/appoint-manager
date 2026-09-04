@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Settings;
 
+use App\Enums\BookingMode;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -26,6 +28,8 @@ class UpdateSettingsRequest extends FormRequest
             'address_line_2' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'postcode' => ['nullable', 'string', 'max:20'],
+            'booking_mode' => ['sometimes', 'required', Rule::enum(BookingMode::class)],
+            'request_requires_deposit' => ['sometimes', 'boolean'],
         ];
     }
 }

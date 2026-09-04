@@ -10,6 +10,7 @@ import SlideOver from '@/Components/ui/SlideOver.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { toast } from '@/lib/toast';
 import { computed, ref, watch } from 'vue';
 
 /**
@@ -52,6 +53,7 @@ type Tenant = {
     state: string;
     needs_attention: boolean;
     preview_url: string | null;
+    booking_url: string;
     feature_flags: Record<string, boolean>;
     sms: {
         used: number;
@@ -193,6 +195,15 @@ watch(
     },
 );
 
+const copyBookingLink = async (url: string) => {
+    try {
+        await navigator.clipboard.writeText(url);
+        toast('Copied.');
+    } catch {
+        toast('Could not copy.', { tone: 'danger' });
+    }
+};
+
 const tenantById = (id: string) => props.tenants.find((tenant) => String(tenant.id) === id.trim());
 
 const cloneFrom = computed(() => tenantById(clone.from_tenant_id));
@@ -271,6 +282,7 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
                 <MenuItem v-if="!row.booking_page_live" @click="router.post(route('super-admin.go-live', row.id))">
                     Publish the booking page
                 </MenuItem>
+                <MenuItem @click="copyBookingLink(row.booking_url)">Copy booking link</MenuItem>
                 <MenuItem @click="router.post(route('super-admin.preview', row.id))">Make a preview link</MenuItem>
                 <MenuItem danger @click="impersonating = row">Sign in as the owner…</MenuItem>
             </template>

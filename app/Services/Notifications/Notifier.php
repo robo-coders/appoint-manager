@@ -9,12 +9,14 @@ use App\Jobs\SendBookingReminder;
 use App\Jobs\SendSms;
 use App\Mail\BookingCancelledMail;
 use App\Mail\BookingConfirmedMail;
+use App\Mail\BookingDeclinedMail;
 use App\Mail\BookingReminderMail;
 use App\Mail\BookingRescheduledMail;
 use App\Mail\DailyAgendaMail;
 use App\Mail\RebookDueMail;
 use App\Mail\SalonCancellationMail;
 use App\Mail\SalonNewBookingMail;
+use App\Mail\SalonNewRequestMail;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Message;
@@ -25,11 +27,14 @@ use App\Models\User;
 use App\Services\Billing\SmsAllowance;
 use App\Services\Sms\SmsConsent;
 use App\Services\Sms\SmsGateway;
+use App\Support\PhoneNumber;
 use App\Support\SmsSegments;
+use App\Support\Surface;
 use App\Support\TenantContext;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
+use InvalidArgumentException;
 
 final class Notifier
 {
@@ -51,6 +56,40 @@ final class Notifier
         }
 
         $this->scheduleReminder($booking);
+    }
+
+    public function bookingRequested(Booking $booking): void
+    {
+        [$booking, $tenant] = $this->hydrate($booking);
+
+        $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
+        $url = Surface::App->to('dashboard');
+        $who = $booking->customer?->name ?? 'A customer';
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': request '.$when.' — '.$who.'. '.$url);
+
+        if ($tenant->email) {
+            $this->emailSalon($tenant, $booking, new SalonNewRequestMail($booking, $tenant), MessageType::SalonNewRequest);
+        }
+
+        $this->smsTenant($tenant, $booking, $sms, MessageType::BookingRequested);
+    }
+
+    public function bookingDeclined(Booking $booking, ?string $reason = null): void
+    {
+        [$booking, $tenant] = $this->hydrate($booking);
+        $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
+        $sms = $this->fitSms($tenant->name, function (string $salon) use ($when, $reason) {
+            $body = $salon.': that time is not available ('.$when.').';
+
+            if (filled($reason)) {
+                $body .= ' '.$reason;
+            }
+
+            return $body;
+        });
+
+        $this->emailCustomer($tenant, $booking, $booking->customer, new BookingDeclinedMail($booking, $tenant, $reason), MessageType::BookingDeclined, 'That time is not available.');
+        $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::BookingDeclined);
     }
 
     public function bookingCancelled(Booking $booking, string $refundStatus): void
@@ -176,6 +215,33 @@ final class Notifier
     {
         Mail::to($tenant->email)->queue($mail);
         $this->log($tenant, null, $booking, MessageChannel::Email, $type, (string) $tenant->email, $type->value, MessageStatus::Sent, null);
+    }
+
+    private function smsTenant(Tenant $tenant, Booking $booking, string $body, MessageType $type): void
+    {
+        if (! $this->smsEnabled($tenant) || ! filled($tenant->phone)) {
+            return;
+        }
+
+        try {
+            $to = PhoneNumber::toE164((string) $tenant->phone, $tenant->country ?? 'GB');
+        } catch (InvalidArgumentException) {
+            return;
+        }
+
+        $body = SmsSegments::sanitise($body);
+        $segments = SmsSegments::count($body);
+
+        if (! app(SmsAllowance::class)->canSend($tenant, $segments)) {
+            return;
+        }
+
+        $message = $this->log(
+            $tenant, null, $booking, MessageChannel::Sms, $type,
+            $to, $body, MessageStatus::Queued, null, $segments,
+        );
+
+        SendSms::dispatch($message->id);
     }
 
     /**

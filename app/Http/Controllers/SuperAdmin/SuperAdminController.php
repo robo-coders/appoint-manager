@@ -66,6 +66,7 @@ class SuperAdminController extends Controller
                     'preview_url' => $tenant->preview_token
                         ? book_url(null, 'preview/'.$tenant->preview_token)
                         : null,
+                    'booking_url' => $tenant->publicBookingUrl(),
                     'sms' => app(SmsAllowance::class)->snapshot($tenant),
                     'monthly_price' => BillingPrice::formatPence(BillingPrice::forTenant($tenant)),
                     'monthly_price_override_pence' => $tenant->monthly_price_override_pence,

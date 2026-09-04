@@ -9,7 +9,9 @@ use App\Enums\SlotOfferStatus;
 use App\Exceptions\OfferUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\PaymentsNotConfiguredException;
+use App\Exceptions\RequestNotPendingException;
 use App\Exceptions\SlotUnavailableException;
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
@@ -92,9 +94,15 @@ final class BookingService
 
     public function needsDeposit(Tenant $tenant, Service $service, BookingSource $source): bool
     {
-        return $source !== BookingSource::Manual
-            && $tenant->takesDeposits()
-            && $service->deposit_amount->amount > 0;
+        if ($source === BookingSource::Manual) {
+            return false;
+        }
+
+        if ($tenant->isRequestMode() && ! $tenant->request_requires_deposit) {
+            return false;
+        }
+
+        return $tenant->takesDeposits() && $service->deposit_amount->amount > 0;
     }
 
     public function create(
@@ -113,9 +121,10 @@ final class BookingService
         $startsAt = $startsAt->utc();
         $endsAt = $startsAt->addMinutes($service->duration_minutes);
         $needsDeposit = $this->needsDeposit($tenant, $service, $source);
+        $isRequest = $tenant->isRequestMode() && $source !== BookingSource::Manual;
         app(TenantContext::class)->set($tenant);
 
-        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $waitlistEntryId, $rebookIntervalDays) {
+        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $isRequest, $waitlistEntryId, $rebookIntervalDays) {
             $this->lockStaffRow($tenant, $staff);
 
             if ($this->afterLock !== null) {
@@ -123,6 +132,8 @@ final class BookingService
             }
 
             $this->assertSlotOpen($tenant, $service, $staff, $startsAt);
+
+            $resolved = $status ?? ($isRequest || $needsDeposit ? BookingStatus::Pending : BookingStatus::Confirmed);
 
             $booking = new Booking;
             $booking->forceFill([
@@ -134,12 +145,15 @@ final class BookingService
                 'waitlist_entry_id' => $waitlistEntryId,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
-                'status' => $status ?? ($needsDeposit ? BookingStatus::Pending : BookingStatus::Confirmed),
+                'status' => $resolved,
                 'deposit_status' => $depositStatus ?? ($needsDeposit ? DepositStatus::Required : DepositStatus::None),
                 'price_at_booking' => $service->price->amount,
                 'deposit_at_booking' => $needsDeposit ? $service->deposit_amount->amount : 0,
                 'source' => $source,
                 'rebook_interval_days' => $rebookIntervalDays,
+                'request_expires_at' => $isRequest && $resolved === BookingStatus::Pending
+                    ? now()->addHours($tenant->requestExpiryHours())
+                    : null,
             ]);
             $booking->save();
 
@@ -155,11 +169,13 @@ final class BookingService
         AvailabilityCache::bust($tenant->id);
 
         if ($needsDeposit && $booking->status === BookingStatus::Pending) {
-            $this->attachPaymentIntent($tenant, $booking);
+            $this->attachPaymentIntent($tenant, $booking, $isRequest ? 'manual' : 'automatic');
         }
 
         if ($booking->status === BookingStatus::Confirmed) {
             $this->notifier->bookingConfirmed($booking);
+        } elseif ($isRequest && $booking->status === BookingStatus::Pending) {
+            $this->notifier->bookingRequested($booking);
         }
 
         return $booking;
@@ -173,10 +189,10 @@ final class BookingService
      *
      * @throws PaymentSetupFailedException
      */
-    private function attachPaymentIntent(Tenant $tenant, Booking $booking): void
+    private function attachPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): void
     {
         try {
-            $intent = $this->gateway()->createPaymentIntent($tenant, $booking);
+            $intent = $this->gateway()->createPaymentIntent($tenant, $booking, $captureMethod);
         } catch (PaymentsNotConfiguredException $exception) {
             report($exception);
             $this->releaseUnpayable($booking, $tenant);
@@ -199,6 +215,107 @@ final class BookingService
         }
 
         $this->lastClientSecret = $intent['client_secret'];
+    }
+
+    public function approve(Booking $booking, ?User $actor = null): Booking
+    {
+        $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
+        app(TenantContext::class)->set($tenant);
+
+        $outcome = DB::transaction(function () use ($booking) {
+            $locked = Booking::withoutGlobalScopes()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== BookingStatus::Pending || $locked->request_expires_at === null) {
+                throw RequestNotPendingException::forBooking();
+            }
+
+            return $locked;
+        });
+
+        $this->captureHeldPayment($outcome, $tenant);
+
+        $outcome->forceFill([
+            'status' => BookingStatus::Confirmed,
+            'deposit_status' => $outcome->stripe_payment_intent_id ? DepositStatus::Paid : $outcome->deposit_status,
+            'deposit_paid_at' => $outcome->stripe_payment_intent_id ? now() : $outcome->deposit_paid_at,
+            'request_expires_at' => null,
+        ])->save();
+
+        $this->notifier->bookingConfirmed($outcome);
+        $this->audit($actor, $tenant, $outcome, 'booking.request.approved');
+
+        return $outcome->fresh();
+    }
+
+    public function decline(Booking $booking, ?string $reason = null, ?User $actor = null, string $action = 'booking.request.declined'): Booking
+    {
+        $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
+        app(TenantContext::class)->set($tenant);
+
+        $outcome = DB::transaction(function () use ($booking, $reason) {
+            $locked = Booking::withoutGlobalScopes()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== BookingStatus::Pending || $locked->request_expires_at === null) {
+                throw RequestNotPendingException::forBooking();
+            }
+
+            $locked->forceFill([
+                'status' => BookingStatus::Declined,
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason,
+                'reminder_cancelled_at' => now(),
+                'request_expires_at' => null,
+            ])->save();
+
+            return $locked;
+        });
+
+        $this->voidHeldPayment($outcome, $tenant);
+
+        AvailabilityCache::bust($tenant->id);
+        $this->notifier->bookingDeclined($outcome, $reason);
+        $this->waitlist->offerForBooking($outcome);
+        $this->audit($actor, $tenant, $outcome, $action, $reason !== null ? ['reason' => $reason] : []);
+
+        return $outcome->fresh();
+    }
+
+    private function captureHeldPayment(Booking $booking, Tenant $tenant): void
+    {
+        if (! $booking->stripe_payment_intent_id || ! $tenant->stripe_account_id) {
+            return;
+        }
+
+        $this->gateway()->capturePaymentIntent(
+            (string) $booking->stripe_payment_intent_id,
+            (string) $tenant->stripe_account_id,
+        );
+    }
+
+    private function voidHeldPayment(Booking $booking, Tenant $tenant): void
+    {
+        if (! $booking->stripe_payment_intent_id || ! $tenant->stripe_account_id) {
+            return;
+        }
+
+        try {
+            $this->gateway()->cancelPaymentIntent(
+                (string) $booking->stripe_payment_intent_id,
+                (string) $tenant->stripe_account_id,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    private function audit(?User $actor, Tenant $tenant, Booking $booking, string $action, array $extra = []): void
+    {
+        AuditLog::query()->create([
+            'actor_id' => $actor?->id,
+            'target_tenant_id' => $tenant->id,
+            'action' => $action,
+            'meta' => array_merge(['booking_id' => $booking->id], $extra),
+        ]);
     }
 
     /**

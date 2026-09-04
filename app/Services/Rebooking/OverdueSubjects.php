@@ -35,7 +35,7 @@ final class OverdueSubjects
             ->where('tenant_id', $tenant->id)
             ->whereNotNull('subject_id')
             ->where('starts_at', '>', $todayUtc)
-            ->where('status', '!=', BookingStatus::Cancelled->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
             ->pluck('subject_id');
 
         $subjects = Subject::withoutGlobalScopes()

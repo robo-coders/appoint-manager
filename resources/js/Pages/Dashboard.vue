@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import EmptyState from '@/Components/ui/EmptyState.vue';
+import PendingRequests, { type PendingRequest } from '@/Components/PendingRequests.vue';
 import TimelineRow from '@/Components/ui/TimelineRow.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -51,6 +52,7 @@ const props = defineProps<{
         no_shows: { value: string; previous: string | null; previous_month: string; direction: string | null };
     };
     today: Row[];
+    pending_requests: PendingRequest[];
 }>();
 
 const newBooking = () => router.get(route('diary.index'), { new: 1 });
@@ -152,9 +154,8 @@ const freedLine = (row: Row) => {
             </section>
         </div>
 
-        <!-- ================================================================
-             Today.
-             ================================================================ -->
+        <PendingRequests class="mt-8" :requests="pending_requests" />
+
         <h2 class="mt-8 border-b border-b-rule pb-3 text-17">Today</h2>
 
         <EmptyState

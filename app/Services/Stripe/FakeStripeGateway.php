@@ -11,8 +11,14 @@ final class FakeStripeGateway implements StripeGateway
     /** @var array<string, array{charges_enabled: bool, currently_due: list<string>}> */
     public array $accounts = [];
 
-    /** @var list<array{tenant_id: int, booking_id: int, amount: int}> */
+    /** @var list<array{tenant_id: int, booking_id: int, amount: int, capture_method: string}> */
     public array $intents = [];
+
+    /** @var list<string> */
+    public array $captures = [];
+
+    /** @var list<string> */
+    public array $cancels = [];
 
     /** @var list<string> */
     public array $refunds = [];
@@ -78,7 +84,7 @@ final class FakeStripeGateway implements StripeGateway
         ];
     }
 
-    public function createPaymentIntent(Tenant $tenant, Booking $booking): array
+    public function createPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): array
     {
         $this->refuseOutsideTesting();
 
@@ -92,12 +98,25 @@ final class FakeStripeGateway implements StripeGateway
             'tenant_id' => $tenant->id,
             'booking_id' => $booking->id,
             'amount' => $booking->deposit_at_booking->amount,
+            'capture_method' => $captureMethod,
         ];
 
         return [
             'id' => $id,
             'client_secret' => $id.'_secret_test',
         ];
+    }
+
+    public function capturePaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->refuseOutsideTesting();
+        $this->captures[] = $paymentIntentId;
+    }
+
+    public function cancelPaymentIntent(string $paymentIntentId, string $accountId): void
+    {
+        $this->refuseOutsideTesting();
+        $this->cancels[] = $paymentIntentId;
     }
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string

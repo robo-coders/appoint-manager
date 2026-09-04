@@ -104,19 +104,38 @@ const iconFor = (link: NavLink) => navIconFor(link.label);
         aria-label="Sidebar"
     >
         <!--
-            The mark and wordmark, from `AppLogo` — which owns both shapes of
-            the lockup now. This block used to hand-roll its own SVG and its own
-            two-line span, which meant the product name was drawn by two files
-            that could disagree. The measurement that forces the stack is
-            recorded there, next to the markup it forces.
+            The lockup, from `AppLogo` — which owns all four of its files. This
+            block used to hand-roll its own SVG and its own two-line span, which
+            meant the product name was drawn by two files that could disagree.
+
+            **The stack is gone with the type that forced it.** The wordmark was
+            live text, and "Appoint Manager" set 104.63px at 13px/500 inside the
+            88px this rail leaves — so it went to two lines. The lockup is
+            artwork now: 260x64, on one line, at any name length. `AppLogo`
+            records the rest.
+
+            **40px, and the rail is sized from it rather than the other way
+            round.** The mark was 20px — the size a favicon is — and read as a
+            label for the rail rather than as the way home. At 40px the lockup
+            is 163px wide, which is why `--rail` is 192px and not the 148px it
+            was; the token moved and `AppLayout`'s `md:pl-rail` moved with it.
+
+            Collapsed is the tight one: 40px square inside 56px leaves 8px a
+            side, so the link drops its padding and centres there instead of
+            keeping `px-3` and pushing the mark 24px past the edge. `py-4` is
+            unconditional and the block has no fixed height, so the row is
+            72px tall now and the mark is centred in it either way.
+
+            `label=""` because the link is already named by `aria-label` — an
+            alt text here would make a screen reader read the product twice.
         -->
-        <Link :href="homeHref" class="flex items-center gap-2 px-4 py-4 text-ink" :aria-label="appName">
-            <AppLogo
-                :size="20"
-                label=""
-                :variant="collapsed && !drawerOpen ? 'mark' : 'lockup'"
-                stacked
-            />
+        <Link
+            :href="homeHref"
+            class="flex items-center py-4"
+            :class="collapsed && !drawerOpen ? 'px-3 md:justify-center md:px-0' : 'px-3'"
+            :aria-label="appName"
+        >
+            <AppLogo :size="40" label="" :variant="collapsed && !drawerOpen ? 'mark' : 'lockup'" />
         </Link>
 
         <nav class="mt-2 flex-1 overflow-y-auto px-2" aria-label="Main">

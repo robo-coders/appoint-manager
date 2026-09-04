@@ -19,7 +19,11 @@ interface StripeGateway
     /**
      * @return array{id: string, client_secret: string}
      */
-    public function createPaymentIntent(Tenant $tenant, Booking $booking): array;
+    public function createPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): array;
+
+    public function capturePaymentIntent(string $paymentIntentId, string $accountId): void;
+
+    public function cancelPaymentIntent(string $paymentIntentId, string $accountId): void;
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string;
 

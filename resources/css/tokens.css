@@ -196,7 +196,21 @@
     /* ---- Chrome ---------------------------------------------------------
      * Named so a layout dimension never looks like a spacing value.
      */
-    --rail: 148px;
+    /*
+     * --rail holds the lockup, and the lockup is what sets it. `AppLogo` draws
+     * `logo.svg` from a 260x64 viewBox, so a 40px-tall mark is a 163px-wide
+     * image; 163px plus the logo link's `px-3` is 187px, and 192px is the next
+     * multiple of four above it. It was 148px, sized for the same lockup at
+     * 20px — a mark 20px tall in a 148px rail, which is the size a favicon is,
+     * not the size a masthead is. Widening it moves `md:pl-rail` in
+     * `AppLayout` with it, which is the whole point of the token.
+     *
+     * --rail-collapsed is unchanged and is now the tighter of the two: the
+     * mark alone is 40px square, so the 56px rail has 8px a side and the logo
+     * link drops its padding and centres instead. 40px is the floor; this is
+     * the surface that decides how much above it there is room for.
+     */
+    --rail: 192px;
     --rail-collapsed: 56px;
     --topbar: 56px;
 
