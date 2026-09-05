@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 /**
  * The five settings screens, as tabs.
@@ -15,7 +16,24 @@ import { Link } from '@inertiajs/vue3';
  * reader and then unload the page when one is chosen. These are links, so they
  * are links, and `aria-current` carries which one you are on.
  */
-defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' }>();
+defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' | 'beta-sandbox' }>();
+
+/**
+ * BetaSandbox — see BETA_SANDBOX.md. The sixth tab, for beta salons only.
+ *
+ * Conditional rather than always-present-and-disabled, which is the opposite of
+ * the reasoning next to the Loyalty tab above: Loyalty is a feature every salon
+ * could switch on, so hiding it until they had would hide it forever. The
+ * sandbox is not something a salon can opt into — we put them in the beta — so a
+ * tab that says "not for you" would be an advert for a door with no handle.
+ *
+ * Last in the row on purpose: it is the only tab that is not part of running a
+ * salon, and the five that are should not shift position for the handful of
+ * shops that see a sixth.
+ */
+const page = usePage();
+
+const beta = computed(() => page.props.tenant?.is_beta === true);
 </script>
 
 <template>
@@ -41,6 +59,7 @@ defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payme
                  */
                 { key: 'calendar', label: 'Calendar', href: route('settings.calendar.show') },
                 { key: 'payments', label: 'Payments', href: route('settings.payments.show') },
+                ...(beta ? [{ key: 'beta-sandbox', label: 'Beta sandbox', href: route('beta-sandbox.show') }] : []),
             ]"
             :key="tab.key"
             :href="tab.href"

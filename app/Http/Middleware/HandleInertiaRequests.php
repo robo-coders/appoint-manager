@@ -101,6 +101,12 @@ class HandleInertiaRequests extends Middleware
                 'currency' => $tenant->currency,
                 'onboarding_completed' => $tenant->hasCompletedOnboarding(),
                 'read_only' => $tenant->isReadOnly(),
+                /*
+                 * BetaSandbox — see BETA_SANDBOX.md. What the banner and the
+                 * settings tab are drawn from. Presentation only: every sandbox
+                 * action re-asks the same question on the server.
+                 */
+                'is_beta' => $tenant->is_beta,
                 'trial_days_remaining' => $tenant->trialDaysRemaining(),
                 'show_trial_banner' => $tenant->onTrial() && $tenant->trialDaysRemaining() <= 7,
             ] : null,

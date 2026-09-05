@@ -237,9 +237,16 @@ for (const mirror of MIRRORS) {
  * Product mockups (dashboard, bookings-table, …) copy tokens.css. The
  * editorial marketing direction and the archived ledger homepage are a
  * different token system on purpose — they must not be forced onto --paper.
+ *
+ * `Market-site/` is the third exemption and the one that is not ours at all:
+ * it is a Claude Design bundle export, machine-generated markup with its own
+ * inlined variables and no `:root` block to compare. It is a reference
+ * photograph, not a mockup this repo maintains, so gating it asserts nothing
+ * except that an export has the shape of a hand-written file.
  */
 const MOCKUPS = globSync('.design/mockups/**/*.html').filter((f) => {
     const skip = f.includes('/directions/')
+        || f.includes('/Market-site/')
         || /direction-a-/.test(f)
         || /archived-/.test(f);
 

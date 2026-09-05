@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifications;
 
+use App\BetaSandbox\SandboxMute;
 use App\Enums\MessageChannel;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
@@ -159,7 +160,10 @@ final class Notifier
             return;
         }
 
-        Mail::to($tenant->email)->queue(new DailyAgendaMail($tenant, $bookings));
+        if (! $this->sandboxMuted()) {
+            Mail::to($tenant->email)->queue(new DailyAgendaMail($tenant, $bookings));
+        }
+
         $this->log($tenant, null, null, MessageChannel::Email, MessageType::DailyAgenda, $tenant->email, 'Daily agenda', MessageStatus::Sent, null);
     }
 
@@ -219,19 +223,48 @@ final class Notifier
         return (bool) data_get($tenant->settings, 'notifications.sms_enabled', true);
     }
 
+    /**
+     * **BetaSandbox integration point.** See BETA_SANDBOX.md.
+     *
+     * True only while a beta tenant's sandbox action is running, and false for
+     * every other request this class has ever served. When it is true, this
+     * file still records the message — the send log is part of what an owner is
+     * testing — but hands nothing to `SendSms` and queues no mailable, because
+     * the recipients are invented people with invented phone numbers.
+     *
+     * It is asked here rather than at the call sites in `BetaSandbox\FastForward`
+     * because the sending decision is made in this file and nowhere else: a
+     * caller that remembered to check would only be checking on behalf of the
+     * five places below that actually dispatch.
+     *
+     * Removing the beta sandbox means deleting this method, the five `if`s that
+     * call it, and restoring `MessageStatus::Queued` unconditionally in the two
+     * SMS helpers.
+     */
+    private function sandboxMuted(): bool
+    {
+        return SandboxMute::isMuted();
+    }
+
     private function emailCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, Mailable $mail, MessageType $type, string $body, ?Subject $subject = null): void
     {
         if (! $customer->email) {
             return;
         }
 
-        Mail::to($customer->email)->queue($mail);
+        if (! $this->sandboxMuted()) {
+            Mail::to($customer->email)->queue($mail);
+        }
+
         $this->log($tenant, $customer, $booking, MessageChannel::Email, $type, $customer->email, $body, MessageStatus::Sent, null, 1, $subject);
     }
 
     private function emailSalon(Tenant $tenant, Booking $booking, Mailable $mail, MessageType $type): void
     {
-        Mail::to($tenant->email)->queue($mail);
+        if (! $this->sandboxMuted()) {
+            Mail::to($tenant->email)->queue($mail);
+        }
+
         $this->log($tenant, null, $booking, MessageChannel::Email, $type, (string) $tenant->email, $type->value, MessageStatus::Sent, null);
     }
 
@@ -254,12 +287,16 @@ final class Notifier
             return;
         }
 
+        $muted = $this->sandboxMuted();
+
         $message = $this->log(
             $tenant, null, $booking, MessageChannel::Sms, $type,
-            $to, $body, MessageStatus::Queued, null, $segments,
+            $to, $body, $muted ? MessageStatus::Sent : MessageStatus::Queued, null, $segments,
         );
 
-        SendSms::dispatch($message->id);
+        if (! $muted) {
+            SendSms::dispatch($message->id);
+        }
     }
 
     /**
@@ -289,12 +326,17 @@ final class Notifier
             return null;
         }
 
+        $muted = $this->sandboxMuted();
+
         $message = $this->log(
             $tenant, $customer, $booking, MessageChannel::Sms, $type,
-            $customer->phone, $body, MessageStatus::Queued, null, $segments, $subject,
+            $customer->phone, $body, $muted ? MessageStatus::Sent : MessageStatus::Queued,
+            null, $segments, $subject,
         );
 
-        SendSms::dispatch($message->id);
+        if (! $muted) {
+            SendSms::dispatch($message->id);
+        }
 
         return $message;
     }

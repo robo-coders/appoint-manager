@@ -3448,3 +3448,23 @@ Named rather than filed, because these are in the work this pass shipped.
   problem with move up / move down in a row menu (WCAG 2.2 requires a
   single-pointer alternative to any drag); this screen has neither, because
   neither existed before either.
+
+## Beta sandbox
+
+The feature's own record — what it touches, how fast-forward works and why it is
+both a timestamp shift and a run of the real automation, and the six deviations
+from the brief — lives in `BETA_SANDBOX.md` rather than here, because it doubles
+as the checklist for deleting the feature and a checklist is worse when it is
+buried in a two-hundred-kilobyte log. Three things are worth restating where the
+rest of the decisions are:
+
+- **`is_beta` is a column, not a `feature_flags` key.** `feature_flags` is a JSON
+  blob a super admin edits freely. This flag decides whether a tenant can reach
+  Stripe live keys.
+- **A beta salon's Stripe calls are pinned to test mode in
+  `StripeConnectGateway::client()`**, the single point at which the product picks
+  a credential, and a beta tenant with no test key is *refused* rather than
+  falling back to the live one.
+- **A reset keeps the loyalty package and deletes the enrolments.** The brief
+  named both; a package is configured on a settings screen and a reset promises
+  settings survive.

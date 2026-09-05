@@ -52,6 +52,8 @@ class SuperAdminController extends Controller
                     'trial_ends_at' => $trialEnds?->toDateString(),
                     'trial_days_left' => $trialEnds ? (int) now()->startOfDay()->diffInDays($trialEnds->startOfDay(), false) : null,
                     'is_comped' => $tenant->is_comped,
+                    // BetaSandbox — see BETA_SANDBOX.md.
+                    'is_beta' => $tenant->is_beta,
                     'booking_page_live' => $tenant->booking_page_live,
                     'bookings_this_month' => Booking::withoutGlobalScopes()
                         ->where('tenant_id', $tenant->id)
@@ -365,6 +367,32 @@ class SuperAdminController extends Controller
         $this->audit($tenant, 'tenant.comp');
 
         return back()->with('toast', 'Account comped.');
+    }
+
+    /**
+     * Put a salon into the beta programme, or take it out.
+     *
+     * **BetaSandbox integration point.** See BETA_SANDBOX.md. It is a method
+     * here rather than a screen of its own because the brief asks for a
+     * checkbox on the tenant controls that already exist, and because this is
+     * one boolean beside `is_comped` and the SMS overrides — the same shape as
+     * every other switch on this console, audited the same way.
+     *
+     * What the flag actually buys the tenant is two things, and both are
+     * consequential: their Stripe calls are pinned to test mode, and the
+     * sandbox's three destructive buttons appear in their settings. So it is
+     * written explicitly from the request rather than toggled, which means a
+     * stale console tab cannot flip a salon back by accident.
+     */
+    public function setBeta(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $beta = $request->boolean('is_beta');
+        $tenant->forceFill(['is_beta' => $beta])->save();
+        $this->audit($tenant, 'tenant.beta', ['is_beta' => $beta]);
+
+        return back()->with('toast', $beta
+            ? 'Beta sandbox on. Stripe is test-mode only for this salon.'
+            : 'Beta sandbox off.');
     }
 
     public function flags(Request $request, Tenant $tenant): RedirectResponse

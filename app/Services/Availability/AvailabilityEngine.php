@@ -96,7 +96,7 @@ final class AvailabilityEngine
             : Booking::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->whereIn('staff_id', $staffIds)
-                ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
+                ->whereNotIn('status', BookingStatus::vacatingValues())
                 ->where('starts_at', '<', $loadTo)
                 ->where('ends_at', '>', $loadFrom)
                 ->when($ignoreBookingId !== null, fn ($query) => $query->whereKeyNot($ignoreBookingId))

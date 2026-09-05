@@ -130,11 +130,24 @@ final class WaitlistOfferer
             ->values();
     }
 
-    public function expireAndContinue(): void
+    /**
+     * Retire the offers whose window has closed, and offer the slot on.
+     *
+     * `$tenantId` narrows the sweep to one salon. The scheduled command passes
+     * nothing and sweeps the platform, which is what it has always done; a
+     * caller that must not touch anybody else's rows — running one tenant's
+     * automation early, on demand — passes an id and gets exactly that tenant.
+     *
+     * The filter is on the read, not on the write side, so nothing downstream
+     * has to remember the restriction: an offer that is not in the result set is
+     * never expired, never superseded, and never re-offered.
+     */
+    public function expireAndContinue(?int $tenantId = null): void
     {
         $expired = SlotOffer::withoutGlobalScopes()
             ->where('status', SlotOfferStatus::Sent->value)
             ->where('expires_at', '<=', now())
+            ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
             ->get();
 
         foreach ($expired->groupBy(fn (SlotOffer $offer) => $offer->staff_id.'|'.$offer->starts_at) as $group) {
@@ -144,6 +157,7 @@ final class WaitlistOfferer
 
             $sample = $group->first();
             $claimed = SlotOffer::withoutGlobalScopes()
+                ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
                 ->where('staff_id', $sample->staff_id)
                 ->where('starts_at', $sample->starts_at)
                 ->where('status', SlotOfferStatus::Claimed->value)

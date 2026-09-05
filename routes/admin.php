@@ -46,6 +46,8 @@ Route::middleware(['auth', 'super-admin'])->group(function (): void {
     Route::post('/tenants/{tenant}/price', [SuperAdminController::class, 'setPrice'])->name('super-admin.price');
     Route::post('/tenants/{tenant}/comp', [SuperAdminController::class, 'comp'])->name('super-admin.comp');
     Route::post('/tenants/{tenant}/flags', [SuperAdminController::class, 'flags'])->name('super-admin.flags');
+    // BetaSandbox — see BETA_SANDBOX.md.
+    Route::post('/tenants/{tenant}/beta', [SuperAdminController::class, 'setBeta'])->name('super-admin.beta');
     Route::post('/tenants/{tenant}/go-live', [SuperAdminController::class, 'goLive'])->name('super-admin.go-live');
     Route::post('/tenants/{tenant}/preview', [SuperAdminController::class, 'previewLink'])->name('super-admin.preview');
     Route::post('/clone-setup', [SuperAdminController::class, 'cloneSetup'])->name('super-admin.clone');

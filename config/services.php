@@ -41,6 +41,17 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
 
         /*
+         * BetaSandbox — see BETA_SANDBOX.md.
+         *
+         * The test-mode key beta tenants are pinned to, whatever `secret` is.
+         * Unset on an installation whose `secret` is already an `sk_test_` key,
+         * which is every local and staging box; required on production, where a
+         * beta tenant with no test key is refused rather than quietly charged
+         * through the live one. See App\BetaSandbox\StripeTestMode.
+         */
+        'test_secret' => env('STRIPE_TEST_SECRET'),
+
+        /*
          * `STRIPE_FAKE` used to live here. It is gone — AUDIT C1.
          *
          * It opted a non-production environment into `FakeStripeGateway`, which

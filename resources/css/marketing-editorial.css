@@ -1697,3 +1697,419 @@ dl.qa dd {
         font-size: 15px;
     }
 }
+
+/* ---- Home: the band of three figures under the hero ----------------- */
+
+.stat-bar {
+    padding: var(--space-8) var(--space-4);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.stat-bar-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-8);
+}
+
+.stat .fig {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 48px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.stat p {
+    margin: var(--space-2) 0 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 34ch;
+}
+
+/* ---- Home: the whole week ------------------------------------------- */
+
+.week {
+    padding: var(--space-16) var(--space-4);
+}
+
+.week-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.eyebrow.accent {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    text-align: center;
+}
+
+.week h2 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 60px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-align: center;
+    max-width: 20ch;
+    margin: 0 auto var(--space-3);
+}
+
+.week p.sub {
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-align: center;
+    max-width: 46ch;
+    margin: 0 auto var(--space-8);
+}
+
+.grid-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-diary);
+    padding: var(--space-3);
+}
+
+.grid-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--rule);
+}
+
+.grid-head .wk {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.grid-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.grid-meta .fig,
+.grid-head .fig {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.grid-meta .won {
+    color: var(--accent);
+}
+
+.grid-days {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    row-gap: var(--space-3);
+}
+
+.day-col {
+    padding: var(--space-3) var(--space-2) 0;
+}
+
+.day-col + .day-col {
+    border-left: 1px solid var(--rule);
+}
+
+.day-name {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-bottom: var(--space-2);
+}
+
+.chip {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 10px 12px;
+    margin-bottom: var(--space-1);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-slot);
+    background: var(--canvas);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+}
+
+.chip .v::before {
+    content: '·';
+    color: var(--ink-3);
+    margin-right: 6px;
+}
+
+.chip .v {
+    color: var(--ink-2);
+}
+
+.chip.won {
+    background: var(--reclaimed-fill);
+    border-color: var(--reclaimed-rule);
+}
+
+.chip.won .v,
+.chip.won .v::before {
+    color: var(--accent);
+}
+
+.chip.free {
+    background: transparent;
+    border-style: dashed;
+    color: var(--ink-3);
+}
+
+.chip.free .v,
+.chip.free .v::before {
+    color: var(--ink-3);
+}
+
+/* ---- Home: the numbered rows, set as the mockup sets them ----------- */
+
+[data-page='home'] .section h2 {
+    font-size: 56px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    max-width: 12ch;
+    margin: 0 0 var(--space-12);
+}
+
+[data-page='home'] .row {
+    padding: var(--space-8) 0;
+}
+
+[data-page='home'] .row .label {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+}
+
+[data-page='home'] .row .body {
+    font-size: 22px;
+    line-height: 1.45;
+}
+
+/* ---- Home: the booking page, shown --------------------------------- */
+
+.sendable {
+    padding: 0 var(--space-4) var(--space-16);
+}
+
+.sendable-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8);
+    background: var(--canvas-sunk);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+}
+
+.sendable-copy .eyebrow.accent {
+    text-align: left;
+}
+
+.sendable h2 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 40px;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    max-width: 16ch;
+    margin: 0 0 var(--space-3);
+}
+
+.sendable-copy p {
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: var(--measure-tight);
+    margin: 0 0 var(--space-4);
+}
+
+.booking-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-diary);
+    padding: var(--space-3);
+}
+
+.bc-name {
+    font-size: 17px;
+    font-weight: 500;
+}
+
+.bc-trade {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-top: 4px;
+}
+
+.bc-services {
+    margin: var(--space-3) 0 0;
+}
+
+.bc-service {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: 12px 14px;
+    margin-bottom: var(--space-1);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-slot);
+    font-size: 15px;
+}
+
+.bc-service .fig {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.bc-service.picked {
+    background: var(--reclaimed-fill);
+    border-color: var(--reclaimed-rule);
+}
+
+.bc-service.picked .fig {
+    color: var(--accent);
+}
+
+.bc-times {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.bc-time {
+    padding: 12px 8px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-slot);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: var(--ink-2);
+}
+
+.bc-time.picked {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--white);
+}
+
+.bc-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--rule);
+    font-size: 15px;
+}
+
+.bc-total .fig {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+}
+
+@media (max-width: 1024px) {
+    .grid-days {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .day-col:nth-child(3n + 1) {
+        border-left: none;
+    }
+
+    .sendable-inner {
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    .sendable h2 {
+        max-width: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .stat-bar-inner {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+    }
+
+    .stat .fig {
+        font-size: 40px;
+    }
+
+    .week {
+        padding: var(--space-12) var(--space-4);
+    }
+
+    .week h2 {
+        font-size: 34px;
+    }
+
+    .week p.sub {
+        font-size: 17px;
+    }
+
+    [data-page='home'] .section h2 {
+        font-size: 34px;
+        max-width: none;
+        margin: 0 0 var(--space-6);
+    }
+
+    [data-page='home'] .row {
+        padding: var(--space-4) 0;
+    }
+
+    [data-page='home'] .row .body {
+        font-size: 18px;
+    }
+
+    .sendable {
+        padding: 0 var(--space-4) var(--space-12);
+    }
+
+    .sendable-inner {
+        padding: var(--space-3);
+    }
+
+    .sendable h2 {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 560px) {
+    .grid-days {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .day-col:nth-child(3n + 1) {
+        border-left: 1px solid var(--rule);
+    }
+
+    .day-col:nth-child(2n + 1) {
+        border-left: none;
+    }
+}

@@ -50,6 +50,8 @@ class Tenant extends Model
         'cancelled_at',
         'cancellation_reason',
         'is_comped',
+        // BetaSandbox — see BETA_SANDBOX.md.
+        'is_beta',
         'booking_page_live',
         'preview_token',
         'last_activity_at',
@@ -124,6 +126,8 @@ class Tenant extends Model
             'cancelled_at' => 'datetime',
             'last_activity_at' => 'datetime',
             'is_comped' => 'boolean',
+            // BetaSandbox — see BETA_SANDBOX.md.
+            'is_beta' => 'boolean',
             'booking_page_live' => 'boolean',
             'dunning_emails_sent' => 'integer',
             'feature_flags' => 'array',

@@ -104,9 +104,21 @@ class Booking extends Model
         ];
     }
 
+    /**
+     * Is this booking still holding its slot?
+     *
+     * A no-show answers no, alongside a cancellation and a decline. It used to
+     * answer yes, and that was the bug behind "Sorry, that slot was just
+     * taken": marking a missed appointment offered the hour to the waitlist and
+     * then blocked every one of them from claiming it, because the booking they
+     * were being offered a replacement for was still sitting in the slot.
+     *
+     * See `BookingStatus::vacating()` for why the list lives there rather than
+     * here.
+     */
     public function occupiesTime(): bool
     {
-        return ! in_array($this->status, [BookingStatus::Cancelled, BookingStatus::Declined], true);
+        return ! in_array($this->status, BookingStatus::vacating(), true);
     }
 
     public function isBookingRequest(): bool

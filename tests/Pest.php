@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Enums\DepositStatus;
 use App\Enums\Weekday;
 use App\Models\AvailabilityRule;
 use App\Models\Booking;
@@ -149,6 +151,60 @@ function aBookingPayload(Service $service, User $staff, CarbonImmutable $startsA
 | A helper used by one file stays in that file; one used by two comes here.
 |
 */
+
+/**
+ * A salon in the beta programme. BetaSandbox — see BETA_SANDBOX.md.
+ *
+ * Here rather than in one of the sandbox test files because five of them need
+ * it, and a helper declared in a test file is undefined in every other worker
+ * under `--parallel` — see the note above.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array{tenant: Tenant, staff: User, service: Service}
+ */
+function aBetaSalon(array $overrides = []): array
+{
+    $salon = aSalon($overrides);
+    $salon['tenant']->forceFill(['is_beta' => true])->save();
+
+    return [...$salon, 'tenant' => $salon['tenant']->fresh()];
+}
+
+/**
+ * One confirmed booking in a salon, written straight to the table.
+ *
+ * @param  array{tenant: Tenant, staff: User, service: Service}  $salon
+ */
+function aSandboxBooking(array $salon, string $startsAt): Booking
+{
+    $context = app(TenantContext::class);
+    $context->set($salon['tenant']);
+
+    try {
+        $starts = CarbonImmutable::parse($startsAt, 'Europe/London');
+
+        $customer = Customer::query()->create([
+            'name' => 'Sam Reed',
+            'email' => 'sam.'.$salon['tenant']->id.'@example.test',
+            'phone' => '07700900123',
+        ]);
+
+        return Booking::query()->create([
+            'staff_id' => $salon['staff']->id,
+            'service_id' => $salon['service']->id,
+            'customer_id' => $customer->id,
+            'starts_at' => $starts->utc(),
+            'ends_at' => $starts->addHour()->utc(),
+            'status' => BookingStatus::Confirmed,
+            'deposit_status' => DepositStatus::None,
+            'price_at_booking' => 3500,
+            'deposit_at_booking' => 0,
+            'source' => BookingSource::Online,
+        ]);
+    } finally {
+        $context->clear();
+    }
+}
 
 /**
  * A salon with a diary, a Wednesday, and one of everything a day view draws.

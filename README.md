@@ -7,6 +7,10 @@ The design system is in `DESIGN.md`, the decisions behind it in `DECISIONS.md`,
 and deployment in `DEPLOY.md`. `npm run check` is the gate: design tokens,
 contrast, component reuse and formatting.
 
+The beta sandbox — the `is_beta` flag, its Stripe test-mode guard and the three
+owner-facing tools behind it — is documented and inventoried in
+`BETA_SANDBOX.md`, which is also the checklist for removing it.
+
 ## Surfaces
 
 Appoint Manager is one app, one database and one deployment, served from four

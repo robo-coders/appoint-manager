@@ -162,6 +162,13 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
     Route::post('/overdue/{subject}/stop', [OverdueController::class, 'stop'])->name('overdue.stop');
     Route::post('/overdue/{subject}/resume', [OverdueController::class, 'resume'])->name('overdue.resume');
 
+    /*
+     * Beta sandbox — sample data, fast-forward, reset. See BETA_SANDBOX.md.
+     * Everything it owns is in that one file; deleting the feature is deleting
+     * this line and routes/beta-sandbox.php.
+     */
+    require __DIR__.'/beta-sandbox.php';
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

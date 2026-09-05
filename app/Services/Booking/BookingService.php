@@ -351,6 +351,26 @@ final class BookingService
      * `Completed`, so a missed appointment earns nothing — which is the point of
      * stamping at completion rather than at booking. And a missed *reward*
      * booking stays spent: the slot was held and nobody else could have it.
+     *
+     * ## The hour is freed, so it is offered
+     *
+     * A missed appointment leaves exactly the same hole in the day as a
+     * cancellation does, and it used to be the only way of leaving one that
+     * told nobody. `cancel()`, `decline()` and `reschedule()` all hand the
+     * vacated window to `WaitlistOfferer::offerForBooking()`; this does the
+     * same, through the same call, so the offer rows, the batch size, the TTL
+     * and the wording are whatever they already are for every other freed slot.
+     * Nothing here composes a message — the customer being texted is being told
+     * a slot opened, and *why* it opened is not their business.
+     *
+     * Placed after the transaction commits, like every other caller: the blast
+     * writes offer rows and queues SMS, and none of that may run inside a lock
+     * on the booking row.
+     *
+     * The `already` flag is why the transaction now returns a pair. The
+     * idempotent second press returns early with the status unchanged, and it
+     * must not put a second round of offers out for a slot that was already
+     * offered when it was first marked.
      */
     public function markNoShow(Booking $booking, ?User $actor = null): Booking
     {
@@ -361,7 +381,7 @@ final class BookingService
             $locked = Booking::withoutGlobalScopes()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === BookingStatus::NoShow) {
-                return $locked;
+                return ['booking' => $locked, 'already' => true];
             }
 
             if ($locked->status !== BookingStatus::Confirmed) {
@@ -374,12 +394,18 @@ final class BookingService
 
             $locked->forceFill(['status' => BookingStatus::NoShow])->save();
 
-            return $locked;
+            return ['booking' => $locked, 'already' => false];
         });
 
-        $this->audit($actor, $tenant, $outcome, 'booking.no_show');
+        $missed = $outcome['booking'];
 
-        return $outcome->fresh();
+        $this->audit($actor, $tenant, $missed, 'booking.no_show');
+
+        if (! $outcome['already']) {
+            $this->waitlist->offerForBooking($missed);
+        }
+
+        return $missed->fresh();
     }
 
     public function decline(Booking $booking, ?string $reason = null, ?User $actor = null, string $action = 'booking.request.declined'): Booking

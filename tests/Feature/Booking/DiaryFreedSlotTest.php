@@ -82,3 +82,45 @@ it('shows a past cancellation, but not as a freed slot', function () {
             ->where('bookings.0.deposit_status', 'paid')
             ->where('bookings.0.cancellation_reason', 'Cancelled inside notice — deposit kept'));
 });
+
+/*
+ * A missed appointment leaves the same hole as a cancellation, so the diary
+ * draws it the same way. Before `BookingStatus::NoShow` joined
+ * `BookingStatus::vacating()` this row came back as a solid booking: an hour
+ * the screen said was busy, that nobody was sitting in, and that the waitlist
+ * had already been texted about.
+ */
+it('draws a no show that left a gap as a freed slot', function () {
+    $salon = aDiarySalon();
+    $missed = aDiaryBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', [
+        'status' => BookingStatus::NoShow,
+    ]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('diary.index', ['date' => '2026-08-19']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Diary/Index')
+            ->has('bookings', 1)
+            ->where('bookings.0.id', $missed->id)
+            ->where('bookings.0.status', 'no_show')
+            ->where('bookings.0.is_freed', true)
+            ->where('bookings.0.minutes', 90));
+});
+
+/*
+ * And the same measurement rule applies: a no-show whose hour has since been
+ * sold to somebody else is not a gap, it is a slot that was recovered.
+ */
+it('drops a no show whose hour has already been refilled', function () {
+    $salon = aDiarySalon();
+    aDiaryBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', ['status' => BookingStatus::NoShow]);
+    $replacement = aDiaryBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00');
+
+    actingAsTenant($salon['user'])
+        ->get(route('diary.index', ['date' => '2026-08-19']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('bookings', 1)
+            ->where('bookings.0.id', $replacement->id));
+});

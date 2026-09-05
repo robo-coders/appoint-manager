@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BetaSandboxBanner from '@/Components/BetaSandbox/Banner.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
 import Button from '@/Components/ui/Button.vue';
 import NavRail from '@/Components/ui/NavRail.vue';
@@ -258,6 +259,14 @@ onUnmounted(() => {
             <header class="flex h-topbar items-center border-b border-b-rule bg-white px-4 md:hidden">
                 <Button variant="ghost" @click="drawerOpen = true">Menu</Button>
             </header>
+
+            <!--
+                BetaSandbox — see BETA_SANDBOX.md. First in the notice stack: it
+                is the standing fact about this whole installation of the app,
+                and the ones below it are transient. It renders itself away for
+                every tenant that is not in the beta.
+            -->
+            <BetaSandboxBanner />
 
             <div
                 v-if="page.props.auth.user && !page.props.auth.user.email_verified_at"

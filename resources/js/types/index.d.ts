@@ -17,6 +17,8 @@ export interface Tenant {
     currency: string;
     onboarding_completed: boolean;
     read_only: boolean;
+    /** BetaSandbox — see BETA_SANDBOX.md. */
+    is_beta: boolean;
     trial_days_remaining: number;
     show_trial_banner: boolean;
 }

@@ -267,3 +267,52 @@ it('returns zero slots when the service is longer than any window', function () 
 
     expect($slots)->toHaveCount(0);
 });
+
+/*
+|--------------------------------------------------------------------------
+| The statuses that give the hour back
+|--------------------------------------------------------------------------
+|
+| `BookingStatus::vacating()` is the one list, and the engine reads it. A
+| no-show joined it because marking an appointment missed offers the hour to the
+| waitlist, and every one of those offers was unclaimable while the missed
+| booking still sat in the slot blocking it.
+|
+| The status is set directly rather than through `markNoShow()`, which refuses a
+| booking that has not started yet. This is the engine's own contract — a row
+| carrying this status does not consume its window — and it is tested on a
+| future day because that is the only kind of slot the engine ever returns.
+*/
+it('does not block a slot for a booking that vacated it', function (BookingStatus $status, bool $blocked) {
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = salon();
+    openHours($staff, Weekday::Tuesday);
+
+    $bookingStart = CarbonImmutable::parse('2026-03-10 12:00:00', 'Europe/London')->utc();
+
+    Booking::factory()->create([
+        'tenant_id' => $tenant->id,
+        'staff_id' => $staff->id,
+        'service_id' => $service->id,
+        'customer_id' => Customer::factory()->create(['tenant_id' => $tenant->id])->id,
+        'starts_at' => $bookingStart,
+        'ends_at' => $bookingStart->addHour(),
+        'status' => $status,
+        'source' => BookingSource::Manual,
+    ]);
+
+    [$from, $to] = dayRange('2026-03-10');
+    $times = [];
+
+    foreach (app(AvailabilityEngine::class)->slotsFor($tenant, $service, $from, $to) as $slot) {
+        $times[] = $slot->startsAt->timezone('Europe/London')->format('H:i');
+    }
+
+    expect(in_array('12:00', $times, true))->toBe(! $blocked);
+})->with([
+    'confirmed still holds it' => [BookingStatus::Confirmed, true],
+    'pending still holds it' => [BookingStatus::Pending, true],
+    'completed still holds it' => [BookingStatus::Completed, true],
+    'cancelled gives it back' => [BookingStatus::Cancelled, false],
+    'declined gives it back' => [BookingStatus::Declined, false],
+    'no show gives it back' => [BookingStatus::NoShow, false],
+]);

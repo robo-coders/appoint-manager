@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Callout from '@/Components/ui/Callout.vue';
+import Checkbox from '@/Components/ui/Checkbox.vue';
 import ConfirmDialog from '@/Components/ui/ConfirmDialog.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
@@ -45,6 +46,8 @@ type Tenant = {
     trial_ends_at: string | null;
     trial_days_left: number | null;
     is_comped: boolean;
+    /** BetaSandbox — see BETA_SANDBOX.md. */
+    is_beta: boolean;
     booking_page_live: boolean;
     bookings_this_month: number;
     last_activity_at: string | null;
@@ -158,9 +161,12 @@ const allowance = ref('');
 const ceiling = ref('');
 const credit = ref('200');
 const pricePence = ref('');
+/* BetaSandbox — see BETA_SANDBOX.md. */
+const beta = ref(false);
 
 const openControls = (tenant: Tenant) => {
     controlling.value = tenant;
+    beta.value = tenant.is_beta;
     trialDays.value = '14';
     trialEnds.value = tenant.trial_ends_at ?? '';
     allowance.value = tenant.sms_included_override === null ? '' : String(tenant.sms_included_override);
@@ -190,6 +196,7 @@ watch(
             allowance.value = fresh.sms_included_override === null ? '' : String(fresh.sms_included_override);
             ceiling.value = fresh.sms_ceiling_override === null ? '' : String(fresh.sms_ceiling_override);
             trialEnds.value = fresh.trial_ends_at ?? '';
+            beta.value = fresh.is_beta;
             pricePence.value = fresh.monthly_price_override_pence === null ? '' : String(fresh.monthly_price_override_pence);
         }
     },
@@ -412,6 +419,31 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
                     >
                         <TextInput v-model="pricePence" label="Monthly price, pence" hint="2900 is £29." mono />
                         <Button type="submit" variant="secondary">Set founding price</Button>
+                    </form>
+                </section>
+
+                <!--
+                    BetaSandbox — see BETA_SANDBOX.md.
+
+                    One checkbox on the controls that already exist, rather than
+                    a screen of its own for a single boolean. It is last because
+                    it is the only switch here that is not about money, and the
+                    hint spells out both consequences: a beta salon can never
+                    reach Stripe live mode, and it gains three buttons that
+                    delete its own data.
+                -->
+                <section>
+                    <h2 class="border-b border-b-rule pb-3 text-17">Beta sandbox</h2>
+                    <form
+                        class="mt-4 space-y-3"
+                        @submit.prevent="router.post(route('super-admin.beta', controlling.id), { is_beta: beta })"
+                    >
+                        <Checkbox
+                            v-model="beta"
+                            label="In the beta programme"
+                            hint="Pins this salon to Stripe test mode and gives it the sandbox tools in Settings."
+                        />
+                        <Button type="submit" variant="secondary">Save</Button>
                     </form>
                 </section>
             </div>
