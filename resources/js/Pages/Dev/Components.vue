@@ -15,6 +15,7 @@ import FileDrop from '@/Components/ui/FileDrop.vue';
 import GapButton from '@/Components/ui/GapButton.vue';
 import NavRail from '@/Components/ui/NavRail.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
+import RadioGroup from '@/Components/ui/RadioGroup.vue';
 import RailUserMenu from '@/Components/ui/RailUserMenu.vue';
 import SaveState from '@/Components/ui/SaveState.vue';
 import SlotButton from '@/Components/ui/SlotButton.vue';
@@ -70,6 +71,11 @@ const choice = ref('full-groom');
 const zone = ref('Europe/London');
 const checked = ref(true);
 const toggled = ref(true);
+const bookingMode = ref('automated');
+const bookingModeOptions = [
+    { value: 'automated', label: 'Automated', hint: 'The slot is theirs as soon as they book.' },
+    { value: 'request', label: 'Requests', hint: 'They ask for a time. You confirm or decline before it is theirs.' },
+];
 const tab = ref('upcoming');
 
 // ---- state for the components added in phases 5 to 7 --------------------
@@ -147,7 +153,7 @@ const badgeLabel = (status: string) =>
     status === 'confirmed' ? 'Confirmed' : status === 'cancelled' ? 'Cancelled' : 'Awaiting deposit';
 
 const SECTIONS = [
-    'Button', 'TextInput', 'Select', 'Combobox', 'Textarea', 'Checkbox', 'Toggle',
+    'Button', 'TextInput', 'Select', 'Combobox', 'Textarea', 'Checkbox', 'RadioGroup', 'Toggle',
     'Table', 'Badge', 'Modal', 'SlideOver', 'ConfirmDialog', 'Toast', 'EmptyState',
     'Skeleton', 'Money', 'DateTime', 'PageHeader', 'Tabs', 'Menu', 'UserMenu',
     'CommandPalette', 'AppLogo', 'Card', 'Stat', 'Callout', 'Label and Field',
@@ -296,6 +302,37 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                         <State name="Unchecked"><Checkbox :model-value="false" label="Take a deposit" /></State>
                         <State name="With hint"><Checkbox v-model="checked" label="Show on the booking page" hint="Customers can only book services that are shown." /></State>
                         <State name="Disabled"><Checkbox :model-value="true" label="Locked by your plan" disabled /></State>
+                    </div>
+                </Specimen>
+
+                <Specimen
+                    name="RadioGroup"
+                    note="One of a small set, where the difference between the options is what is being read. Real fieldset, real legend, hint per option, error on the group rather than on any one input."
+                >
+                    <div class="max-w-measure space-y-6">
+                        <State name="Default">
+                            <RadioGroup
+                                v-model="bookingMode"
+                                legend="How do you want to accept bookings?"
+                                :options="bookingModeOptions"
+                            />
+                        </State>
+                        <State name="Error">
+                            <RadioGroup
+                                v-model="bookingMode"
+                                legend="How do you want to accept bookings?"
+                                :options="bookingModeOptions"
+                                error="Pick one of the two."
+                            />
+                        </State>
+                        <State name="Disabled">
+                            <RadioGroup
+                                :model-value="'request'"
+                                legend="Locked by your plan"
+                                :options="bookingModeOptions"
+                                disabled
+                            />
+                        </State>
                     </div>
                 </Specimen>
 

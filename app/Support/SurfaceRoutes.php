@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Http\Controllers\Dev\ComponentGalleryController;
+use App\Http\Controllers\MarketingController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -28,6 +30,7 @@ final class SurfaceRoutes
         Route::middleware('web')->group(__DIR__.'/../../routes/machine.php');
 
         self::manifest();
+        self::robots();
         self::gallery();
         self::errorPreviews();
     }
@@ -72,6 +75,76 @@ final class SurfaceRoutes
                 'display' => 'standalone',
             ])->header('Content-Type', 'application/manifest+json');
         })->name('site.webmanifest');
+    }
+
+    /**
+     * `robots.txt`, once, for all four hostnames.
+     *
+     * There used to be a `public/robots.txt`, and because a file in the document
+     * root is served by nginx before the request reaches PHP, it was the answer
+     * for every hostname — one static file, one document root, four hosts. It
+     * read:
+     *
+     *     User-agent: *
+     *     Disallow:
+     *
+     * which is "crawl everything", and what it invited a crawler into included
+     * `app.` (the operator app), `admin.` (the console) and every tenant's
+     * booking page. It also named no sitemap, so the marketing site's — the one
+     * surface that *wants* crawling — was never advertised at all. The file is
+     * deleted and this is what answers instead.
+     *
+     * **One route, not one per surface.** `RouteCollection` keys a route by
+     * method and URI, and a second registration on the same key replaces the
+     * first rather than sitting behind it: with subdomain routing off, marketing
+     * and app share a host *and* an empty prefix, so a marketing `/robots.txt`
+     * and a global `/robots.txt` are the same key and whichever is grouped last
+     * wins silently. That is not a thing to leave to registration order, so
+     * there is one route and it decides.
+     *
+     * The decision, in both modes:
+     *
+     *   - **Subdomain routing on.** Only the marketing host is crawlable.
+     *     `app.`, `book.` and `admin.` get `Disallow: /`.
+     *   - **Subdomain routing off.** There is one host, marketing is at `/`, and
+     *     `Surface::current` answers `App` for a root path because it cannot
+     *     tell the two apart — they are the same host. So the crawlable answer
+     *     is given to everything except the two surfaces that *do* have a path
+     *     prefix, `book/` and `admin/`. Locally that is right for the same
+     *     reason it is right in production: the pages under `/` are the
+     *     marketing site.
+     *
+     * `app.` and `admin.` are behind auth and a crawler gets a redirect rather
+     * than content, so the disallow is belt as well as braces — but `robots.txt`
+     * is what keeps the *URLs* out of an index, and the console's URLs are not
+     * something to publish.
+     *
+     * `book.` is `Disallow: /` too, and that is a decision rather than an
+     * oversight: a tenant's booking page is public and could reasonably be
+     * indexed, but nothing on it is written for search, every slug sits under one
+     * shared apex whose reputation no single salon controls, and a half-empty
+     * availability grid is a poor first result for a salon's name. Turning it on
+     * is a per-tenant question about a page whose canonical home is the salon's
+     * own site, and it wants answering deliberately rather than by a file nobody
+     * had read.
+     */
+    private static function robots(): void
+    {
+        Route::middleware('web')->get('/robots.txt', function (Request $request) {
+            $surface = Surface::current($request->getHost(), $request->path());
+
+            $crawlable = Surface::routingBySubdomain()
+                ? $surface === Surface::Marketing
+                : ! in_array($surface, [Surface::Book, Surface::Admin], true);
+
+            if ($crawlable) {
+                return app(MarketingController::class)->robots();
+            }
+
+            return response("User-agent: *\nDisallow: /\n", 200, [
+                'Content-Type' => 'text/plain; charset=utf-8',
+            ]);
+        })->name('robots');
     }
 
     /**

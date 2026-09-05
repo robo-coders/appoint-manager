@@ -87,6 +87,22 @@
         </div>
     </section>
 
+    {{--
+        The questions, from `App\Support\MarketingFaq::home()`.
+
+        The home page had none, which left the eight questions a stranger
+        actually arrives with — what is it, what does it cost, is there a trial,
+        who is it for — answerable only by reading three other pages. They are
+        also the questions an answer engine is asked on this product's behalf,
+        and the same array is published as `FAQPage` JSON-LD in the head, so
+        there is one copy of each answer rather than a page and a markup block
+        that drift.
+
+        `.faq` and `.q` are the pricing page's existing styles, unchanged and
+        page-agnostic — this adds a section, not a look.
+    --}}
+    @include('marketing.partials.faq', ['faq' => $faq, 'heading' => 'Common questions'])
+
     @include('marketing.partials.cta-band', [
         'heading' => 'Put your own week in it.',
         'note' => 'Set up your services, open your booking page, see what a cancellation does.',

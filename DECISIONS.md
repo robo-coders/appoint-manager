@@ -2968,3 +2968,483 @@ What looked wrong or confusing, plainly:
 - Login on `127.0.0.1` fails silently. DEPLOY already says localhost; the failure mode still needs to be named, because it is how this walk died last time.
 - No usage number in the chrome until you are near the limit. The brief asked to see the counter; it lives on `/billing` only.
 - I did not finish snooze, stop, dry-run bodies, admin kill/credit/trial, or a real card. Those are in the script. They are not a substitute for having watched them.
+
+# Phase 13 — seven items
+
+Seven scoped items, done in order, each kept to its own scope. Vertical
+management, domain references, the auth surface, super admin cleanup, marketing
+discoverability, loyalty packages and staff calendar sync. What follows is the
+decision record: what was found, what was chosen, and where the brief and the
+result differ.
+
+## 1 — Verticals: the two columns that were thrown away
+
+`VerticalController::store` wrote `subject_fields => []` and
+`default_services => []` **after** the spread of `$request->validated()`, so
+whatever was submitted was overwritten with nothing. In practice nothing was
+submitted either — the form had no fields for them — so the bug was two bugs
+wearing one coat: the screen could not send them and the controller would have
+discarded them anyway.
+
+The two columns are not decoration. `subject_fields` is what the public booking
+page asks about the animal (`StorePublicBookingRequest`,
+`StoreManualBookingRequest`, `Public/BookingIsland.vue`), and
+`default_services` is the price list `OnboardingController` pre-fills a new
+salon's services step from, plus the per-service rebooking rhythm
+`VerticalInterval` reads. **A vertical created through the console shipped with
+neither, which is a vertical that is a word in a dropdown rather than a trade.**
+
+Now: both are on the form as repeaters, validated per element in
+`Http/Requests/SuperAdmin/Concerns/DefinesVertical.php`, and written. Three
+decisions in the validation worth naming:
+
+- **The two rules a wildcard cannot express are in an `after` hook.** A choice
+  field with no choices, and a deposit larger than its price. The second mirrors
+  `lte:price` on `StoreServiceRequest`, which cannot be written as
+  `default_services.*.deposit_amount` because the sibling index is not
+  addressable from a wildcard rule.
+- **Blank repeater rows are pruned before validation.** Adding a row and
+  thinking better of it without pressing remove otherwise fails `required` on
+  three keys and reports three errors about a row the person had abandoned.
+  Pruning looks at the identifying text only — `filled(false)` is true, so
+  "any value present" would find every abandoned row occupied by its own
+  unchecked checkbox and prune nothing.
+- **`customer_singular` and `appointment_singular` are `sometimes`.** They have
+  column defaults and are not what a caller with nothing to say about them
+  should be made to fill in. The existing tests posted without them and still
+  pass.
+
+`store()` keeps writing `[]` into both columns when a caller sends neither —
+listed *before* the spread now, so it is a default rather than an override.
+
+**Delete is soft-blocked while a tenant is on the key, and that is the whole
+design of it.** `tenants.type` holds the vertical key as a plain string with no
+foreign key behind it. A delete therefore succeeds at the database and takes
+effect as a *silent* change to live salons: every tenant on that key falls
+through `Vertical::definitionFor()` to the groomer row, and a barber's booking
+page starts asking his customers for the dog's breed. There is no cascade worth
+writing and no confirmation strong enough, so `destroy()` counts and refuses,
+with the count in the message. The dialog says which case you are in before the
+button, not after. Soft-deleted tenants do not count — a tenant in the bin is
+not using the vertical, and counting it would make a key undeletable forever
+with nothing on screen to say why.
+
+**A key cannot be changed.** `UpdateVerticalRequest` rules it `prohibited` rather
+than ignoring it, so a request that tries fails loudly; the edit sheet shows the
+key as type rather than as a disabled input, because a control you cannot use is
+still a control and this is a fact about the record.
+
+Choices for a `select` subject field are one per line (or comma-separated) in a
+text field rather than a repeater inside a repeater. Two levels of add/remove for
+"small, medium, large" is more control than the data deserves.
+
+## 2 — Domains
+
+`appoint-manager.com` → `diarydesk.com` across `config/session.php`,
+`.env.example`, `README.md` and `DEPLOY.md`. Nothing under `app/`,
+`resources/`, `routes/`, `tests/` or `scripts/` contained it.
+
+Two deliberate non-changes:
+
+- **`DECISIONS.md:214` still says `appoint-manager.com`.** It is the record of
+  the decision to use that hostname, and rewriting history to match the present
+  is how a decision log stops being one. Same principle as `check:name`, which
+  exempts this file as the rename's own record.
+- **`appoint-manager.test` is untouched**, in `DEPLOY.md`, `Surface.php`'s
+  docblock and four test files. That is the *local* hostname, not the live
+  domain, and it is what four `/etc/hosts` entries and four test config blocks
+  say. The brief named `.com`; changing the dev host is a separate change with
+  its own blast radius.
+
+The repository, the composer package and `app.name` keep the old name on
+purpose — see the rename section above and `config/product.php`.
+
+## 3 — Auth (phase 8)
+
+Almost all of this was already done: all six screens are on `GuestLayout`, every
+field is a library control taking its own `form.errors.<field>`, every submit
+button has `:loading`, and `ui/Field` links each error with `aria-describedby`
+and sets `aria-invalid`. `Auth/Login.vue` came off the `check:components` list in
+an earlier pass.
+
+**One thing was left, and it was the one the check kept naming.**
+`Auth/Register.vue`'s business-type field was a raw `<select>` with a
+hand-written `<label>`, its own `rounded-[6px] border-rule bg-paper` class list
+and its own `<p class="text-12 text-danger">` underneath. Three things were wrong
+with it beyond the duplication: the field sat on `paper` where every other input
+in the product is `white`, the error was not linked to the control, and
+`aria-invalid` was never set — on the one field a person is most likely to skip.
+
+It is `ui/Select` now, with the prompt as a real empty first option rather than a
+`placeholder` (a native select has none, and an empty value is what makes
+`required` mean anything on it). `ui/Select` rather than `ui/Combobox`: there are
+a handful of trades, not four hundred timezones, and a control that asks you to
+type before it will show you the list is the wrong one for a list you can read
+in full.
+
+No layout or flow changed. Still email and password, still the same fields.
+
+## 4 — Super admin (phase 9)
+
+**`EnsureSubscriptionWrite` was already correct.** The agreed behaviour — a
+super admin bypasses a tenant's billing lock unless they are impersonating — is
+what the code does, and the reasoning is in a comment there. What was missing was
+a test, so there was nothing stopping the next person "simplifying" it back.
+`tests/Feature/Billing/SubscriptionWriteGateTest.php` pins both directions and
+the way out of an impersonated session.
+
+**`check:components` was failing on one file, and it was not a super admin
+screen.** `PENDING` was already empty and `MAX_PENDING` already zero;
+`Components/BookingModeFields.vue` carried two hand-rolled
+`<input type="radio">` wearing `size-4 border-rule-strong text-ink` typed out by
+hand, plus its own two-line label markup. Every `Pages/SuperAdmin/*` screen was
+clean.
+
+So the fix was to give the library the control it was missing:
+`Components/ui/RadioGroup.vue`. Why a radio group and not something that already
+existed:
+
+- **Not `ui/Select`.** A select hides the options behind a click, and on these
+  decisions the difference *between* the options is the thing being read — "the
+  slot is theirs as soon as they book" against "you confirm before it is
+  theirs". A select cannot carry a second line per option, so the hint would move
+  out of the control and into prose above it, which is where it was and is why
+  the question needed asking twice.
+- **Not `ui/ChoiceRow`.** That is a `<button>` that emits `pick` and draws no
+  selected state at all, because on the booking page it lists alternatives you
+  take rather than settings you hold.
+- **Not `ui/Toggle`, even for two options.** A toggle is one thing on or off and
+  it takes effect immediately. "Off" would have to mean "requests", which is a
+  name nobody chose.
+
+It is in the gallery in three states, and `BookingModeFields` now takes an
+`error` prop that both callers wire to `form.errors.booking_mode` — which was
+never bound anywhere before.
+
+`check:components` reports **clean** across 112 Vue and Blade files, with an
+empty `PENDING` and a ceiling of zero. The next entry anybody wants to add has
+nowhere to go.
+
+## 5 — Marketing: SEO, GEO, AEO
+
+**The semantic pass found nothing to fix.** Every one of the eight pages already
+had exactly one `h1`, no skipped heading level, and `<header>` / `<nav
+aria-label>` / `<main id="main">` / `<footer>`. Rather than assert that in prose,
+it is now four parametrised tests in
+`tests/Feature/Launch/MarketingDiscoverabilityTest.php`, so the next page cannot
+arrive without them. Same for titles and descriptions, which were already unique
+and specific: the test proves uniqueness across all eight and bounds the
+description length to what a search result actually prints.
+
+**The FAQ is written once and published twice.** `App\Support\MarketingFaq` holds
+the questions; `marketing/partials/faq.blade.php` renders them and
+`App\Support\MarketingSchema` serialises the same array as `FAQPage` JSON-LD.
+Google's structured-data policy requires the markup to match the visible text,
+and the only way to guarantee that is for there to be one copy of the words — the
+same argument `MarketingFigures` already won about prices. The pricing page's
+five questions moved into it unchanged in wording; the home page had none and now
+has eight, written for a stranger and an answer engine at once (the question is
+the phrasing somebody would type, and the whole answer is in the first sentence).
+
+`.faq` and `.q` are the pricing page's existing styles, which were already
+page-agnostic. **No visual or layout change** — a section was added, not a look.
+
+JSON-LD is one `@graph` per page rather than sibling script tags, with stable
+`@id`s so the organisation is declared once and the page nodes reference it:
+`Organization`+`SoftwareApplication` everywhere, `LocalBusiness` on home and
+contact, `Service` on the trade page, `FAQPage` where there are questions.
+`JSON_HEX_TAG` matters and is not cosmetic: the FAQ answers legitimately contain
+an `<a>`, which is exactly the value that would otherwise close the `<script>`.
+
+**`LocalBusiness` states no street address and no telephone, and that is the
+decision.** The schema wants both. There is no shopfront, no trading address and
+no business line; locality, region and country is all that is true.
+`config/marketing.php` says so at length, because inventing an address to fill
+the shape of a schema is publishing a false fact about a real business to the
+engines that quote it, which is worse than an incomplete record. A test asserts
+the absence rather than trusting it.
+
+The `Offer` prices are read from `config/billing.php`. A `priceSpecification`
+that disagrees with the checkout is a rich result advertising a price we do not
+honour, and a test pins it to config rather than to a literal.
+
+**The sitemap was eight `route()` calls typed into an array** — the routes file's
+list, copied. A ninth page added to `routes/marketing.php` and to nothing else
+was a page no crawler heard about, and *nothing failed*: a short sitemap is still
+valid XML. `App\Support\MarketingSitemap` reads the router instead — every named
+`marketing.*` route that is a parameterless `GET`, minus the two machine files.
+The 404 is absent by construction, not by exclusion: it is rendered from
+`bootstrap/app.php` and is not a route. No `lastmod` (it would be `now()` on
+every request, which tells a crawler the whole site changed every time it looked),
+no `changefreq`, no `priority`.
+
+**`public/robots.txt` was the real find, and it was worse than a missing
+sitemap.** A file in the document root is served by nginx before the request
+reaches PHP, so `MarketingController::robots` was dead in production — and
+because all four hostnames share one document root, that one static file was the
+answer for `app.`, `book.` and `admin.` as well. It said:
+
+```
+User-agent: *
+Disallow:
+```
+
+which is "crawl everything": the operator app, the console, and every tenant's
+booking page, with no sitemap named for the one surface that wants crawling. The
+file is deleted. There is now **one** `/robots.txt` route, in
+`SurfaceRoutes::robots()`, that decides by surface — and it is one route rather
+than one per surface because `RouteCollection` keys by method and URI, so with
+subdomain routing off (which is how the suite runs) marketing and app share a
+host *and* an empty prefix and two registrations would silently replace each
+other by grouping order.
+
+`book.` is `Disallow: /` too, and that is a decision rather than an oversight: a
+tenant's booking page is public and could reasonably be indexed, but nothing on
+it is written for search, every slug sits under one shared apex whose reputation
+no single salon controls, and a half-empty availability grid is a poor first
+result for a salon's name. Turning it on is a per-tenant question about a page
+whose canonical home is the salon's own site.
+
+**`llms.txt`** is at the root, generated: the product summary, the price and the
+trial from `MarketingFigures`, and the page list from `MarketingSitemap`, so a
+new page appears in it without a second edit. It is not a robots file and grants
+nothing; it is the summary we would rather a model quote than one it assembles
+out of the nav.
+
+**Nothing on the surface is JS-only.** It mounts no Vue by construction (phase
+11), and the only script is the pricing interval toggle, whose starting price is
+server-rendered. A test asserts there is no Inertia mount point or payload on any
+page and that the pricing card shows the monthly figure without the toggle
+running.
+
+**The contact form emails a person now.** It validated, throttled, honeypotted
+and then `Log::info`'d, and the page's own comment had to admit an enquiry
+reached a log file. `MarketingEnquiryMail` is queued to
+`config('billing.owner_alert_email')` with the enquirer on `replyTo` — ours on
+the envelope, theirs on reply-to, because sending as the visitor's own address
+fails SPF and DKIM for whatever domain they typed and is how a form gets a
+domain's mail rejected. The log line stays: it is the record that a submission
+happened, which matters exactly when the mail is the thing that failed. With no
+address configured the send is skipped rather than throwing on a null recipient,
+and a test covers that.
+
+**Two of phase 11's listed leftovers were already done, at a different path.**
+The logos are wired (`resources/js/assets/*.svg`, used by
+`marketing/partials/nav.blade.php` and `footer.blade.php` through
+`Vite::asset()`), and that folder is already the `check:design` raw-colour
+exemption — `BRAND_ARTWORK` in `check-design-tokens.mjs`, verified against
+`tokens.css`. There is no `resources/branding/svg/`; the brief's path is stale,
+not the work.
+
+## 6 — Loyalty packages, v1
+
+Off by default, and off means absent rather than hidden. The flag is
+`tenants.settings['loyalty']['enabled']`, beside `notifications.sms_enabled`, so
+switching it on needed no migration; every method on `App\Services\Loyalty\Loyalty`
+returns early when it is off, and nothing outside that service reads a loyalty
+row.
+
+**Two tables and one column**, and each shape is a decision — `loyalty_packages`
+is plural even though v1 creates one (a `tenants.loyalty_sessions_required`
+column would be fewer moving parts today and a migration with a backfill the
+first time anybody wants a second tier); `loyalty_enrolments` has a unique index
+on `(tenant_id, customer_id)`, because "one active package per customer" as a
+rule in a service is a rule two concurrent bookings can both pass; and
+`bookings.is_loyalty_reward` exists because without it a £0 booking is
+indistinguishable from a free service, completing it would earn a stamp, and the
+reward would pay for itself.
+
+**The reward is spent at booking; the stamp is earned at completion.** Those are
+deliberately different moments. A stamp is a session that happened, so it cannot
+be earned by booking one and not turning up. The reward has to be applied at
+booking, because that is when the price and the deposit are decided and the whole
+point is that the free one is free *before* the customer is asked for a card.
+
+**`BookingStatus::Completed` had no writer, and that is the one thing this item
+needed that the brief did not mention.** The status existed and was read in four
+places — the dashboard's takings and no-show rate, `AppointmentSuggester`,
+`OverdueSubjects` — and was set by nothing in the application; only the two demo
+seeders. So "past appointments" and "completed appointments" were different sets
+in a product whose rebooking chase reads the second, and a loyalty stamp would
+have had nothing to count. `BookingService::complete()` and a **Mark as done**
+button on the booking screen are new. This is scope the brief did not ask for and
+without it item 6 is dead code; it is deliberately narrow — a confirmed
+appointment whose start time has passed, refusing a pending request, a
+cancellation and anything in the future, and idempotent on a second press.
+
+The stamp itself hangs off `Booking`'s `updated` model hook rather than the
+controller, for the reason `Customer::booted()` gives about the phone number: a
+status a support script, an import or tinker can also set is a status whose
+consequence must not live down one route. `wasChanged('status')` means it only
+fires on the transition, so an unrelated save on a completed booking does not
+stamp twice — and a row *created* as completed does not stamp at all, which is
+deliberate: the CSV importer brings historical appointments in that way, and a
+salon switching loyalty on should not have last year's bookings hand out free
+grooms.
+
+The touch on the booking flow is four lines in `BookingService::create` —
+`enrol`, `rewardDue`, a `needsDeposit` that is false when the reward is due, and
+`spendReward` after the write. The loyalty question is asked *before*
+`needsDeposit()` rather than unpicking its answer afterwards. `price_at_booking`
+is zero rather than a discount applied later, so every screen, export and refund
+path that reads it sees the price that was charged.
+
+**Enrolment is automatic on the next booking**, as the brief chose. The
+alternative — the owner enrolling people by hand — is a screen, a button and a
+decision per customer for a feature whose promise is that it runs itself.
+`firstOrCreate` on the unique index, so two bookings arriving together cannot
+make two enrolments.
+
+**`cycles_completed` never resets.** It is the difference between "0 of 5" and
+"0 of 5, and this would be their third free groom", and the second is worth
+saying to an owner looking at a regular. `loyalty_package_id` is `nullOnDelete`,
+not `cascadeOnDelete`: deleting a package a customer is halfway through must not
+delete the record that they were three sessions in — the enrolment survives with
+a null package, stops accruing, and the customer screen says "Paused".
+
+**Visibility, both halves.** The confirmation SMS carries the count *after* the
+appointment just booked, not before it — a message saying "3 of 5" when the one
+just booked is the fourth is a message the customer has to do arithmetic on, and
+the arithmetic is the only thing they wanted. It is composed inside `fitSms`, so
+the progress line competes with the salon's name for the segment budget and the
+name is what gives way; never the link, never the date. Owner-side, the customer
+record shows the package, the count, the state as a labelled badge, the number of
+full cards and the free sessions themselves as history.
+
+Wording differs from the brief's example: "3 of 5 stamps — 2 more until your free
+session." rather than "Booked! 3 of 5 stamps used — ...". DESIGN.md forbids
+exclamation marks and the surrounding SMS register is terse ("Salon: confirmed 4
+Sep 09:00."); the substance is the brief's.
+
+## 7 — Calendar sync
+
+Owner-facing only. There is no staff login, so there is nobody to show a "your
+calendar" screen to and no customer-facing element anywhere — the owner copies
+each person's link and sends it however she already talks to them.
+
+**The feed is unauthenticated, and that is the standard shape rather than a
+compromise.** A calendar client — iOS, Google, Outlook — fetches a URL on a timer
+with no cookie jar and cannot sign in to a session even where one exists. So the
+URL is the credential. What that costs and what is done about it:
+
+- 128 bits of `random_bytes`, unique across all tenants (the feed has no tenant
+  context, so the token is the only identifier and a collision would serve one
+  salon's diary to another's staff).
+- Minted on first view, not at staff creation, so a salon that never opens the
+  screen has no live tokens at all.
+- Revocable. **Replace the link** writes a new token and the old URL stops
+  resolving on the next poll. The screen says to send the new one, because the
+  old address keeps being polled and quietly shows an empty calendar.
+- Not fillable on `User`. A credential a staff form could mass-assign is a
+  credential anybody with a form can choose.
+- **The file carries the minimum a diary needs and nothing more**: customer name,
+  service, time, staff name. No phone, no email, no address, no price, no deposit
+  status, no notes about the animal. A leaked link is then a leak of who is coming
+  in on Thursday, not of a customer list somebody can ring. A test asserts the
+  absences.
+- 404 on a wrong token, never 403 — indistinguishable from a URL never issued —
+  and a route constraint of `[0-9a-f]{32}` keeps a malformed token out of the
+  query entirely.
+- `Cache-Control: private` and `X-Robots-Tag: noindex, nofollow`.
+
+Confirmed and upcoming only, bounded to 120 days. A cancelled appointment has to
+*disappear* from the phone rather than linger; a pending request is not yet an
+appointment; and a staff member scrolling back is looking at their own calendar's
+history, which this feed is not the record of.
+
+`App\Support\ICalendar` is written by hand and every rule in it is a rule because
+breaking it makes a real client refuse the whole file rather than skip a line:
+CRLF always (a bare LF is not a line break, and iOS shows "unsupported
+calendar"), folding at 75 **octets** between whole characters (folding mid-UTF-8
+emits two invalid bytes), escaping backslash / semicolon / comma / newline (a
+customer called "Smith, J" is enough), UTC stamps with a `Z` so the file carries
+no VTIMEZONE and cannot be wrong about British Summer Time, and a stable `UID`
+per booking so a poll updates the event instead of adding a duplicate.
+`SEQUENCE` comes from the booking's own `updated_at` — monotonic per booking,
+which is all the field requires, and it means a reschedule moves in the client.
+
+Its own settings tab rather than a section at the bottom of Business: it is a
+list of copyable links with no Save button, and putting it inside a form that
+does have one invites people to press Save and wonder what it did. The address is
+on screen in mono beside the Copy link button, because a clipboard write can fail
+and reading the link is then the only recovery. Replace is in the row's menu, not
+beside Copy, because it is the destructive one.
+
+## Found broken, left alone
+
+Outside the seven items. Untouched.
+
+- **`BookingStatus::NoShow` has no writer.** Exactly the shape `Completed` was in
+  before item 6: `DashboardController` computes a no-show *rate* from it and
+  nothing in the application can ever set it, so the figure is structurally zero
+  for every real tenant. Item 6 needed a writer for `Completed` and got one; this
+  one is the same fix and is not in scope. What would close it: a "Didn't turn
+  up" action beside **Mark as done**, and a decision about whether it forfeits a
+  loyalty stamp (it should).
+- **Two route-name exemptions in `EnsureSubscriptionWrite` are dead code.**
+  `$request->routeIs('billing.*', 'logout', 'impersonation.stop')` — `logout`
+  and `impersonation.stop` are both registered *outside* the `subscribed`
+  middleware group, so that branch is never reached for either. Harmless (they
+  are exempt by not being gated) but misleading: it reads as the mechanism and it
+  is not. `billing.*` is the only live half.
+- **`Pages/Customers/Show.vue` and `Pages/Bookings/Show.vue` have had no design
+  pass.** They pass `check:components` because they hand-roll no *controls* —
+  which is precisely the thing that check cannot see. Two hand-written cards each
+  with `text-14 font-medium` headings where every other screen uses
+  `ui/PageHeader` and `ui/Card`, no `ui/Table`, no `ui/Badge` except the one the
+  loyalty section added, and — worse — raw enum values printed at the reader:
+  "Status: confirmed", "Deposit: none". `DESIGN.md` requires every badge to carry
+  a label and the operator app to read status from ink weight, and these two
+  print database strings. The loyalty section added in item 6 deliberately
+  follows the page's existing pattern rather than redesigning around itself;
+  redesigning the page is a phase, not a side effect.
+- **The pricing page's interval toggle is inert without JavaScript and does not
+  say so.** Two `aria-pressed` buttons that look pressable and do nothing. The
+  price itself is server-rendered, so nothing is *hidden* — the marketing
+  discoverability tests pin that — but a control that silently does nothing is
+  worse than one that is not there. What would close it: render both prices and
+  let the toggle switch which is visible, or hide the toggle until the script
+  runs.
+- **`marketing/pricing.blade.php` still carries an `UNVERIFIED` competitor price
+  range** read off a public price list, with a marker and an on-page caveat.
+  Already recorded above; nothing in this repository can check it.
+
+## Still weak
+
+Named rather than filed, because these are in the work this pass shipped.
+
+- **JSON-LD `@id`s are built from `Surface::Marketing->url()`** — i.e. from
+  `APP_URL_MARKETING` — while a page's `url`/`canonical` comes from the request.
+  In production those agree. Locally, and anywhere the app is reached on a host
+  other than its configured one, the organisation node's `@id` names a different
+  origin from the page it is on. It is the same `APP_URL`-versus-request-host seam
+  `Surface::path()` exists for; a graph node needs an absolute, stable id, so the
+  configured host is the right source and the local mismatch is cosmetic.
+- **The loyalty progress line is on the SMS only, not the confirmation email.**
+  The brief said "SMS/booking confirmation message"; adding it to
+  `BookingConfirmedMail` means touching the Mailable and both its views, and a
+  customer with no phone therefore never sees the count. Small and worth doing.
+- **A cancelled reward booking has spent the reward.** `spendReward` runs at
+  booking, so a customer who books the free one and cancels loses it. That is the
+  paper-card behaviour (the stamps were crossed off) and it is the simpler rule,
+  but it is a rule nobody has agreed and no screen states.
+- **`MARKETING_PATHS` and `DISCOVERY_PATHS` are the same eight paths in two test
+  files.** They cannot be shared: a `const` in a Pest file is file-scoped, and
+  a helper declared in one test file is undefined in another worker under
+  `--parallel` (the reason `tests/Pest.php` exists and says so). Moving the list
+  there is the fix and is a change to a shared fixture file that two suites read.
+- **The calendar feed carries the `web` group, so every poll opens a session and
+  sets two cookies a calendar client discards.** Consistent with `machine.php`,
+  which makes the same choice for webhooks and documents it, and the rows are
+  GC'd inside `SESSION_LIFETIME` — but it is garbage a machine endpoint does not
+  need.
+- **Nothing tests the `.ics` against a real client.** The format rules are
+  asserted (CRLF, escaping, UTC, stable UID) but "iOS accepts this file" is not
+  something the suite can know. It wants one manual subscribe on a phone before a
+  staff member is sent a link.
+- **The vertical repeaters have no keyboard reordering and no drag.** Subject
+  field order is the order the booking page asks the questions in, and the only
+  way to change it is to retype the rows. `Services/Index.vue` solved the same
+  problem with move up / move down in a row menu (WCAG 2.2 requires a
+  single-pointer alternative to any drag); this screen has neither, because
+  neither existed before either.

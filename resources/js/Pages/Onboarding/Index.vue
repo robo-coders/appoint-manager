@@ -285,6 +285,7 @@ const saveHours = () => {
             <BookingModeFields
                 v-model:booking-mode="businessForm.booking_mode"
                 v-model:request-requires-deposit="businessForm.request_requires_deposit"
+                :error="businessForm.errors.booking_mode"
             />
             <div class="pt-2">
                 <Button type="submit" :loading="businessForm.processing">Save and continue</Button>

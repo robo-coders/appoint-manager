@@ -6,6 +6,7 @@ use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Enums\SlotOfferStatus;
+use App\Exceptions\BookingNotCompletableException;
 use App\Exceptions\OfferUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\PaymentsNotConfiguredException;
@@ -21,6 +22,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WaitlistEntry;
 use App\Services\Availability\AvailabilityEngine;
+use App\Services\Loyalty\Loyalty;
 use App\Services\Notifications\Notifier;
 use App\Services\Rebooking\RebookInterval;
 use App\Services\Stripe\StripeGateway;
@@ -58,6 +60,7 @@ final class BookingService
         private AvailabilityEngine $engine,
         private Notifier $notifier,
         private WaitlistOfferer $waitlist,
+        private Loyalty $loyalty,
     ) {}
 
     /**
@@ -120,11 +123,24 @@ final class BookingService
     ): Booking {
         $startsAt = $startsAt->utc();
         $endsAt = $startsAt->addMinutes($service->duration_minutes);
-        $needsDeposit = $this->needsDeposit($tenant, $service, $source);
-        $isRequest = $tenant->isRequestMode() && $source !== BookingSource::Manual;
         app(TenantContext::class)->set($tenant);
 
-        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $isRequest, $waitlistEntryId, $rebookIntervalDays) {
+        /*
+         * Loyalty, and the whole of its reach into this method.
+         *
+         * `enrol()` is a no-op unless the tenant has switched the feature on, so
+         * for every other tenant these two lines are two early returns and
+         * nothing else changes. When the reward is due the booking is free:
+         * price zero, deposit zero, and `needsDeposit` false — which is why the
+         * loyalty question is asked *before* `needsDeposit()` rather than
+         * unpicking its answer afterwards. Nothing else about the flow moves.
+         */
+        $this->loyalty->enrol($tenant, $customer);
+        $isReward = $this->loyalty->rewardDue($tenant, $customer);
+        $needsDeposit = ! $isReward && $this->needsDeposit($tenant, $service, $source);
+        $isRequest = $tenant->isRequestMode() && $source !== BookingSource::Manual;
+
+        $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $isRequest, $isReward, $waitlistEntryId, $rebookIntervalDays) {
             $this->lockStaffRow($tenant, $staff);
 
             if ($this->afterLock !== null) {
@@ -147,8 +163,12 @@ final class BookingService
                 'ends_at' => $endsAt,
                 'status' => $resolved,
                 'deposit_status' => $depositStatus ?? ($needsDeposit ? DepositStatus::Required : DepositStatus::None),
-                'price_at_booking' => $service->price->amount,
+                // The reward is the free one. Zero here rather than a discount
+                // applied later, so every screen, export and refund path that
+                // reads `price_at_booking` sees the price that was charged.
+                'price_at_booking' => $isReward ? 0 : $service->price->amount,
                 'deposit_at_booking' => $needsDeposit ? $service->deposit_amount->amount : 0,
+                'is_loyalty_reward' => $isReward,
                 'source' => $source,
                 'rebook_interval_days' => $rebookIntervalDays,
                 'request_expires_at' => $isRequest && $resolved === BookingStatus::Pending
@@ -167,6 +187,16 @@ final class BookingService
         // Everything below runs with no transaction open and no row locks held. The
         // staff window must never stay locked across a third-party call.
         AvailabilityCache::bust($tenant->id);
+
+        /*
+         * Spend the stamps that paid for this one, before the confirmation goes
+         * out — the message quotes the counter, and a message saying "5 of 5" on
+         * the appointment that used them would be a receipt for a card that has
+         * already been cleared.
+         */
+        if ($isReward) {
+            $this->loyalty->spendReward($tenant, $customer);
+        }
 
         if ($needsDeposit && $booking->status === BookingStatus::Pending) {
             $this->attachPaymentIntent($tenant, $booking, $isRequest ? 'manual' : 'automatic');
@@ -243,6 +273,111 @@ final class BookingService
 
         $this->notifier->bookingConfirmed($outcome);
         $this->audit($actor, $tenant, $outcome, 'booking.request.approved');
+
+        return $outcome->fresh();
+    }
+
+    /**
+     * Mark an appointment as having happened.
+     *
+     * **This is new, and it is here because the status had no writer.**
+     * `BookingStatus::Completed` existed and was read in four places — the
+     * dashboard's takings, the rebooking suggester, the overdue list — and set
+     * by nothing but the demo seeders. So "past appointments" and "completed
+     * appointments" were different sets in a product whose rebooking chase reads
+     * the second one, and loyalty stamps would have had nothing to count.
+     *
+     * Deliberately narrow. It refuses anything that is not a confirmed
+     * appointment that has already started: a pending request has not been
+     * accepted, a cancellation did not happen, and an appointment in three weeks
+     * has not happened yet. A booking already completed is returned unchanged
+     * rather than treated as an error, so a double press is not a failure.
+     *
+     * The loyalty stamp is not applied here. It hangs off `Booking`'s `updated`
+     * hook, so an import, a support script or a later "no show / completed"
+     * bulk action agrees with this method by construction rather than by
+     * remembering to call the same service.
+     */
+    public function complete(Booking $booking, ?User $actor = null): Booking
+    {
+        $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
+        app(TenantContext::class)->set($tenant);
+
+        $outcome = DB::transaction(function () use ($booking) {
+            $locked = Booking::withoutGlobalScopes()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === BookingStatus::Completed) {
+                return $locked;
+            }
+
+            if ($locked->status !== BookingStatus::Confirmed) {
+                throw BookingNotCompletableException::notConfirmed();
+            }
+
+            if ($locked->starts_at->isFuture()) {
+                throw BookingNotCompletableException::notYetStarted();
+            }
+
+            // `forceFill` and `save`, not `update`: the `updated` model hook
+            // that adds the loyalty stamp needs `wasChanged('status')`, which a
+            // mass update on the query builder would never produce.
+            $locked->forceFill(['status' => BookingStatus::Completed])->save();
+
+            return $locked;
+        });
+
+        $this->audit($actor, $tenant, $outcome, 'booking.completed');
+
+        return $outcome->fresh();
+    }
+
+    /**
+     * Mark an appointment as missed.
+     *
+     * **This is new, and it is here for the same reason `complete()` is.**
+     * `BookingStatus::NoShow` existed as an enum case and the dashboard's
+     * no-show rate read it, but nothing in the app could write it — the stat was
+     * structurally zero for every tenant, forever, and the only rows that ever
+     * carried the status came out of the demo seeder.
+     *
+     * Same eligibility as `complete()`, deliberately: a confirmed appointment
+     * whose start time has passed. A pending request was never accepted, a
+     * cancellation is a different thing that happened, and an appointment on
+     * Thursday cannot have been missed yet. Already a no-show is returned
+     * unchanged rather than treated as an error, so a double press is not a
+     * failure.
+     *
+     * No loyalty stamp, and no loyalty refund. The stamp hook only fires on
+     * `Completed`, so a missed appointment earns nothing — which is the point of
+     * stamping at completion rather than at booking. And a missed *reward*
+     * booking stays spent: the slot was held and nobody else could have it.
+     */
+    public function markNoShow(Booking $booking, ?User $actor = null): Booking
+    {
+        $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
+        app(TenantContext::class)->set($tenant);
+
+        $outcome = DB::transaction(function () use ($booking) {
+            $locked = Booking::withoutGlobalScopes()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === BookingStatus::NoShow) {
+                return $locked;
+            }
+
+            if ($locked->status !== BookingStatus::Confirmed) {
+                throw BookingNotCompletableException::noShowNotConfirmed();
+            }
+
+            if ($locked->starts_at->isFuture()) {
+                throw BookingNotCompletableException::noShowNotYetStarted();
+            }
+
+            $locked->forceFill(['status' => BookingStatus::NoShow])->save();
+
+            return $locked;
+        });
+
+        $this->audit($actor, $tenant, $outcome, 'booking.no_show');
 
         return $outcome->fresh();
     }
@@ -383,6 +518,24 @@ final class BookingService
 
         if ($outcome['already']) {
             return $booking;
+        }
+
+        /*
+         * Give the stamps back before anything else runs.
+         *
+         * A cancelled reward booking used to leave the customer's card empty and
+         * the reward gone: `spendReward()` clears it at creation, and nothing
+         * ever undid that. Placed after the transaction — like `spendReward()`
+         * in `create()` — because the enrolment write is its own concern and
+         * must not extend the lock on the booking row. Guarded by the `already`
+         * return above, so a second cancel cannot refund a second time.
+         */
+        if ($booking->is_loyalty_reward) {
+            $customer = $booking->customer ?? Customer::withoutGlobalScopes()->find($booking->customer_id);
+
+            if ($customer !== null) {
+                $this->loyalty->refundReward($tenant, $customer);
+            }
         }
 
         $refundStatus = $this->settleRefund($booking, $tenant, $outcome['refund']);

@@ -33,6 +33,8 @@ Route::middleware(['auth', 'super-admin'])->group(function (): void {
     Route::get('/failures', [SuperAdminController::class, 'failures'])->name('super-admin.failures');
     Route::get('/verticals', [VerticalController::class, 'index'])->name('super-admin.verticals');
     Route::post('/verticals', [VerticalController::class, 'store'])->name('super-admin.verticals.store');
+    Route::patch('/verticals/{vertical}', [VerticalController::class, 'update'])->name('super-admin.verticals.update');
+    Route::delete('/verticals/{vertical}', [VerticalController::class, 'destroy'])->name('super-admin.verticals.destroy');
     Route::post('/tenants/{tenant}/impersonate', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
     Route::post('/tenants/{tenant}/extend-trial', [SuperAdminController::class, 'extendTrial'])->name('super-admin.extend-trial');
     Route::post('/tenants/{tenant}/trial', [SuperAdminController::class, 'setTrial'])->name('super-admin.trial');

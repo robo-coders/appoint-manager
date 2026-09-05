@@ -25,6 +25,7 @@ use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Billing\SmsAllowance;
+use App\Services\Loyalty\Loyalty;
 use App\Services\Sms\SmsConsent;
 use App\Services\Sms\SmsGateway;
 use App\Support\PhoneNumber;
@@ -46,7 +47,24 @@ final class Notifier
 
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
         $url = book_url(null, 'b/'.$booking->public_token);
-        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': confirmed '.$when.'. '.$url);
+
+        /*
+         * The loyalty stamps, on the confirmation.
+         *
+         * There is no customer portal, so this message and the owner's customer
+         * screen are the only two places the count is ever visible — which makes
+         * this the feature's whole customer-facing surface rather than a nicety.
+         * Null for every tenant that has the feature off, and for a customer who
+         * is not enrolled, so the message is byte-identical to what it was.
+         *
+         * Inside `fitSms`, so the progress line competes with the salon's name
+         * for the segment budget and the *name* is what gives way — never the
+         * link, and never the date. See `SmsSegments::fit`.
+         */
+        $progress = app(Loyalty::class)->progressLine($booking);
+
+        $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': confirmed '.$when.'. '.$url
+            .($progress === null ? '' : ' '.$progress));
 
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingConfirmedMail($booking, $tenant), MessageType::BookingConfirmed, 'Your booking is confirmed.');
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::BookingConfirmed);

@@ -14,10 +14,10 @@ hostnames:
 
 | Host | Surface | Routes |
 |---|---|---|
-| `appoint-manager.com` | marketing | `routes/marketing.php` |
-| `app.appoint-manager.com` | the operator app | `routes/app.php` |
-| `book.appoint-manager.com/{slug}` | public booking | `routes/book.php` |
-| `admin.appoint-manager.com` | super admin | `routes/admin.php` |
+| `diarydesk.com` | marketing | `routes/marketing.php` |
+| `app.diarydesk.com` | the operator app | `routes/app.php` |
+| `book.diarydesk.com/{slug}` | public booking | `routes/book.php` |
+| `admin.diarydesk.com` | super admin | `routes/admin.php` |
 
 Webhooks and health checks are in `routes/machine.php` and are registered on
 every host — they are not a user surface.

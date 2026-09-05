@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests\SuperAdmin;
 
+use App\Http\Requests\SuperAdmin\Concerns\DefinesVertical;
 use App\Models\Vertical;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreVerticalRequest extends FormRequest
 {
+    use DefinesVertical;
+
     public function authorize(): bool
     {
         return $this->user()?->is_super_admin ?? false;
@@ -21,9 +25,7 @@ class StoreVerticalRequest extends FormRequest
     {
         return [
             'key' => ['required', 'string', 'max:64', Rule::unique(Vertical::class, 'key'), 'regex:/^[a-z0-9_]+$/'],
-            'label' => ['required', 'string', 'max:255'],
-            'subject_singular' => ['required', 'string', 'max:255'],
-            'subject_plural' => ['required', 'string', 'max:255'],
+            ...$this->definitionRules(),
         ];
     }
 
@@ -34,7 +36,13 @@ class StoreVerticalRequest extends FormRequest
     {
         return [
             'key.regex' => 'Use lowercase letters, numbers and underscores only.',
+            ...$this->definitionMessages(),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $v) => $this->validateDefinitionShape($v));
     }
 
     protected function prepareForValidation(): void
@@ -42,5 +50,7 @@ class StoreVerticalRequest extends FormRequest
         if (is_string($this->input('key'))) {
             $this->merge(['key' => strtolower($this->input('key'))]);
         }
+
+        $this->pruneBlankRows();
     }
 }

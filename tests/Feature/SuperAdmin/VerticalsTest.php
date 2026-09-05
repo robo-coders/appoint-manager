@@ -125,3 +125,217 @@ it('seeds the groomer defaults exactly as they were in config', function () {
         ['name' => 'Nail clip', 'duration_minutes' => 15, 'price' => 1000, 'deposit_amount' => 0, 'rebook_interval' => ['value' => 3, 'unit' => 'weeks']],
     ]);
 });
+
+/*
+|--------------------------------------------------------------------------
+| The definition columns, edit and delete
+|--------------------------------------------------------------------------
+|
+| `store()` used to write `subject_fields => []` and `default_services => []`
+| over whatever was submitted, and there was no `update()` or `destroy()` at
+| all. These are the tests for the three.
+|
+*/
+
+/**
+ * @return array<string, mixed>
+ */
+function aVerticalPayload(array $overrides = []): array
+{
+    return [
+        'key' => 'barber',
+        'label' => 'Barber',
+        'subject_singular' => 'client',
+        'subject_plural' => 'clients',
+        'customer_singular' => 'client',
+        'appointment_singular' => 'cut',
+        'subject_fields' => [
+            ['key' => 'style', 'label' => 'Usual style', 'type' => 'text', 'required' => true, 'options' => []],
+            ['key' => 'length', 'label' => 'Length', 'type' => 'select', 'required' => false, 'options' => ['short', 'long']],
+        ],
+        'default_services' => [
+            [
+                'name' => 'Dry cut',
+                'duration_minutes' => 30,
+                'price' => 1800,
+                'deposit_amount' => 500,
+                'rebook_interval' => ['value' => 4, 'unit' => 'weeks'],
+            ],
+        ],
+        ...$overrides,
+    ];
+}
+
+it('persists submitted subject fields and default services', function () {
+    $this->actingAs(aVerticalsAdmin())
+        ->post(route('super-admin.verticals.store'), aVerticalPayload())
+        ->assertRedirect(route('super-admin.verticals'))
+        ->assertSessionHasNoErrors();
+
+    $vertical = Vertical::query()->where('key', 'barber')->firstOrFail();
+
+    expect($vertical->subject_fields)->toHaveCount(2)
+        ->and($vertical->subject_fields[1]['options'])->toBe(['short', 'long'])
+        ->and($vertical->default_services)->toEqual([[
+            'name' => 'Dry cut',
+            'duration_minutes' => 30,
+            'price' => 1800,
+            'deposit_amount' => 500,
+            'rebook_interval' => ['value' => 4, 'unit' => 'weeks'],
+        ]])
+        ->and($vertical->appointment_singular)->toBe('cut');
+});
+
+it('sends the whole definition to the screen so the edit form can open pre-filled', function () {
+    Vertical::query()->create(aVerticalPayload());
+
+    $this->actingAs(aVerticalsAdmin())
+        ->get(route('super-admin.verticals'))
+        ->assertInertia(fn ($page) => $page
+            ->where('verticals.0.key', 'barber')
+            ->has('verticals.0.subject_fields', 2)
+            ->has('verticals.0.default_services', 1)
+            ->where('verticals.0.appointment_singular', 'cut')
+            ->where('verticals.0.tenants_count', 0));
+});
+
+it('counts the tenants on each vertical', function () {
+    Tenant::factory()->count(2)->create(['type' => 'groomer']);
+    Tenant::factory()->create(['type' => 'barber']);
+
+    $this->actingAs(aVerticalsAdmin())
+        ->get(route('super-admin.verticals'))
+        ->assertInertia(fn ($page) => $page->where('verticals.0.tenants_count', 2));
+});
+
+it('updates a vertical, definition columns included', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+
+    $this->actingAs(aVerticalsAdmin())
+        ->patch(route('super-admin.verticals.update', $vertical), [
+            'label' => 'Barbering',
+            'subject_singular' => 'client',
+            'subject_plural' => 'clients',
+            'customer_singular' => 'client',
+            'appointment_singular' => 'cut',
+            'subject_fields' => [
+                ['key' => 'style', 'label' => 'Usual style', 'type' => 'textarea', 'required' => false, 'options' => []],
+            ],
+            'default_services' => [],
+        ])
+        ->assertRedirect(route('super-admin.verticals'))
+        ->assertSessionHasNoErrors();
+
+    $vertical->refresh();
+
+    expect($vertical->label)->toBe('Barbering')
+        ->and($vertical->subject_fields)->toEqual([
+            ['key' => 'style', 'label' => 'Usual style', 'type' => 'textarea', 'required' => false, 'options' => []],
+        ])
+        ->and($vertical->default_services)->toBe([]);
+});
+
+it('refuses to change a key, because tenants store it as their type', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+
+    $this->actingAs(aVerticalsAdmin())
+        ->patch(route('super-admin.verticals.update', $vertical), [
+            'key' => 'hairdresser',
+            'label' => 'Barber',
+            'subject_singular' => 'client',
+            'subject_plural' => 'clients',
+        ])
+        ->assertSessionHasErrors('key');
+
+    expect($vertical->refresh()->key)->toBe('barber');
+});
+
+it('deletes a vertical nobody is using', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+
+    $this->actingAs(aVerticalsAdmin())
+        ->delete(route('super-admin.verticals.destroy', $vertical))
+        ->assertRedirect(route('super-admin.verticals'));
+
+    expect(Vertical::query()->where('key', 'barber')->exists())->toBeFalse();
+});
+
+it('refuses to delete a vertical a live tenant is set up as', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+    Tenant::factory()->create(['type' => 'barber']);
+
+    $this->actingAs(aVerticalsAdmin())
+        ->from(route('super-admin.verticals'))
+        ->delete(route('super-admin.verticals.destroy', $vertical))
+        ->assertRedirect(route('super-admin.verticals'))
+        ->assertSessionHas('toast', fn (string $toast) => str_contains($toast, 'One salon is set up as Barber'));
+
+    expect(Vertical::query()->where('key', 'barber')->exists())->toBeTrue();
+});
+
+it('lets a soft-deleted tenant stop blocking the delete', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+    $tenant = Tenant::factory()->create(['type' => 'barber']);
+    $tenant->delete();
+
+    $this->actingAs(aVerticalsAdmin())
+        ->delete(route('super-admin.verticals.destroy', $vertical))
+        ->assertRedirect(route('super-admin.verticals'));
+
+    expect(Vertical::query()->where('key', 'barber')->exists())->toBeFalse();
+});
+
+it('rejects a choice field with no choices', function () {
+    $this->actingAs(aVerticalsAdmin())
+        ->post(route('super-admin.verticals.store'), aVerticalPayload([
+            'subject_fields' => [
+                ['key' => 'length', 'label' => 'Length', 'type' => 'select', 'required' => true, 'options' => []],
+            ],
+        ]))
+        ->assertSessionHasErrors('subject_fields.0.options');
+});
+
+it('rejects two subject fields sharing a key', function () {
+    $this->actingAs(aVerticalsAdmin())
+        ->post(route('super-admin.verticals.store'), aVerticalPayload([
+            'subject_fields' => [
+                ['key' => 'style', 'label' => 'Style', 'type' => 'text', 'required' => true, 'options' => []],
+                ['key' => 'style', 'label' => 'Style again', 'type' => 'text', 'required' => false, 'options' => []],
+            ],
+        ]))
+        ->assertSessionHasErrors('subject_fields.1.key');
+});
+
+it('rejects a default service whose deposit is more than its price', function () {
+    $this->actingAs(aVerticalsAdmin())
+        ->post(route('super-admin.verticals.store'), aVerticalPayload([
+            'default_services' => [
+                ['name' => 'Dry cut', 'duration_minutes' => 30, 'price' => 1000, 'deposit_amount' => 2000],
+            ],
+        ]))
+        ->assertSessionHasErrors('default_services.0.deposit_amount');
+});
+
+it('drops a repeater row that was added and abandoned', function () {
+    $this->actingAs(aVerticalsAdmin())
+        ->post(route('super-admin.verticals.store'), aVerticalPayload([
+            'subject_fields' => [
+                ['key' => 'style', 'label' => 'Style', 'type' => 'text', 'required' => true, 'options' => []],
+                ['key' => '', 'label' => '', 'type' => 'text', 'required' => false, 'options' => []],
+            ],
+            'default_services' => [],
+        ]))
+        ->assertRedirect(route('super-admin.verticals'))
+        ->assertSessionHasNoErrors();
+
+    expect(Vertical::query()->where('key', 'barber')->firstOrFail()->subject_fields)->toHaveCount(1);
+});
+
+it('keeps a non-super-admin out of update and destroy', function () {
+    $vertical = Vertical::query()->create(aVerticalPayload());
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id, 'is_super_admin' => false]);
+
+    $this->actingAs($user)->patch(route('super-admin.verticals.update', $vertical))->assertForbidden();
+    $this->actingAs($user)->delete(route('super-admin.verticals.destroy', $vertical))->assertForbidden();
+});

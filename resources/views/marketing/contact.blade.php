@@ -3,13 +3,15 @@
 {{--
     Contact, and the in-person demo offer.
 
-    **The form posts for real and does not email anybody yet.** `POST /contact`
-    validates, rate-limits, drops anything that trips the honeypot, and writes
-    the enquiry to the application log at `info`. It does not send mail. That is
-    a deliberate one-step-short: the copy under the button says so, and
-    `MarketingController::sendContact()` says where the one line goes that turns
-    it into a Mailable. Nothing here pretends an enquiry has reached a person
-    when it has reached a log file.
+    **The form posts for real and emails a person.** `POST /contact` validates,
+    rate-limits, drops anything that trips the honeypot, writes the enquiry to
+    the application log at `info`, and queues `MarketingEnquiryMail` to
+    `config('billing.owner_alert_email')` with the enquirer on `replyTo`.
+
+    It used to stop at the log line, and this comment used to say so. The log
+    line stays — it is the record that a submission happened, which matters
+    exactly when the mail is the thing that failed — but the flash under the
+    button now tells the truth rather than being one step ahead of the code.
 
     The page is deliberately **not** in the `cache.headers:public` group the
     rest of the surface is in. It carries a CSRF token, and a shared cache

@@ -7,6 +7,7 @@ use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Models\Concerns\BelongsToTenant;
+use App\Services\Loyalty\Loyalty;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +41,7 @@ class Booking extends Model
         'stripe_payment_intent_id',
         'waitlist_entry_id',
         'request_expires_at',
+        'is_loyalty_reward',
     ];
 
     protected static function booted(): void
@@ -48,6 +50,35 @@ class Booking extends Model
             if ($booking->public_token === null) {
                 $booking->public_token = (string) Str::uuid();
             }
+        });
+
+        /**
+         * A completed appointment earns a loyalty stamp, wherever it was
+         * completed from.
+         *
+         * Here rather than in a controller for the reason `Customer::booted()`
+         * gives about the phone number: a status that a support script, an
+         * import or tinker can also set is a status whose consequence must not
+         * live down one route. `Booking::complete()` on `BookingService` is the
+         * route an owner uses; this is what makes the other ways agree with it.
+         *
+         * **`updated`, and only on the transition.** `wasChanged('status')`
+         * means a booking that is saved again while already completed does not
+         * stamp twice — which is what an edit to its notes would otherwise do.
+         * It also means a row *created* as completed does not stamp, and that is
+         * deliberate: the CSV importer brings historical appointments in that
+         * way, and a salon switching loyalty on should not have last year's
+         * bookings hand out free grooms.
+         *
+         * `Loyalty::stamp()` returns immediately unless the tenant has the
+         * feature on, so for everybody else this hook is one enum comparison.
+         */
+        static::updated(function (Booking $booking): void {
+            if ($booking->status !== BookingStatus::Completed || ! $booking->wasChanged('status')) {
+                return;
+            }
+
+            app(Loyalty::class)->stamp($booking);
         });
     }
 
@@ -66,6 +97,7 @@ class Booking extends Model
             'rebook_interval_days' => 'integer',
             'price_at_booking' => MoneyCast::class,
             'deposit_at_booking' => MoneyCast::class,
+            'is_loyalty_reward' => 'boolean',
             'deposit_paid_at' => 'datetime',
             'reminder_cancelled_at' => 'datetime',
             'request_expires_at' => 'datetime',

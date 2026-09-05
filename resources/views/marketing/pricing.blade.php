@@ -116,54 +116,17 @@
         </div>
     </section>
 
-    <section class="faq">
-        <div class="faq-inner">
-            <h2>Questions</h2>
-            <div class="q">
-                <h3 class="question">What is the difference between monthly and yearly?</h3>
-                <p class="answer">
-                    Yearly is {{ $figures->yearlyBare() }}, which works out at about
-                    {{ $figures->yearlyPerMonthBare() }} a month. Monthly is
-                    {{ $figures->monthlyBare() }} and you can stop whenever you like. Nothing else
-                    changes between them.
-                </p>
-            </div>
-            <div class="q">
-                <h3 class="question">What happens after the {{ $figures->smsIncluded() }} included texts?</h3>
-                <p class="answer">
-                    Top up another {{ $figures->smsTopupSize() }} for {{ $figures->smsTopupBare() }}.
-                    Top-ups roll over rather than expiring at the end of the month. There is a
-                    ceiling of {{ $figures->smsCeiling() }} texts per account per month so a
-                    runaway loop can never hand you a bill you did not expect.
-                </p>
-            </div>
-            <div class="q">
-                <h3 class="question">Can I cancel during the trial?</h3>
-                <p class="answer">
-                    Yes, any time, and you are not charged. You give no card to start the trial, so
-                    there is nothing to cancel a payment on.
-                </p>
-            </div>
-            <div class="q">
-                <h3 class="question">Do my customers pay anything to {{ config('product.name') }}?</h3>
-                <p class="answer">
-                    No. Deposits go to your own Stripe account, and
-                    {{ config('product.name') }} only ever charges you the subscription. Stripe
-                    takes its own card processing fee from the deposit, the same as it would on any
-                    payment you take.
-                </p>
-            </div>
-            <div class="q">
-                <h3 class="question">What happens to my data if I stop paying?</h3>
-                <p class="answer">
-                    The account goes read-only rather than dark. Your customers' booking page keeps
-                    working, you can still export everything, and nothing is deleted while the
-                    account exists. The <a href="{{ route('marketing.terms') }}">terms</a> set out
-                    how long that lasts.
-                </p>
-            </div>
-        </div>
-    </section>
+    {{--
+        The same five questions, in the same words, from
+        `App\Support\MarketingFaq::pricing()`.
+
+        They were written out in this file. They moved so that the visible text
+        and the `FAQPage` JSON-LD in the head are one array rather than two
+        copies — Google's structured-data policy requires them to match, and a
+        page whose answers are editable in one place and published in another is
+        a page that will eventually be quoted saying the old price.
+    --}}
+    @include('marketing.partials.faq', ['faq' => $faq])
 
     @include('marketing.partials.cta-band', [
         'heading' => 'One price, whatever your week looks like.',

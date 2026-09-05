@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Exceptions\BookingNotCompletableException;
 use App\Exceptions\RequestNotPendingException;
 use App\Exceptions\SlotUnavailableException;
 use App\Http\Requests\Bookings\StoreManualBookingRequest;
@@ -159,6 +160,46 @@ class BookingController extends Controller
         }
 
         return back()->with('toast', 'Request declined.');
+    }
+
+    /**
+     * Mark an appointment as having happened.
+     *
+     * The loyalty stamp is not applied here — it hangs off `Booking`'s `updated`
+     * hook, so this route and an import and a support script all agree. See
+     * `BookingService::complete`.
+     */
+    public function complete(Booking $booking, Request $request, BookingService $bookings): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        try {
+            $bookings->complete($booking, $request->user());
+        } catch (BookingNotCompletableException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()]);
+        }
+
+        return back()->with('toast', 'Marked as done.');
+    }
+
+    /**
+     * Mark an appointment as missed.
+     *
+     * The only writer of `BookingStatus::NoShow` in the app — the dashboard's
+     * no-show rate read a status nothing could set. See
+     * `BookingService::markNoShow`.
+     */
+    public function noShow(Booking $booking, Request $request, BookingService $bookings): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        try {
+            $bookings->markNoShow($booking, $request->user());
+        } catch (BookingNotCompletableException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()]);
+        }
+
+        return back()->with('toast', 'Marked as a no show.');
     }
 
     /**

@@ -8,6 +8,10 @@ Tick or defer with a reason. First real salon does not go live until every open 
 - [x] Dunning emails day 0 / 3 / 7 (`billing:dunning`)
 - [x] Cancel asks why and offers pause
 - [x] Marketing: home, pricing, `/dog-grooming`, about, contact, privacy, terms, sitemap, robots
+- [x] Marketing discoverability: JSON-LD (`Organization`, `LocalBusiness`, `Service`, `FAQPage`), `llms.txt`, sitemap generated from routes, `robots.txt` per surface (`public/robots.txt` deleted — it shadowed the route on all four hosts and said "crawl everything")
+- [x] Contact form emails `BILLING_OWNER_EMAIL` (`MarketingEnquiryMail`), enquirer on `replyTo`. Set `BILLING_OWNER_EMAIL` on Forge or the send is skipped and only the log line remains
+- [x] Loyalty packages (off per tenant by default): one package, stamps on completed appointments, next session free, progress on the confirmation text and on the customer record
+- [x] Calendar sync: per-staff `.ics` at `/calendar/{token}.ics`, links copied from Settings → Calendar and distributed by the owner. **Subscribe to one feed on a real iPhone and in Google Calendar before sending a staff member a link** — the format rules are unit-tested, "the client accepts it" is not
 - [x] Empty testimonials slot (no fake quotes). No blog.
 - [x] Super admin `/admin`: tenants, impersonate + audit, send log, failed jobs/webhooks, trial/comp/flags/clone
 - [x] CSV customer + booking import with dry-run

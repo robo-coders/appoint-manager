@@ -60,6 +60,45 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * This person's calendar subscription token, minted on first use.
+     *
+     * Not fillable and not in `$fillable` above: it is a credential, and a
+     * credential a staff form could mass-assign is a credential anybody with a
+     * form can choose. `saveQuietly` because minting a token is not a change to
+     * the member of staff that anything should observe.
+     *
+     * `random_bytes(16)` rather than a UUID: 128 bits either way, but a UUID
+     * carries a version and a variant and reads as an identifier somebody may
+     * feel free to log. This reads as a secret.
+     */
+    public function calendarToken(): string
+    {
+        if ($this->calendar_token === null) {
+            $this->calendar_token = bin2hex(random_bytes(16));
+            $this->saveQuietly();
+        }
+
+        return $this->calendar_token;
+    }
+
+    /**
+     * Throw the old token away and issue a new one.
+     *
+     * This is the whole answer to "the link got forwarded to someone who should
+     * not have it": the previous URL stops resolving immediately, and the member
+     * of staff is sent the new one. Their calendar app will keep polling the old
+     * address and quietly show nothing, which is why the screen says to re-send
+     * the link.
+     */
+    public function regenerateCalendarToken(): string
+    {
+        $this->calendar_token = bin2hex(random_bytes(16));
+        $this->saveQuietly();
+
+        return $this->calendar_token;
+    }
+
+    /**
      * @return BelongsToMany<Service, $this>
      */
     public function services(): BelongsToMany

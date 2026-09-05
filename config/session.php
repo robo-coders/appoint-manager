@@ -157,7 +157,7 @@ return [
     */
 
     /*
-     * Never the parent domain. A cookie on `.appoint-manager.com` would be
+     * Never the parent domain. A cookie on `.diarydesk.com` would be
      * sent to app., admin. and book. together, which is the sharing the
      * surface split exists to prevent. `ConfigureSurfaceSession` assigns the
      * exact request host when subdomain routing is on, and null (host-only)

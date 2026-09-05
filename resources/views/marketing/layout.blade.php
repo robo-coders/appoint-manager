@@ -41,6 +41,7 @@
         <meta name="robots" content="noindex">
     @endif
     <link rel="canonical" href="{{ $url }}">
+    @include('marketing.partials.schema')
     @include('partials.head')
     <meta name="theme-color" content="#FBF9F5"> {{-- design-tokens-ignore: editorial canvas, not --paper; HTML meta cannot hold a CSS variable --}}
     @vite(['resources/css/marketing-editorial.css'])

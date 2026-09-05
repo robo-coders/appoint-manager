@@ -34,8 +34,19 @@ Route::middleware('cache.headers:public;max_age=300;etag')->group(function (): v
     Route::get('/about', [MarketingController::class, 'about'])->name('marketing.about');
     Route::get('/privacy', [MarketingController::class, 'privacy'])->name('marketing.privacy');
     Route::get('/terms', [MarketingController::class, 'terms'])->name('marketing.terms');
+    /*
+     * The three machine files. They are pages to a crawler and not to a person,
+     * so they are excluded from the sitemap and from `llms.txt` by name — see
+     * `App\Support\MarketingSitemap`.
+     *
+     * `robots.txt` is deliberately **not** here. It is one route for all four
+     * hostnames, registered in `App\Support\SurfaceRoutes::robots()`, because
+     * only one of them may say "crawl everything" and a second route on the same
+     * URI would silently replace the first — `RouteCollection` keys by method
+     * and URI, and without subdomain routing marketing and app share both.
+     */
     Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('marketing.sitemap');
-    Route::get('/robots.txt', [MarketingController::class, 'robots'])->name('marketing.robots');
+    Route::get('/llms.txt', [MarketingController::class, 'llms'])->name('marketing.llms');
 });
 
 Route::get('/contact', [MarketingController::class, 'contact'])->name('marketing.contact');

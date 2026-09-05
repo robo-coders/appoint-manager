@@ -88,7 +88,7 @@ const submit = () =>
 <template>
     <AppLayout>
         <Head title="Settings" />
-        <PageHeader title="Settings" description="Business details, branding and payments." />
+        <PageHeader title="Settings" description="Business details, branding, loyalty, calendars and payments." />
 
         <SettingsNav current="business" />
 
@@ -155,6 +155,7 @@ const submit = () =>
             <BookingModeFields
                 v-model:booking-mode="form.booking_mode"
                 v-model:request-requires-deposit="form.request_requires_deposit"
+                :error="form.errors.booking_mode"
             />
 
             <div class="flex items-center gap-4 pt-2">

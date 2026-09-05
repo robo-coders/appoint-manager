@@ -38,6 +38,9 @@ class BookingPayload
             'price_at_booking' => $booking->price_at_booking->toArray(),
             'deposit_at_booking' => $booking->deposit_at_booking->toArray(),
             'source' => $booking->source->value,
+            // The free one. Every screen that lists a booking needs to be able
+            // to say why a £0 appointment is £0.
+            'is_loyalty_reward' => (bool) $booking->is_loyalty_reward,
             'public_token' => $booking->public_token,
             'cancellation_reason' => $booking->cancellation_reason,
             'request_expires_at' => $booking->request_expires_at?->utc()->toIso8601String(),

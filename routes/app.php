@@ -18,12 +18,14 @@ use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\CalendarSettingsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPrivacyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiaryController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\LoyaltyController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OverdueController;
 use App\Http\Controllers\PaymentSettingsController;
@@ -31,6 +33,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StaffCalendarController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TimeOffController;
 use App\Http\Controllers\WaitlistController;
@@ -51,6 +54,23 @@ Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])
     ->middleware('auth')
     ->name('impersonation.stop');
 
+/*
+ * A staff member's calendar feed.
+ *
+ * Outside `auth` on purpose, and outside `tenant` because it has to be: a
+ * calendar client fetches a URL on a timer with no cookie, so there is no
+ * session to resolve a tenant from. The token is the credential and the row it
+ * finds establishes the tenant context — see `StaffCalendarController`.
+ *
+ * Throttled harder than the surface default. A calendar client polls every
+ * fifteen minutes; sixty requests an hour per token is generous for that and is
+ * a ceiling on anybody trying tokens.
+ */
+Route::get('/calendar/{token}.ics', StaffCalendarController::class)
+    ->where('token', '[0-9a-f]{32}')
+    ->middleware('throttle:60,1')
+    ->name('calendar.feed');
+
 Route::middleware(['auth', 'tenant'])->group(function (): void {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::patch('/onboarding/business', [OnboardingController::class, 'updateBusiness'])->name('onboarding.business');
@@ -70,6 +90,18 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/approve', [BookingController::class, 'approve'])->name('bookings.approve');
     Route::post('/bookings/{booking}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
+    /*
+     * Marking an appointment as having happened. `BookingStatus::Completed` was
+     * read in four places and written by nothing but the demo seeders before
+     * this existed — see `BookingService::complete`.
+     */
+    Route::post('/bookings/{booking}/complete', [BookingController::class, 'complete'])->name('bookings.complete');
+    /*
+     * And marking one as missed. `BookingStatus::NoShow` was read by the
+     * dashboard's no-show rate and written by nothing, so the stat could only
+     * ever be zero — see `BookingService::markNoShow`.
+     */
+    Route::post('/bookings/{booking}/no-show', [BookingController::class, 'noShow'])->name('bookings.no-show');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
@@ -109,6 +141,10 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
     Route::get('/settings/booking-link/qr', [SettingsController::class, 'qr'])->name('settings.booking-link.qr');
     Route::get('/settings/branding', [BrandingController::class, 'edit'])->name('settings.branding.edit');
     Route::patch('/settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
+    Route::get('/settings/calendar', [CalendarSettingsController::class, 'show'])->name('settings.calendar.show');
+    Route::post('/settings/calendar/{staff}/regenerate', [CalendarSettingsController::class, 'regenerate'])->name('settings.calendar.regenerate');
+    Route::get('/settings/loyalty', [LoyaltyController::class, 'edit'])->name('settings.loyalty.edit');
+    Route::patch('/settings/loyalty', [LoyaltyController::class, 'update'])->name('settings.loyalty.update');
     Route::get('/settings/payments', [PaymentSettingsController::class, 'show'])->name('settings.payments.show');
     Route::post('/settings/payments/connect', [PaymentSettingsController::class, 'connect'])->name('settings.payments.connect');
     Route::get('/settings/payments/refresh', [PaymentSettingsController::class, 'refresh'])->name('settings.payments.refresh');

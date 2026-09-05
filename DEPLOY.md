@@ -7,12 +7,12 @@ hostnames. This is not a microservice split and must not become one.
 
 | Host | Surface | Who |
 |---|---|---|
-| `appoint-manager.com` | marketing | anyone |
-| `app.appoint-manager.com` | the operator app | the salon owner |
-| `book.appoint-manager.com/{slug}` | public booking | her customers |
-| `admin.appoint-manager.com` | super admin | us |
+| `diarydesk.com` | marketing | anyone |
+| `app.diarydesk.com` | the operator app | the salon owner |
+| `book.diarydesk.com/{slug}` | public booking | her customers |
+| `admin.diarydesk.com` | super admin | us |
 
-Verticals do **not** get subdomains — a dentist logs into `app.appoint-manager.com`
+Verticals do **not** get subdomains — a dentist logs into `app.diarydesk.com`
 exactly like a groomer, and only the vertical config and the marketing path she
 arrived from differ. Tenants do not get subdomains either; the slug stays in the
 path. Wildcard subdomains mean wildcard SSL and a class of routing bugs, for no
@@ -20,15 +20,15 @@ gain.
 
 ### DNS
 
-Four A/AAAA records (or `appoint-manager.com` plus three CNAMEs) pointing at the same
+Four A/AAAA records (or `diarydesk.com` plus three CNAMEs) pointing at the same
 server:
 
 ```
-appoint-manager.com.         A     <server-ip>
-www.appoint-manager.com.     CNAME appoint-manager.com.      # redirect to apex at the edge
-app.appoint-manager.com.     CNAME appoint-manager.com.
-book.appoint-manager.com.    CNAME appoint-manager.com.
-admin.appoint-manager.com.   CNAME appoint-manager.com.
+diarydesk.com.         A     <server-ip>
+www.diarydesk.com.     CNAME diarydesk.com.      # redirect to apex at the edge
+app.diarydesk.com.     CNAME diarydesk.com.
+book.diarydesk.com.    CNAME diarydesk.com.
+admin.diarydesk.com.   CNAME diarydesk.com.
 ```
 
 ### SSL
@@ -38,7 +38,7 @@ wildcard. On Forge, add each hostname to the site and issue a single Let's
 Encrypt certificate with all four SANs:
 
 ```
-appoint-manager.com, www.appoint-manager.com, app.appoint-manager.com, book.appoint-manager.com, admin.appoint-manager.com
+diarydesk.com, www.diarydesk.com, app.diarydesk.com, book.diarydesk.com, admin.diarydesk.com
 ```
 
 Renewal covers all four together. If you add a hostname later you must reissue.
@@ -48,7 +48,7 @@ Renewal covers all four together. If you add a hostname later you must reissue.
 One site, one document root, all four hostnames as aliases. Nginx:
 
 ```
-server_name appoint-manager.com www.appoint-manager.com app.appoint-manager.com book.appoint-manager.com admin.appoint-manager.com;
+server_name diarydesk.com www.diarydesk.com app.diarydesk.com book.diarydesk.com admin.diarydesk.com;
 ```
 
 Laravel routes by `Host`, so nothing else is needed. Make sure the proxy passes
@@ -58,13 +58,13 @@ the wrong surface.
 ### Environment
 
 ```
-APP_DOMAIN=appoint-manager.com
+APP_DOMAIN=diarydesk.com
 SUBDOMAIN_ROUTING=true
-APP_URL=https://app.appoint-manager.com
-APP_URL_MARKETING=https://appoint-manager.com
-APP_URL_APP=https://app.appoint-manager.com
-APP_URL_BOOK=https://book.appoint-manager.com
-APP_URL_ADMIN=https://admin.appoint-manager.com
+APP_URL=https://app.diarydesk.com
+APP_URL_MARKETING=https://diarydesk.com
+APP_URL_APP=https://app.diarydesk.com
+APP_URL_BOOK=https://book.diarydesk.com
+APP_URL_ADMIN=https://admin.diarydesk.com
 
 # Restrict the console to the office and the two of us. Empty means no
 # restriction, which is wrong in production.
@@ -74,12 +74,12 @@ SESSION_SECURE_COOKIE=true
 ```
 
 `SESSION_DOMAIN` is **not** set: it is assigned per request from the resolved
-host, so a cookie is never scoped to `.appoint-manager.com` where all four surfaces
+host, so a cookie is never scoped to `.diarydesk.com` where all four surfaces
 could read it.
 
 ### Caching
 
-`book.appoint-manager.com` is the only surface that may be CDN-cached, and only its
+`book.diarydesk.com` is the only surface that may be CDN-cached, and only its
 static assets — the booking page itself is per tenant and must not be cached at
 the edge. If you put a CDN in front, set the cache key to include the full path
 and never cache a response carrying `Set-Cookie`.
@@ -802,7 +802,7 @@ opened (`ConfigureSurfaceSession`):
 | `admin.` | `appoint_manager_admin_session` | that host only |
 | `book.` | no auth session | that host only |
 
-**No cookie is ever set on `.appoint-manager.com`.** A session on one surface
+**No cookie is ever set on `.diarydesk.com`.** A session on one surface
 cannot be presented to another, which is the point of the split.
 
 Impersonation is the one flow that crosses the boundary. The console cannot set

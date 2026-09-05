@@ -2,10 +2,10 @@
 import { Link } from '@inertiajs/vue3';
 
 /**
- * The three settings screens, as tabs.
+ * The five settings screens, as tabs.
  *
  * They were two underlined words floating above the form, which reads as
- * "here are some links" rather than "this screen has three parts". They are
+ * "here are some links" rather than "this screen has five parts". They are
  * separate routes rather than a single page with client-side tabs because each
  * one saves independently and each one deserves its own URL — a person sent a
  * link to Payments should land on Payments.
@@ -15,7 +15,7 @@ import { Link } from '@inertiajs/vue3';
  * reader and then unload the page when one is chosen. These are links, so they
  * are links, and `aria-current` carries which one you are on.
  */
-defineProps<{ current: 'business' | 'branding' | 'payments' }>();
+defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' }>();
 </script>
 
 <template>
@@ -24,6 +24,22 @@ defineProps<{ current: 'business' | 'branding' | 'payments' }>();
             v-for="tab in [
                 { key: 'business', label: 'Business', href: route('settings.edit') },
                 { key: 'branding', label: 'Branding', href: route('settings.branding.edit') },
+                /*
+                 * Loyalty is a tab even when it is switched off, because a tab
+                 * that appears once you have turned something on is a feature
+                 * nobody finds. It is between Branding and Payments rather than
+                 * last: it is about what the salon offers, and Payments is where
+                 * the Stripe connection lives, which is the one people arrive
+                 * looking for.
+                 */
+                { key: 'loyalty', label: 'Loyalty', href: route('settings.loyalty.edit') },
+                /*
+                 * Calendar sync. Its own screen rather than a block at the
+                 * bottom of Business, because it is a list of copyable links
+                 * with no Save button — putting it inside a form that does have
+                 * one invites people to press Save and wonder what it did.
+                 */
+                { key: 'calendar', label: 'Calendar', href: route('settings.calendar.show') },
                 { key: 'payments', label: 'Payments', href: route('settings.payments.show') },
             ]"
             :key="tab.key"
