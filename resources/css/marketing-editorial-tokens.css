@@ -35,6 +35,30 @@
     --font-body: 'Inter', 'Geist', ui-sans-serif, sans-serif;
     --font-mono: 'Geist Mono', ui-monospace, monospace;
 
+    /*
+     * The whole-week band on the home page. Its own light step off --canvas:
+     * the section is a gradient from --week-top to --week-bottom with a clay
+     * glow at the top of the card and a fade to --week-bottom at the foot of
+     * it, so the grid runs off the edge of the page rather than stopping on a
+     * border. None of these resolve to --canvas or --rule; they are a warmer,
+     * flatter set, and forcing them onto the page tokens flattens the band
+     * back into the sections either side of it.
+     */
+    --week-top: #fcfbf9;
+    --week-bottom: #f8f5f0;
+    --week-bottom-clear: rgb(248 245 240 / 0);
+    --week-rule: #efece6;
+    --week-rule-soft: #f0ede7;
+    --week-ink: #5f5c56;
+    --week-ink-quiet: #8c8880;
+    --week-chip-ink: #6b6862;
+    --week-open-ink: #a3a099;
+    --week-open-rule: #dcd8d1;
+    --week-won-rule: #ebd8c7;
+    --week-won-fill: rgb(168 87 41 / 0.06);
+    --week-glow: rgb(168 87 41 / 0.13);
+    --week-glow-clear: rgb(168 87 41 / 0);
+
     --space-1: 8px;
     --space-2: 16px;
     --space-3: 24px;
@@ -64,12 +88,24 @@
     --focus-ring: 0 0 0 2px #fbf9f5, 0 0 0 4px #a85729;
 
     /*
-     * Nothing on this surface animates. These exist so the reduced-motion gate
-     * has the same two values to read here that it reads on every other
-     * surface, and so it can see them zeroed.
+     * The two the reduced-motion gate reads, kept here so it has the same pair
+     * to check on this surface that it checks on every other one. Nothing on
+     * the page reads them: the only motion the marketing site has is the
+     * scroll reveal below, which is its own, much slower, pair.
      */
     --duration-fast: 120ms;
     --duration: 180ms;
+
+    /*
+     * The scroll reveal. Long and heavily eased, because it is scenery rather
+     * than feedback — a control that took 800ms to answer would be broken, a
+     * section that takes 800ms to arrive is the point. Zeroed under reduced
+     * motion alongside the two above.
+     */
+    --reveal-duration: 800ms;
+    --reveal-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --reveal-rise: 18px;
+    --reveal-stagger: 120ms;
 
     /* Prose measure. One column of reading, on the pages that are mostly words. */
     --measure: 68ch;
@@ -80,5 +116,8 @@
     :root {
         --duration-fast: 0ms;
         --duration: 0ms;
+        --reveal-duration: 0ms;
+        --reveal-rise: 0px;
+        --reveal-stagger: 0ms;
     }
 }

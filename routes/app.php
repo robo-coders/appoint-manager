@@ -168,6 +168,7 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
      * this line and routes/beta-sandbox.php.
      */
     require __DIR__.'/beta-sandbox.php';
+    require __DIR__.'/sandbox.php';
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -9,6 +9,8 @@ use App\BetaSandbox\SandboxNotReady;
 use App\BetaSandbox\SandboxReset;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Sandbox\PageData;
+use App\Sandbox\SandboxState;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,27 +53,29 @@ class SandboxController extends Controller
     {
         $tenant = $this->tenant();
 
-        return Inertia::render('BetaSandbox/Index', [
-            'shop' => [
-                'customers' => $tenant->customers()->count(),
-                'bookings' => $tenant->bookings()->count(),
-            ],
-            'intervals' => array_keys(FastForward::INTERVALS),
-        ]);
+        return Inertia::render('Settings/Sandbox/Index', PageData::props($tenant));
     }
 
     public function sampleData(Request $request, SampleData $sample): RedirectResponse
     {
         $tenant = $this->tenant($request);
+        $size = (string) $request->input('size', 'typical');
+
+        abort_unless(array_key_exists($size, SampleData::SIZES), 422);
 
         try {
-            $counts = $sample->load($tenant);
+            $counts = $sample->load($tenant, $size);
         } catch (SandboxNotReady $exception) {
             return back()->withErrors(['sandbox' => $exception->getMessage()]);
         }
 
+        $label = collect(SampleData::sizeOptions())->firstWhere('key', $size)['label'] ?? 'Sample shop';
+        SandboxState::put($tenant->fresh(), ['sample_size' => $size]);
+        SandboxState::remember($tenant->fresh(), 'Loaded '.$label);
+
         return back()->with('toast', sprintf(
-            'Sample shop loaded: %d customers, %d appointments, %d people on the waitlist.',
+            '%s loaded: %d customers, %d appointments, %d people on the waitlist.',
+            $label,
             $counts['customers'],
             $counts['bookings'],
             $counts['waitlist'],
@@ -86,6 +90,8 @@ class SandboxController extends Controller
         abort_unless(array_key_exists($interval, FastForward::INTERVALS), 422);
 
         $result = $forward->run($tenant, $interval);
+        $label = $interval === 'week' ? 'Skipped 1 week' : 'Skipped 1 day';
+        SandboxState::remember($tenant->fresh(), $label);
 
         return back()->with('toast', $this->fastForwardMessage($interval, $result));
     }
@@ -94,6 +100,7 @@ class SandboxController extends Controller
     {
         $tenant = $this->tenant($request);
         $removed = $reset->run($tenant);
+        SandboxState::remember($tenant->fresh(), 'Reset my shop');
 
         return back()->with('toast', sprintf(
             'Shop reset. %d customers and %d appointments removed. Your staff, services and hours are untouched.',

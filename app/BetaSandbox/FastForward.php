@@ -100,11 +100,21 @@ final class FastForward
      */
     public function run(Tenant $tenant, string $interval): array
     {
-        BetaSandbox::guard($tenant);
-
         $minutes = self::INTERVALS[$interval] ?? null;
 
         abort_if($minutes === null, 422);
+
+        return $this->advance($tenant, $minutes);
+    }
+
+    /**
+     * @return array{shifted: int, released: int, declined: int, offers: int, reminders: int}
+     */
+    public function advance(Tenant $tenant, int $minutes): array
+    {
+        BetaSandbox::guard($tenant);
+
+        abort_if($minutes < 1, 422);
 
         $context = app(TenantContext::class);
         $previous = $context->tenant();
@@ -133,6 +143,21 @@ final class FastForward
                     'reminders' => $this->sendDueReminders($tenant),
                 ];
             });
+        } finally {
+            $previous === null ? $context->clear() : $context->set($previous);
+        }
+    }
+
+    public function remindDue(Tenant $tenant): int
+    {
+        BetaSandbox::guard($tenant);
+
+        $context = app(TenantContext::class);
+        $previous = $context->tenant();
+        $context->set($tenant);
+
+        try {
+            return SandboxMute::while(fn (): int => $this->sendDueReminders($tenant));
         } finally {
             $previous === null ? $context->clear() : $context->set($previous);
         }

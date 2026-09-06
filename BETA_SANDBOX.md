@@ -5,10 +5,11 @@ payment, and its owner has three buttons that fill, advance and empty their own
 shop. It exists so a beta tester can answer "what happens when somebody does not
 turn up" without waiting a week or inventing a customer by hand.
 
-Everything the feature owns is named or grouped under **`BetaSandbox`**, plus one
-column called **`is_beta`**. This file is the checklist a future "delete the beta
-sandbox" prompt works from: it is complete, and every integration point outside
-the namespace is named with the exact edit that reverses it.
+Everything the feature owns is named or grouped under **`BetaSandbox`** and
+**`Sandbox`**, plus **`is_beta`** and **`sandbox_state`**. This file is the
+checklist a future "delete the beta sandbox" prompt works from: it is complete,
+and every integration point outside the namespace is named with the exact edit
+that reverses it.
 
 ---
 
@@ -26,10 +27,13 @@ the namespace is named with the exact edit that reverses it.
 | `app/BetaSandbox/FastForward.php` | "Skip 1 day" / "Skip 1 week" |
 | `app/BetaSandbox/SandboxReset.php` | "Reset my shop" |
 | `app/BetaSandbox/SandboxNotReady.php` | the one refusal an owner can act on |
-| `app/Http/Controllers/BetaSandbox/SandboxController.php` | the four endpoints |
-| `routes/beta-sandbox.php` | the four routes |
+| `app/Http/Controllers/BetaSandbox/SandboxController.php` | the original four endpoints |
+| `app/Sandbox/` | toolkit controllers and wrappers (jump, no-show, waitlist, outbox, reminders, flaky network) |
+| `routes/beta-sandbox.php` | the original four routes |
+| `routes/sandbox.php` | the toolkit routes |
 | `resources/js/Components/BetaSandbox/Banner.vue` | the global bar |
-| `resources/js/Pages/BetaSandbox/Index.vue` | Settings → Beta sandbox |
+| `resources/js/Components/Sandbox/` | status strip and SMS outbox |
+| `resources/js/Pages/Settings/Sandbox/Index.vue` | Settings → Beta sandbox |
 | `tests/Feature/BetaSandbox/BetaBannerTest.php` | banner shows / never shows |
 | `tests/Feature/BetaSandbox/BetaStripeTestModeTest.php` | test-mode guard |
 | `tests/Feature/BetaSandbox/SampleDataTest.php` | shape, idempotence, silence |
@@ -37,6 +41,7 @@ the namespace is named with the exact edit that reverses it.
 | `tests/Feature/BetaSandbox/SandboxResetTest.php` | wipes, preserves, rolls back |
 | `tests/Feature/BetaSandbox/SandboxGuardsTest.php` | 404s, tampering, impersonation |
 | `tests/Feature/BetaSandbox/SuperAdminBetaFlagTest.php` | the console switch |
+| `tests/Feature/BetaSandbox/ToolkitTest.php` | sizes, jump, no-show, waitlist, outbox, reminders, flaky |
 | `BETA_SANDBOX.md` | this file |
 
 ### Reverse by hand
@@ -44,7 +49,8 @@ the namespace is named with the exact edit that reverses it.
 | File | The edit |
 |---|---|
 | `database/migrations/2026_09_06_100000_add_is_beta_to_tenants_table.php` | new migration dropping `tenants.is_beta`; delete this one only if it has never run anywhere |
-| `app/Models/Tenant.php` | drop `'is_beta'` from `$fillable` and from `casts()` (both marked with a `BetaSandbox` comment) |
+| `database/migrations/2026_09_06_120000_add_sandbox_state_to_tenants_table.php` | new migration dropping `tenants.sandbox_state`; delete this one only if it has never run anywhere |
+| `app/Models/Tenant.php` | drop `'is_beta'` and `'sandbox_state'` from `$fillable` and from `casts()` (both marked with a `BetaSandbox` comment) |
 | `app/Services/Stripe/StripeConnectGateway.php` | **integration point 1** — `client()` back to `new StripeClient(config('services.stripe.secret'))` with no argument; delete `clientForAccount()`; drop the `$tenant` / `$accountId` arguments at its seven call sites; drop the `StripeTestMode` import |
 | `app/Services/Notifications/Notifier.php` | **integration point 2** — delete `sandboxMuted()`, its five `if (! $this->sandboxMuted())` guards, the two `$muted ? MessageStatus::Sent : MessageStatus::Queued` ternaries (back to `MessageStatus::Queued`), and the `SandboxMute` import |
 | `app/Services/Waitlist/WaitlistOfferer.php` | **integration point 3** — `expireAndContinue()` loses its optional `?int $tenantId` and the two `when()` clauses. Tenant-agnostic and safe to leave in place |
@@ -54,16 +60,17 @@ the namespace is named with the exact edit that reverses it.
 | `resources/js/types/index.d.ts` | delete `is_beta` from `Tenant` |
 | `resources/js/Layouts/AppLayout.vue` | delete the `BetaSandboxBanner` import and its one tag |
 | `resources/js/Components/Settings/SettingsNav.vue` | drop `'beta-sandbox'` from the `current` union, the `usePage`/`computed` imports, the `beta` computed, and the spread that adds the tab |
-| `routes/app.php` | delete the `require __DIR__.'/beta-sandbox.php';` line and its comment |
+| `routes/app.php` | delete the `require` lines for `beta-sandbox.php` and `sandbox.php` |
 | `routes/admin.php` | delete the `super-admin.beta` route |
 | `app/Http/Controllers/SuperAdmin/SuperAdminController.php` | delete `setBeta()` and the `'is_beta'` line in `index()` |
 | `resources/js/Pages/SuperAdmin/Index.vue` | delete `is_beta` from the `Tenant` type, the `Checkbox` import, the `beta` ref and its two assignments, and the "Beta sandbox" `<section>` |
 | `tests/Pest.php` | delete `aBetaSalon()` and `aSandboxBooking()` |
 
-### The one column
+### The columns
 
-`tenants.is_beta` — boolean, default false. Nothing else was added to the schema.
-Sandbox actions operate on the existing tables through `tenant_id`.
+`tenants.is_beta` — boolean, default false. `tenants.sandbox_state` — nullable
+JSON for last action, flaky-network toggle, and the last sample size. Everything
+else the sandbox does operates on the existing tables through `tenant_id`.
 
 ### The one environment variable
 

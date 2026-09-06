@@ -32,7 +32,38 @@ const ALL_PAGES = [
 
 const WIDTHS = [375, 768, 1024, 1280, 1440] as const;
 
+/*
+ * Scroll the whole document, then come back to the top.
+ *
+ * The home page reveals `.dd-r` on scroll, and a full-page screenshot does not
+ * scroll: Chromium captures beyond the viewport in one pass, so no scroll event
+ * is ever dispatched and every revealed section is photographed at `opacity: 0`.
+ * The whole-week band came out as an empty gradient and the baseline would have
+ * been written that way — a picture of nothing, which no later regression in
+ * that section could fail against.
+ *
+ * So the page is scrolled through before it is photographed, which is also just
+ * what a person does. `.dd-in` is never removed once set, so returning to the
+ * top leaves everything revealed and the capture starts from the same offset it
+ * always did. A page with no `.dd-r` waits on a condition that is already true.
+ */
+async function revealed(page: Page): Promise<void> {
+    await page.evaluate(async () => {
+        const step = Math.max(1, Math.round(window.innerHeight * 0.8));
+
+        for (let y = 0; y <= document.documentElement.scrollHeight; y += step) {
+            window.scrollTo(0, y);
+            await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        }
+    });
+
+    await page.waitForFunction(() => document.querySelectorAll('.dd-r:not(.dd-in)').length === 0);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+}
+
 async function settled(page: Page): Promise<void> {
+    await revealed(page);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(250);
 }

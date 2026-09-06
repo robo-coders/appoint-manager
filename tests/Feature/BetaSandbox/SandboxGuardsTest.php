@@ -37,6 +37,13 @@ function sandboxEndpoints(): array
         ['post', 'beta-sandbox.sample-data'],
         ['post', 'beta-sandbox.fast-forward'],
         ['post', 'beta-sandbox.reset'],
+        ['post', 'beta-sandbox.jump'],
+        ['post', 'beta-sandbox.no-show'],
+        ['post', 'beta-sandbox.waitlist-free'],
+        ['post', 'beta-sandbox.waitlist-expire'],
+        ['post', 'beta-sandbox.remind'],
+        ['post', 'beta-sandbox.outbox-clear'],
+        ['post', 'beta-sandbox.flaky'],
     ];
 }
 

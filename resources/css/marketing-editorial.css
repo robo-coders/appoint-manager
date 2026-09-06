@@ -1733,12 +1733,20 @@ dl.qa dd {
 /* ---- Home: the whole week ------------------------------------------- */
 
 .week {
-    padding: var(--space-16) var(--space-4);
+    padding: 104px 40px 0;
+    border-bottom: 1px solid var(--week-rule);
+    background: linear-gradient(var(--week-top) 0%, var(--week-bottom) 100%);
+    overflow: hidden;
 }
 
 .week-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
     max-width: 1200px;
     margin: 0 auto;
+    text-align: center;
 }
 
 .eyebrow.accent {
@@ -1749,41 +1757,75 @@ dl.qa dd {
     text-align: center;
 }
 
+.week-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase; /* design-tokens-ignore: the approved reference sets this eyebrow in caps; the rest of the surface stays sentence case */
+    color: var(--accent);
+}
+
 .week h2 {
+    margin: 0;
+    max-width: 760px;
     font-family: var(--font-display);
-    font-weight: 300;
-    font-size: 60px;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-    text-align: center;
-    max-width: 20ch;
-    margin: 0 auto var(--space-3);
+    font-size: clamp(38px, 4.6vw, 60px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
 }
 
 .week p.sub {
-    font-size: 20px;
-    line-height: 1.5;
-    color: var(--ink-2);
-    text-align: center;
-    max-width: 46ch;
-    margin: 0 auto var(--space-8);
+    margin: 0;
+    max-width: 560px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--week-ink);
+    text-wrap: pretty;
+}
+
+.week-frame {
+    position: relative;
+    max-width: 1180px;
+    margin: 56px auto 0;
+    transition-delay: var(--reveal-stagger);
+}
+
+.week-glow {
+    position: absolute;
+    inset: -1px -1px 0;
+    border-radius: 6px;
+    background: radial-gradient(60% 90% at 78% 0%, var(--week-glow) 0%, var(--week-glow-clear) 68%);
+    pointer-events: none;
+}
+
+.week-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 120px;
+    background: linear-gradient(var(--week-bottom-clear), var(--week-bottom) 82%);
+    pointer-events: none;
 }
 
 .grid-card {
-    background: var(--white);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-diary);
-    padding: var(--space-3);
+    position: relative;
+    border: 1px solid var(--week-rule);
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+    background: var(--week-top);
+    padding: 22px 24px 48px;
 }
 
 .grid-head {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-2);
-    padding-bottom: var(--space-3);
-    border-bottom: 1px solid var(--rule);
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--week-rule-soft);
 }
 
 .grid-head .wk {
@@ -1793,85 +1835,109 @@ dl.qa dd {
 
 .grid-meta {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    font-size: 13px;
-    color: var(--ink-2);
-}
-
-.grid-meta .fig,
-.grid-head .fig {
+    align-items: center;
+    gap: 20px;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--week-ink-quiet);
+}
+
+.grid-meta > span {
+    white-space: nowrap;
 }
 
 .grid-meta .won {
     color: var(--accent);
 }
 
+/*
+ * The hairlines between the columns are the grid gap with the grid's own
+ * background showing through, not six borders. It is the one way the rule
+ * survives the columns reflowing to three and then to two: a `border-left`
+ * has to be turned off on whichever column now starts a row, which is what
+ * the nth-child rules underneath this used to be doing, twice.
+ */
 .grid-days {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    row-gap: var(--space-3);
+    gap: 1px;
+    background: var(--week-rule-soft);
 }
 
 .day-col {
-    padding: var(--space-3) var(--space-2) 0;
-}
-
-.day-col + .day-col {
-    border-left: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 12px 0;
+    background: var(--week-top);
 }
 
 .day-name {
-    font-size: 14px;
-    color: var(--ink-2);
-    margin-bottom: var(--space-2);
+    margin-bottom: 2px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    color: var(--week-ink-quiet);
 }
 
 .chip {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    padding: 10px 12px;
-    margin-bottom: var(--space-1);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-slot);
-    background: var(--canvas);
+    padding: 9px 11px;
+    border: 1px solid var(--week-rule);
+    border-radius: 6px;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
+    font-size: 12.5px;
+    color: var(--week-chip-ink);
 }
 
 .chip .v::before {
-    content: '·';
-    color: var(--ink-3);
+    content: '\00b7';
     margin-right: 6px;
 }
 
-.chip .v {
-    color: var(--ink-2);
-}
-
 .chip.won {
-    background: var(--reclaimed-fill);
-    border-color: var(--reclaimed-rule);
-}
-
-.chip.won .v,
-.chip.won .v::before {
+    border-color: var(--week-won-rule);
+    background: var(--week-won-fill);
     color: var(--accent);
 }
 
 .chip.free {
-    background: transparent;
     border-style: dashed;
-    color: var(--ink-3);
+    border-color: var(--week-open-rule);
+    color: var(--week-open-ink);
 }
 
-.chip.free .v,
-.chip.free .v::before {
-    color: var(--ink-3);
+/*
+ * The scroll reveal, and the only motion on this surface.
+ *
+ * Gated on `dd-ready`, which the script adds, so a page with the stylesheet
+ * and no script — or a script that threw before it ran — is a page whose
+ * content is visible rather than a column of empty space. The hidden state
+ * never exists in the markup for that reason.
+ */
+body.dd-ready .dd-r {
+    opacity: 0;
+    transform: translateY(var(--reveal-rise));
+    transition:
+        opacity var(--reveal-duration) var(--reveal-ease),
+        transform var(--reveal-duration) var(--reveal-ease);
+}
+
+body.dd-ready .dd-r.dd-in {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.dd-ready .dd-r {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
 }
 
 /* ---- Home: the numbered rows, set as the mockup sets them ----------- */
@@ -2037,10 +2103,6 @@ dl.qa dd {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .day-col:nth-child(3n + 1) {
-        border-left: none;
-    }
-
     .sendable-inner {
         grid-template-columns: 1fr;
         gap: var(--space-6);
@@ -2062,15 +2124,28 @@ dl.qa dd {
     }
 
     .week {
-        padding: var(--space-12) var(--space-4);
-    }
-
-    .week h2 {
-        font-size: 34px;
+        padding: 72px 20px 0;
     }
 
     .week p.sub {
         font-size: 17px;
+    }
+
+    .week-frame {
+        margin-top: 40px;
+    }
+
+    .grid-card {
+        padding: 18px 16px 48px;
+    }
+
+    .grid-head {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .grid-meta {
+        gap: 14px;
     }
 
     [data-page='home'] .section h2 {
@@ -2105,11 +2180,35 @@ dl.qa dd {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .day-col:nth-child(3n + 1) {
-        border-left: 1px solid var(--rule);
+    /*
+     * Two columns is the width at which "12:00 · reclaimed" — seventeen
+     * monospaced characters, the longest string the grid can hold — stops
+     * fitting inside its chip. It has always overflowed here: the section this
+     * replaced clipped that label *and* the £45 beside it at 375, and the only
+     * reason no test caught it is that the band clips rather than scrolls.
+     *
+     * So the chip is tightened rather than the label shortened, which would
+     * make the narrow page say something the wide one does not.
+     */
+    .grid-card {
+        padding: 14px 12px 44px;
     }
 
-    .day-col:nth-child(2n + 1) {
-        border-left: none;
+    .day-col {
+        padding: 14px 8px 0;
+    }
+
+    .grid-meta {
+        gap: 12px;
+        font-size: 12px;
+    }
+
+    .chip {
+        padding: 8px;
+        font-size: 11px;
+    }
+
+    .chip .v::before {
+        margin-right: 4px;
     }
 }

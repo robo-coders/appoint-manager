@@ -64,6 +64,14 @@ final class SampleData
     /** Ofcom reserves 07700 900000-900999 for drama. No handset is ever on one. */
     private const PHONE_PREFIX = '07700900';
 
+    public const DECLINE_LABEL = 'Always declines — test card';
+
+    public const SIZES = [
+        'quiet' => ['customers' => 5, 'bookings' => 10, 'waitlist' => 2],
+        'typical' => ['customers' => 24, 'bookings' => 115, 'waitlist' => 4],
+        'busy' => ['customers' => 64, 'bookings' => 320, 'waitlist' => 8],
+    ];
+
     /** Marks a row as invented, on the one screen an owner would wonder about. */
     private const LABEL = 'Sample data.';
 
@@ -88,20 +96,35 @@ final class SampleData
     public function __construct(private SandboxReset $reset, private Loyalty $loyalty) {}
 
     /**
+     * @return list<array{key: string, label: string, customers: int, bookings: int}>
+     */
+    public static function sizeOptions(): array
+    {
+        return [
+            ['key' => 'quiet', 'label' => 'Quiet shop', 'customers' => 5, 'bookings' => 10],
+            ['key' => 'typical', 'label' => 'Typical shop', 'customers' => 24, 'bookings' => 115],
+            ['key' => 'busy', 'label' => 'Busy shop', 'customers' => 64, 'bookings' => 320],
+        ];
+    }
+
+    /**
+     * @param  'quiet'|'typical'|'busy'  $size
      * @return array{customers: int, bookings: int, waitlist: int, loyalty: int}
      *
      * @throws SandboxNotReady when the shop has nothing to build a diary from.
      */
-    public function load(Tenant $tenant): array
+    public function load(Tenant $tenant, string $size = 'typical'): array
     {
         BetaSandbox::guard($tenant);
+
+        abort_unless(array_key_exists($size, self::SIZES), 422);
 
         $context = app(TenantContext::class);
         $previous = $context->tenant();
         $context->set($tenant);
 
         try {
-            return SandboxMute::while(function () use ($tenant): array {
+            return SandboxMute::while(function () use ($tenant, $size): array {
                 $staff = $this->bookableStaff($tenant);
                 $services = $this->activeServices($tenant);
 
@@ -119,12 +142,12 @@ final class SampleData
                  * `SandboxReset::run` opens a transaction of its own; nested,
                  * that is a savepoint, so it commits with this one or not at all.
                  */
-                return DB::transaction(function () use ($tenant, $staff, $services): array {
+                return DB::transaction(function () use ($tenant, $staff, $services, $size): array {
                     // Replace, never accumulate. Same list as "Reset my shop",
                     // so there is one definition of what a shop's data is.
                     $this->reset->run($tenant);
 
-                    return $this->build($tenant, $staff, $services);
+                    return $this->build($tenant, $staff, $services, $size);
                 });
             });
         } finally {
@@ -135,21 +158,23 @@ final class SampleData
     /**
      * @param  list<User>  $staff
      * @param  list<Service>  $services
+     * @param  'quiet'|'typical'|'busy'  $size
      * @return array{customers: int, bookings: int, waitlist: int, loyalty: int}
      */
-    private function build(Tenant $tenant, array $staff, array $services): array
+    private function build(Tenant $tenant, array $staff, array $services, string $size): array
     {
         /*
          * Seeded from the tenant id, so the same shop reloads to the same shop
          * and two beta salons do not get an identical diary.
          */
-        mt_srand(20260906 + $tenant->id);
+        mt_srand(20260906 + $tenant->id + (ord($size[0]) * 17));
 
         $today = CarbonImmutable::now($tenant->timezone)->startOfDay();
+        $plan = self::SIZES[$size];
 
-        $pairs = $this->customers();
-        $bookings = $this->diary($tenant, $today, $staff, $services, $pairs);
-        $waitlist = $this->waitlist($today, $services, $pairs);
+        $pairs = $this->customers($plan['customers']);
+        $bookings = $this->diary($tenant, $today, $staff, $services, $pairs, $plan['bookings'], $size === 'busy');
+        $waitlist = $this->waitlist($today, $services, $pairs, $plan['waitlist']);
         $this->sendLog($pairs, $bookings);
         $loyalty = $this->loyalty($tenant, $pairs);
 
@@ -172,22 +197,21 @@ final class SampleData
     }
 
     /**
-     * Twenty-four clients and their pets.
-     *
-     * Enough that the customer list needs scrolling and the search box has
-     * something to find, few enough that the load finishes inside a request. A
-     * handful have two pets, because "which one is this booking for" is a
-     * question the product answers and an empty shop never asks.
+     * Clients and their pets, including one whose card is a known Stripe decline.
      *
      * @return list<array{customer: Customer, subject: Subject}>
      */
-    private function customers(): array
+    private function customers(int $count): array
     {
         $pairs = [];
+        $firsts = count(self::FIRST_NAMES);
+        $lasts = count(self::LAST_NAMES);
 
-        for ($i = 0; $i < 24; $i++) {
-            $name = self::FIRST_NAMES[$i % count(self::FIRST_NAMES)]
-                .' '.self::LAST_NAMES[($i * 5 + 3) % count(self::LAST_NAMES)];
+        for ($i = 0; $i < $count; $i++) {
+            $decline = $i === $count - 1;
+            $name = $decline
+                ? 'Pat Cardwell'
+                : $this->personName($i, $firsts, $lasts);
 
             $customer = Customer::query()->create([
                 'name' => $name,
@@ -196,7 +220,9 @@ final class SampleData
                 // day tries to send to it.
                 'email' => Str::slug($name, '.').'.'.$i.'@example.test',
                 'phone' => self::PHONE_PREFIX.str_pad((string) $i, 3, '0', STR_PAD_LEFT),
-                'notes' => self::LABEL.($i % 5 === 0 ? ' Prefers Saturday mornings.' : ''),
+                'notes' => $decline
+                    ? self::DECLINE_LABEL
+                    : self::LABEL.($i % 5 === 0 ? ' Prefers Saturday mornings.' : ''),
             ]);
 
             $petCount = $i % 7 === 0 ? 2 : 1;
@@ -215,6 +241,14 @@ final class SampleData
         return $pairs;
     }
 
+    private function personName(int $i, int $firsts, int $lasts): string
+    {
+        $base = self::FIRST_NAMES[$i % $firsts].' '.self::LAST_NAMES[($i * 5 + 3) % $lasts];
+        $cycle = intdiv($i, $firsts);
+
+        return $cycle === 0 ? $base : $base.' '.chr(ord('B') + $cycle - 1);
+    }
+
     /**
      * Five weeks behind and three ahead, on the shop's own services and staff.
      *
@@ -230,43 +264,96 @@ final class SampleData
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
      * @return list<Booking>
      */
-    private function diary(Tenant $tenant, CarbonImmutable $today, array $staff, array $services, array $pairs): array
-    {
-        $slots = [9 * 60, 10 * 60 + 30, 12 * 60, 13 * 60 + 30, 15 * 60, 16 * 60 + 30];
-        $created = [];
+    private function diary(
+        Tenant $tenant,
+        CarbonImmutable $today,
+        array $staff,
+        array $services,
+        array $pairs,
+        int $target,
+        bool $busy,
+    ): array {
+        $horizon = $busy ? 42 : 35;
+        $ahead = $busy ? 28 : 21;
+        $slots = $busy
+            ? [9 * 60, 9 * 60 + 45, 10 * 60 + 30, 11 * 60 + 15, 12 * 60, 12 * 60 + 45, 13 * 60 + 30, 14 * 60 + 15, 15 * 60, 15 * 60 + 45, 16 * 60 + 30]
+            : [9 * 60, 10 * 60 + 30, 12 * 60, 13 * 60 + 30, 15 * 60, 16 * 60 + 30];
 
-        for ($offset = -35; $offset <= 21; $offset++) {
+        $days = [];
+
+        for ($offset = -$horizon; $offset <= $ahead; $offset++) {
             $day = $today->addDays($offset);
 
             if ($day->isSunday()) {
                 continue;
             }
 
-            $taken = [];
+            $days[] = [$day, $offset];
+        }
 
-            for ($i = 0, $count = mt_rand(2, 4); $i < $count; $i++) {
-                $member = $staff[mt_rand(0, count($staff) - 1)];
-                $slot = $slots[mt_rand(0, count($slots) - 1)];
-                $key = $member->id.':'.$slot;
+        $created = [];
+        $taken = [];
 
-                if (isset($taken[$key])) {
-                    continue;
+        $place = function (User $member, Service $service, array $pair, CarbonImmutable $day, int $slot, int $offset) use (&$created, &$taken): bool {
+            $key = $member->id.':'.$day->toDateString().':'.$slot;
+
+            if (isset($taken[$key])) {
+                return false;
+            }
+
+            $taken[$key] = true;
+            $starts = $day->addMinutes($slot);
+            $created[] = $this->booking(
+                $member,
+                $service,
+                $pair,
+                $starts,
+                $starts->addMinutes(max(15, (int) $service->duration_minutes)),
+                $offset,
+            );
+
+            return true;
+        };
+
+        if ($busy) {
+            foreach ($days as [$day, $offset]) {
+                if ($offset > 0 && ! $day->isSaturday()) {
+                    foreach ($staff as $member) {
+                        foreach ($slots as $slot) {
+                            $place(
+                                $member,
+                                $services[mt_rand(0, count($services) - 1)],
+                                $pairs[mt_rand(0, count($pairs) - 1)],
+                                $day,
+                                $slot,
+                                $offset,
+                            );
+                        }
+                    }
+
+                    break;
                 }
+            }
+        }
 
-                $taken[$key] = true;
+        $n = 0;
 
-                $service = $services[mt_rand(0, count($services) - 1)];
-                $pair = $pairs[mt_rand(0, count($pairs) - 1)];
-                $starts = $day->addMinutes($slot);
+        while (count($created) < $target) {
+            [$day, $offset] = $days[$n % count($days)];
+            $member = $staff[$n % count($staff)];
+            $slot = $slots[intdiv($n, count($staff)) % count($slots)];
+            $place(
+                $member,
+                $services[$n % count($services)],
+                $pairs[$n % count($pairs)],
+                $day,
+                $slot,
+                $offset,
+            );
+            $n++;
 
-                $created[] = $this->booking(
-                    $member,
-                    $service,
-                    $pair,
-                    $starts,
-                    $starts->addMinutes(max(15, (int) $service->duration_minutes)),
-                    $offset,
-                );
+            if ($n > $target * 40) {
+                break;
             }
         }
 
@@ -333,11 +420,12 @@ final class SampleData
      * @param  list<Service>  $services
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
      */
-    private function waitlist(CarbonImmutable $today, array $services, array $pairs): int
+    private function waitlist(CarbonImmutable $today, array $services, array $pairs, int $count): int
     {
         $times = [PreferredTime::Any, PreferredTime::Morning, PreferredTime::Afternoon, PreferredTime::Any];
 
-        foreach ($times as $i => $preferred) {
+        for ($i = 0; $i < $count; $i++) {
+            $preferred = $times[$i % count($times)];
             $pair = $pairs[($i * 5 + 2) % count($pairs)];
 
             WaitlistEntry::query()->create([
@@ -354,7 +442,7 @@ final class SampleData
             ]);
         }
 
-        return count($times);
+        return $count;
     }
 
     /**

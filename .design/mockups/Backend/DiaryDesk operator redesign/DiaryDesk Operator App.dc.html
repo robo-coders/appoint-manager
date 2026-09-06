@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200;300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#FCFBF9;color:#181714;font-family:Geist,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#A85729;text-decoration:none}
+  a:hover{color:#8A461F;text-decoration:underline}
+  button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+  ::selection{background:rgba(168,87,41,.16)}
+  :focus-visible{outline:2px solid #A85729;outline-offset:2px;border-radius:6px}
+  @keyframes ddpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.82)}}
+  @keyframes ddring{0%{opacity:.5;transform:scale(.6)}100%{opacity:0;transform:scale(2.4)}}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#FCFBF9;font-size:13.5px;line-height:1.45">
+
+  <aside style="width:236px;flex:none;background:#F7F5F1;border-right:1px solid rgba(24,23,20,.09);display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+    <div style="padding:20px 18px 16px;display:flex;align-items:center;gap:9px">
+      <div style="width:22px;height:22px;border-radius:6px;background:#181714;display:flex;align-items:center;justify-content:center;color:#FCFBF9;font-family:'Geist Mono',monospace;font-size:11px;font-weight:500">D</div>
+      <div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:16px;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+
+    <nav style="padding:4px 10px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <div style="padding:0 8px 7px;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.4)">{{ g.label }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:6.5px 8px;border-radius:6px;background:{{ it.bg }};color:{{ it.color }};font-weight:{{ it.weight }};position:relative;text-align:left" style-hover="background:rgba(24,23,20,.05)">
+              <span style="position:absolute;left:-10px;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:{{ it.bar }}"></span>
+              <span style="flex:1;letter-spacing:-.005em">{{ it.name }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:{{ it.countColor }}">{{ it.count }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+
+    <div style="padding:10px;border-top:1px solid rgba(24,23,20,.09)">
+      <button style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:6px;color:rgba(24,23,20,.55)" style-hover="background:rgba(24,23,20,.05);color:#181714">
+        <span style="flex:1">Search</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;padding:1px 5px;border:1px solid rgba(24,23,20,.14);border-radius:4px">⌘K</span>
+      </button>
+      <button style="display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;border-radius:6px;margin-top:2px" style-hover="background:rgba(24,23,20,.05)">
+        <span style="width:22px;height:22px;border-radius:6px;background:#181714;color:#FCFBF9;font-family:'Geist Mono',monospace;font-size:10.5px;display:flex;align-items:center;justify-content:center">S</span>
+        <span style="flex:1;text-align:left">sad</span>
+        <span style="color:rgba(24,23,20,.35);font-size:11px">▲</span>
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <sc-if value="{{ noticeOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:14px;padding:9px 32px;border-bottom:1px solid rgba(24,23,20,.09);background:#FCFBF9">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#A85729;border:1px solid rgba(168,87,41,.35);border-radius:6px;padding:2px 6px">Sandbox</span>
+        <span style="color:rgba(24,23,20,.62);font-size:12.5px">Beta preview — payments are test-only, no card is ever charged.</span>
+        <span style="width:1px;height:13px;background:rgba(24,23,20,.12)"></span>
+        <span style="color:rgba(24,23,20,.62);font-size:12.5px">Confirm your email so clients can reach you. <a href="#0" style="color:#181714;text-decoration:underline;text-decoration-color:rgba(24,23,20,.3);text-underline-offset:2px">Resend</a></span>
+        <span style="flex:1"></span>
+        <button onClick="{{ dismissNotice }}" style="color:rgba(24,23,20,.4);padding:2px 5px;border-radius:6px;font-size:13px" style-hover="color:#181714;background:rgba(24,23,20,.05)">✕</button>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;padding:30px 32px 64px;max-width:1180px">
+
+      <!-- BOOKINGS -->
+      <sc-if value="{{ isBookings }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:22px">
+            <div style="flex:1;min-width:0">
+              <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">Bookings</h1>
+              <p style="margin:5px 0 0;color:rgba(24,23,20,.55);font-size:13px">Everything booked, filtered by status and date.</p>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button style="padding:7px 12px;border-radius:6px;border:1px solid rgba(24,23,20,.14);color:rgba(24,23,20,.7);font-size:12.5px" style-hover="border-color:rgba(24,23,20,.3);color:#181714">Export</button>
+              <button style="padding:7px 13px;border-radius:6px;background:#181714;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#000">New booking</button>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px;padding-bottom:12px;border-bottom:1px solid rgba(24,23,20,.09)">
+            <sc-for list="{{ bookingFilters }}" as="f" hint-placeholder-count="4">
+              <button onClick="{{ f.go }}" style="padding:5px 10px;border-radius:6px;font-size:12.5px;background:{{ f.bg }};color:{{ f.color }};font-weight:{{ f.weight }}" style-hover="background:rgba(24,23,20,.06)">
+                {{ f.label }} <span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums;opacity:.5;font-size:11.5px">{{ f.count }}</span>
+              </button>
+            </sc-for>
+            <span style="flex:1"></span>
+            <button style="font-size:12.5px;color:rgba(24,23,20,.55);padding:5px 8px;border-radius:6px" style-hover="color:#181714;background:rgba(24,23,20,.05)">Sept 2026 ▾</button>
+          </div>
+
+          <div style="overflow-x:auto"><div style="min-width:820px"><div style="display:grid;grid-template-columns:104px minmax(0,1.3fr) minmax(0,1.5fr) 52px 112px 88px 26px;align-items:center;gap:0;padding:11px 10px;font-size:10.5px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.42)">
+            <div>When ↓</div><div>Customer</div><div>Service</div><div>Staff</div><div>Status</div><div style="text-align:right">Amount</div><div></div>
+          </div>
+
+          <sc-for list="{{ bookings }}" as="b" hint-placeholder-count="9">
+            <button onClick="{{ b.open }}" style="display:grid;width:100%;grid-template-columns:104px minmax(0,1.3fr) minmax(0,1.5fr) 52px 112px 88px 26px;align-items:center;text-align:left;padding:13px 10px;border-radius:6px;border-top:1px solid rgba(24,23,20,.07);opacity:{{ b.dim }}" style-hover="background:#F5F3EF">
+              <div style="font-family:'Geist Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:rgba(24,23,20,.72)">{{ b.when }}</div>
+              <div style="min-width:0;padding-right:12px">
+                <div style="font-weight:500;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.customer }}</div>
+                <div style="font-size:12px;color:rgba(24,23,20,.5);margin-top:1px">{{ b.pet }}</div>
+              </div>
+              <div style="color:rgba(24,23,20,.75);padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.service }}</div>
+              <div style="color:rgba(24,23,20,.5);font-size:12.5px">{{ b.staff }}</div>
+              <div>
+                <span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:500;letter-spacing:-.005em;background:{{ b.pillBg }};color:{{ b.pillFg }}">{{ b.status }}</span>
+              </div>
+              <div style="text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums;color:{{ b.amtColor }};text-decoration:{{ b.amtLine }}">{{ b.amount }}</div>
+              <div style="text-align:right;color:rgba(24,23,20,.3)">⋯</div>
+            </button>
+          </sc-for>
+          </div></div>
+
+          <div style="display:flex;align-items:center;gap:14px;border-top:1px solid rgba(24,23,20,.09);padding-top:13px;margin-top:2px;font-size:12.5px;color:rgba(24,23,20,.5)">
+            <span><span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums;color:#181714">{{ bookingCount }}</span> of 43 bookings</span>
+            <span style="flex:1"></span>
+            <button style="padding:5px 9px;border-radius:6px;border:1px solid rgba(24,23,20,.13)" style-hover="border-color:rgba(24,23,20,.3);color:#181714">Load more</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- WAITLIST -->
+      <sc-if value="{{ isWaitlist }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:22px">
+            <div style="flex:1">
+              <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">Waitlist</h1>
+              <p style="margin:5px 0 0;color:rgba(24,23,20,.55);font-size:13px">A live queue, ordered by how long they have waited.</p>
+            </div>
+            <button style="padding:7px 13px;border-radius:6px;background:#181714;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#000">Add to waitlist</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:9px;padding:11px 14px;border:1px solid rgba(168,87,41,.28);border-radius:6px;margin-bottom:22px;background:rgba(168,87,41,.045)">
+            <span style="position:relative;width:7px;height:7px;flex:none">
+              <span style="position:absolute;inset:0;border-radius:50%;background:#A85729;animation:ddpulse 2s ease-in-out infinite"></span>
+              <span style="position:absolute;inset:0;border-radius:50%;border:1px solid #A85729;animation:ddring 2s ease-out infinite"></span>
+            </span>
+            <span style="font-family:'Geist Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:#8A461F">16:30</span>
+            <span style="font-size:13px;color:#181714">Freed — Priya Okonkwo cancelled, 15 min open with sad on Sat 26 Sept.</span>
+            <span style="flex:1"></span>
+            <button style="padding:6px 11px;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#8A461F">Offer to 1 waiting</button>
+          </div>
+
+          <div style="overflow-x:auto"><div style="min-width:820px"><div style="display:grid;grid-template-columns:34px minmax(0,1.15fr) minmax(0,1.3fr) minmax(0,1.2fr) 92px 104px 26px;align-items:center;padding:11px 10px;font-size:10.5px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.42)">
+            <div>#</div><div>Customer</div><div>Wants</div><div>Flexible on</div><div style="text-align:right;padding-right:14px">Waited ↓</div><div>Status</div><div></div>
+          </div>
+
+          <sc-for list="{{ waitlist }}" as="w" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:34px minmax(0,1.15fr) minmax(0,1.3fr) minmax(0,1.2fr) 92px 104px 26px;align-items:center;padding:14px 10px;border-radius:6px;border-top:1px solid rgba(24,23,20,.07)" style-hover="background:#F5F3EF">
+              <div style="font-family:'Geist Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:{{ w.rankColor }};font-weight:500">{{ w.rank }}</div>
+              <div style="min-width:0;padding-right:12px">
+                <div style="font-weight:500;letter-spacing:-.005em">{{ w.customer }}</div>
+                <div style="font-size:12px;color:rgba(24,23,20,.5);margin-top:1px">{{ w.pet }}</div>
+              </div>
+              <div style="color:rgba(24,23,20,.75);padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.service }}</div>
+              <div style="color:rgba(24,23,20,.5);font-size:12.5px;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.window }}</div>
+              <div style="text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums;color:{{ w.waitColor }};padding-right:14px">{{ w.waited }}</div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="position:relative;width:6px;height:6px;flex:none">
+                  <span style="position:absolute;inset:0;border-radius:50%;background:{{ w.dot }};animation:{{ w.anim }}"></span>
+                </span>
+                <span style="font-size:11.5px;font-weight:500;color:{{ w.statusFg }}">{{ w.status }}</span>
+              </div>
+              <div style="text-align:right;color:rgba(24,23,20,.3)">⋯</div>
+            </div>
+          </sc-for>
+          </div></div>
+
+          <div style="border-top:1px solid rgba(24,23,20,.09);padding-top:13px;font-size:12.5px;color:rgba(24,23,20,.5)">4 waiting · longest 9 d 04 h</div>
+        </div>
+      </sc-if>
+
+      <!-- OVERVIEW -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:26px">
+            <div style="flex:1">
+              <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">Overview</h1>
+              <p style="margin:5px 0 0;color:rgba(24,23,20,.55);font-size:13px">Saturday 26 September · Europe/London</p>
+            </div>
+            <button style="padding:7px 13px;border-radius:6px;border:1px solid rgba(24,23,20,.14);color:rgba(24,23,20,.7);font-size:12.5px" style-hover="border-color:rgba(24,23,20,.3);color:#181714">Last 30 days ▾</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;border-top:1px solid rgba(24,23,20,.12);border-bottom:1px solid rgba(24,23,20,.09)">
+            <div style="padding:22px 26px 24px 0">
+              <div style="font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">No-show rate</div>
+              <div style="display:flex;align-items:flex-end;gap:12px;margin-top:12px">
+                <div style="font-family:'Geist Mono',monospace;font-weight:400;font-size:52px;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums">6.2%</div>
+                <div style="display:flex;align-items:center;gap:5px;padding-bottom:6px;color:#A85729;font-size:12.5px;font-weight:500">
+                  <span style="font-size:11px">▲</span><span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums">+3.1</span><span style="color:rgba(24,23,20,.45);font-weight:400">vs last month</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:18px">
+                <sc-for list="{{ spark }}" as="s" hint-placeholder-count="14">
+                  <span style="flex:1;height:{{ s.h }};background:{{ s.fill }};border-radius:1px"></span>
+                </sc-for>
+              </div>
+              <div style="margin-top:12px;font-size:12.5px;color:rgba(24,23,20,.55)">3 of 48 completed bookings missed. <a href="#0" style="color:#181714;text-decoration:underline;text-decoration-color:rgba(24,23,20,.3);text-underline-offset:2px">Require deposits</a></div>
+            </div>
+            <div style="padding:22px 26px;border-left:1px solid rgba(24,23,20,.09)">
+              <div style="font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">Deposits held</div>
+              <div style="font-family:'Geist Mono',monospace;font-size:27px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:12px">£180.00</div>
+              <div style="margin-top:7px;font-size:12.5px;color:rgba(24,23,20,.5)">18 bookings · released on completion</div>
+            </div>
+            <div style="padding:22px 0 22px 26px;border-left:1px solid rgba(24,23,20,.09)">
+              <div style="font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">Overdue</div>
+              <div style="font-family:'Geist Mono',monospace;font-size:27px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:12px;color:rgba(24,23,20,.35)">£0.00</div>
+              <div style="margin-top:7px;font-size:12.5px;color:rgba(24,23,20,.5)">Nothing outstanding</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:34px;margin-top:34px;align-items:start">
+            <div>
+              <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:2px">
+                <h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:19px;letter-spacing:-.01em">Today’s diary</h2>
+                <span style="font-size:12.5px;color:rgba(24,23,20,.45)">Closed this day</span>
+              </div>
+              <div style="border-top:1px solid rgba(24,23,20,.12);padding:56px 32px 52px;text-align:center">
+                <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.35)">26 Sept</div>
+                <div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:23px;letter-spacing:-.015em;margin-top:12px">Nothing in the diary today</div>
+                <p style="margin:8px auto 0;max-width:330px;font-size:13px;color:rgba(24,23,20,.55)">The shop is closed on Saturdays. Your next open day is Monday 28 September, with three slots free before noon.</p>
+                <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:22px">
+                  <button style="padding:8px 15px;border-radius:6px;background:#181714;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#000">New booking</button>
+                  <a href="#0" style="font-size:12.5px;color:rgba(24,23,20,.6);text-decoration:underline;text-decoration-color:rgba(24,23,20,.25);text-underline-offset:3px">Open Monday 28 September</a>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 style="margin:0 0 2px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:19px;letter-spacing:-.01em">Needs attention</h2>
+              <div style="border-top:1px solid rgba(24,23,20,.12)">
+                <sc-for list="{{ attention }}" as="a" hint-placeholder-count="3">
+                  <button style="display:flex;width:100%;align-items:center;gap:12px;text-align:left;padding:13px 8px;border-bottom:1px solid rgba(24,23,20,.07);border-radius:6px" style-hover="background:#F5F3EF">
+                    <span style="width:3px;align-self:stretch;border-radius:2px;background:{{ a.bar }}"></span>
+                    <span style="flex:1;min-width:0">
+                      <span style="display:block;font-weight:500;letter-spacing:-.005em">{{ a.title }}</span>
+                      <span style="display:block;font-size:12px;color:rgba(24,23,20,.5);margin-top:2px">{{ a.sub }}</span>
+                    </span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:{{ a.valColor }}">{{ a.val }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- BOOKING DETAIL -->
+      <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:900px">
+          <button onClick="{{ goBookings }}" style="font-size:12.5px;color:rgba(24,23,20,.5)" style-hover="color:#181714">← Bookings</button>
+
+          <div style="display:flex;align-items:flex-start;gap:24px;margin:16px 0 0">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:10px">
+                <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">Tom Fricke</h1>
+                <span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:500;background:rgba(168,87,41,.13);color:#8A461F">Awaiting deposit</span>
+              </div>
+              <p style="margin:6px 0 0;color:rgba(24,23,20,.55);font-size:13px">Full groom — small dog · <span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums">Sat 26 Sept, 12:00</span> · ref <span style="font-family:'Geist Mono',monospace">BK-1042</span></p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button style="padding:7px 12px;border-radius:6px;border:1px solid rgba(24,23,20,.14);color:rgba(24,23,20,.7);font-size:12.5px" style-hover="border-color:rgba(24,23,20,.3);color:#181714">Reschedule</button>
+              <button style="padding:7px 13px;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#8A461F">Request deposit</button>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-top:22px;padding:11px 13px;border:1px solid rgba(24,23,20,.11);border-radius:6px">
+            <span style="font-family:'Geist Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:rgba(24,23,20,.5);white-space:nowrap">3 d left</span>
+            <span style="width:1px;height:13px;background:rgba(24,23,20,.12)"></span>
+            <span style="font-size:12.5px;color:rgba(24,23,20,.65)">Deposit of <span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums;color:#181714">£10.00</span> not yet paid. The slot releases automatically 24 h before the appointment.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 44px;margin-top:34px">
+            <sc-for list="{{ detailGroups }}" as="g" hint-placeholder-count="4">
+              <section style="padding-bottom:30px">
+                <div style="font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.42);padding-bottom:9px;border-bottom:1px solid rgba(24,23,20,.12)">{{ g.label }}</div>
+                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:baseline;gap:16px;padding:11px 0;border-bottom:1px solid rgba(24,23,20,.06)">
+                    <div style="width:96px;flex:none;font-size:12.5px;color:rgba(24,23,20,.5)">{{ r.k }}</div>
+                    <div style="flex:1;min-width:0;font-size:13.5px;font-family:{{ r.font }};font-variant-numeric:tabular-nums;letter-spacing:-.005em;white-space:{{ r.wrap }}">{{ r.v }}</div>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-for>
+          </div>
+
+          <section>
+            <div style="font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.42);padding-bottom:9px;border-bottom:1px solid rgba(24,23,20,.12)">Activity</div>
+            <sc-for list="{{ activity }}" as="a" hint-placeholder-count="3">
+              <div style="display:flex;gap:16px;padding:11px 0;border-bottom:1px solid rgba(24,23,20,.06)">
+                <div style="width:112px;flex:none;font-family:'Geist Mono',monospace;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;color:rgba(24,23,20,.45)">{{ a.t }}</div>
+                <div style="flex:1;font-size:13px;color:rgba(24,23,20,.8)">{{ a.text }}</div>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:16px;margin-top:16px">
+              <button style="font-size:12.5px;color:rgba(24,23,20,.6);text-decoration:underline;text-decoration-color:rgba(24,23,20,.25);text-underline-offset:3px" style-hover="color:#181714">Message customer</button>
+              <button style="font-size:12.5px;color:rgba(24,23,20,.6);text-decoration:underline;text-decoration-color:rgba(24,23,20,.25);text-underline-offset:3px" style-hover="color:#181714">Cancel booking</button>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+
+      <!-- STAFF -->
+      <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:900px">
+          <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:24px">
+            <div style="flex:1">
+              <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">Staff</h1>
+              <p style="margin:5px 0 0;color:rgba(24,23,20,.55);font-size:13px">People who work in the business.</p>
+            </div>
+            <button style="padding:7px 13px;border-radius:6px;background:#181714;color:#FCFBF9;font-size:12.5px;font-weight:500" style-hover="background:#000">Add staff</button>
+          </div>
+
+          <div style="border-top:1px solid rgba(24,23,20,.12)">
+            <sc-for list="{{ staff }}" as="s" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:16px;padding:18px 10px;border-bottom:1px solid rgba(24,23,20,.07);border-radius:6px" style-hover="background:#F5F3EF">
+                <div style="width:38px;height:38px;flex:none;border-radius:6px;background:rgba(24,23,20,.07);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:14px;color:rgba(24,23,20,.6)">{{ s.initial }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="font-weight:500;font-size:14.5px;letter-spacing:-.008em">{{ s.name }}</span>
+                    <span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:500;background:rgba(24,23,20,.06);color:rgba(24,23,20,.62)">{{ s.role }}</span>
+                  </div>
+                  <div style="font-size:12.5px;color:rgba(24,23,20,.5);margin-top:3px">{{ s.hours }}</div>
+                </div>
+                <div style="text-align:right;padding-right:22px">
+                  <div style="font-family:'Geist Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums">{{ s.week }}</div>
+                  <div style="font-size:11.5px;color:rgba(24,23,20,.45);margin-top:2px">{{ s.load }}</div>
+                </div>
+                <div style="display:flex;gap:4px;flex:none">
+                  <button style="padding:5px 10px;border-radius:6px;font-size:12.5px;color:rgba(24,23,20,.6)" style-hover="background:rgba(24,23,20,.07);color:#181714">Hours</button>
+                  <button style="padding:5px 10px;border-radius:6px;font-size:12.5px;color:rgba(24,23,20,.6)" style-hover="background:rgba(24,23,20,.07);color:#181714">Edit</button>
+                </div>
+              </div>
+            </sc-for>
+
+            <button style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:17px 10px;margin-top:12px;border:1px dashed rgba(24,23,20,.18);border-radius:6px;color:rgba(24,23,20,.55)" style-hover="border-color:#A85729;color:#A85729">
+              <span style="width:38px;height:38px;flex:none;border-radius:6px;border:1px dashed rgba(24,23,20,.18);display:flex;align-items:center;justify-content:center;font-size:15px">+</span>
+              <span style="flex:1">
+                <span style="display:block;font-weight:500;font-size:14px">Invite a team member</span>
+                <span style="display:block;font-size:12.5px;color:rgba(24,23,20,.45);margin-top:2px">They get their own diary, hours and time off. One seat included on beta.</span>
+              </span>
+            </button>
+          </div>
+
+          <div style="margin-top:16px;font-size:12.5px;color:rgba(24,23,20,.5)"><span style="font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums;color:#181714">1</span> on the team</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isStub }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:30px;line-height:1.1;letter-spacing:-.02em">{{ stubTitle }}</h1>
+          <p style="margin:7px 0 0;color:rgba(24,23,20,.5);font-size:13px">Not part of this redesign pass — the five views in the brief are Bookings, Waitlist, Overview, a booking record and Staff.</p>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;bookings&quot;,&quot;waitlist&quot;,&quot;overview&quot;,&quot;detail&quot;,&quot;staff&quot;],&quot;default&quot;:&quot;bookings&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;showNotice&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#A85729&quot;,&quot;options&quot;:[&quot;#A85729&quot;,&quot;#1F5C4A&quot;,&quot;#3A4CA8&quot;,&quot;#8A2E3C&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;}}">
+const INK = '#181714', TER = '#A85729', TER_D = '#8A461F';
+const muted = 'rgba(24,23,20,.55)';
+
+const PILL = {
+  confirmed:   { bg: 'rgba(24,23,20,.07)',  fg: 'rgba(24,23,20,.78)' },
+  awaiting:    { bg: 'rgba(168,87,41,.13)', fg: TER_D },
+  cancelled:   { bg: 'rgba(24,23,20,.05)',  fg: 'rgba(24,23,20,.6)' },
+  completed:   { bg: 'rgba(24,23,20,.04)',  fg: 'rgba(24,23,20,.5)' }
+};
+
+const BOOKINGS = [
+  ['26 Sept 16:30', 'Priya Okonkwo', 'Nala', 'Nail clip', 'cancelled', 'Cancelled', '£10.00'],
+  ['26 Sept 12:00', 'Tom Fricke', 'Willow', 'Full groom — small dog', 'awaiting', 'Awaiting deposit', '£35.00'],
+  ['25 Sept 15:00', 'Hannah Whitfield', 'Suki', 'Full groom — medium dog', 'confirmed', 'Confirmed', '£45.00'],
+  ['25 Sept 12:00', 'Jo Beckett', 'Dexter', 'Full groom — small dog', 'awaiting', 'Awaiting deposit', '£35.00'],
+  ['25 Sept 10:30', 'Priya Okonkwo', 'Nala', 'Bath and blow dry', 'confirmed', 'Confirmed', '£25.00'],
+  ['24 Sept 16:30', 'Hannah Whitfield', 'Suki', 'Full groom — small dog', 'confirmed', 'Confirmed', '£35.00'],
+  ['24 Sept 10:30', 'Marta Bright', 'Bear', 'Full groom — medium dog', 'confirmed', 'Confirmed', '£45.00'],
+  ['24 Sept 09:00', 'Suki Sackville', 'Nutmeg', 'Nail clip', 'confirmed', 'Confirmed', '£10.00'],
+  ['23 Sept 16:30', 'Tom Fricke', 'Willow', 'Bath and blow dry', 'confirmed', 'Confirmed', '£25.00'],
+  ['23 Sept 13:30', 'Cal Doughty', 'Nala', 'Bath and blow dry', 'confirmed', 'Confirmed', '£25.00'],
+  ['22 Sept 13:30', 'Nadia Nwosu', 'Bandit', 'Full groom — medium dog', 'awaiting', 'Awaiting deposit', '£45.00'],
+  ['22 Sept 12:00', 'Nia Oyelaran', 'Alfie', 'Full groom — medium dog', 'confirmed', 'Confirmed', '£45.00'],
+  ['22 Sept 10:30', 'Fay Iqbal', 'Coco', 'Full groom — small dog', 'confirmed', 'Confirmed', '£35.00'],
+  ['22 Sept 09:00', 'Ruth Rahman', 'Nutmeg', 'Bath and blow dry', 'completed', 'Completed', '£25.00'],
+  ['21 Sept 13:30', 'Tom Fricke', 'Willow', 'Full groom — small dog', 'completed', 'Completed', '£35.00']
+];
+
+const WAIT = [
+  ['Ade Tan', 'Dot', 'Full groom — small dog', 'Any weekday morning', '9 d 04 h'],
+  ['Marta Bright', 'Bear', 'Full groom — medium dog', 'Fri or Sat, after 14:00', '5 d 11 h'],
+  ['Cal Doughty', 'Nala', 'Bath and blow dry', 'Mon–Wed, any time', '2 d 07 h'],
+  ['Fay Iqbal', 'Coco', 'Nail clip', 'Sat 26 Sept only', '0 d 06 h']
+];
+
+class Component extends DCLogic {
+  state = { view: null, filter: 'All', notice: true };
+
+  get view() { return this.state.view || this.props.view || 'bookings'; }
+
+  nav() {
+    return [
+      { label: 'Day-to-day', items: [
+        ['Diary', '', 'diary'], ['Bookings', '43', 'bookings'], ['Waitlist', '4', 'waitlist'],
+        ['Overdue', '0', 'overdue'], ['Customers', '24', 'customers']
+      ]},
+      { label: 'Setup', items: [
+        ['Services', '4', 'services'], ['Staff', '1', 'staff'], ['Hours', '', 'hours'], ['Time off', '', 'timeoff']
+      ]},
+      { label: 'Account', items: [
+        ['Overview', '', 'overview'], ['Import', '', 'import'], ['Settings', '', 'settings']
+      ]}
+    ];
+  }
+
+  go = (v) => () => this.setState({ view: v });
+
+  renderVals() {
+    const v = this.view;
+    const active = v === 'detail' ? 'bookings' : v;
+    const accent = this.props.accentColor || TER;
+
+    const navGroups = this.nav().map(g => ({
+      label: g.label,
+      items: g.items.map(([name, count, id]) => {
+        const on = id === active;
+        return {
+          name, count, go: this.go(id),
+          bg: on ? 'rgba(168,87,41,.07)' : 'transparent',
+          color: on ? INK : 'rgba(24,23,20,.68)',
+          weight: on ? 500 : 400,
+          bar: on ? accent : 'transparent',
+          countColor: on ? 'rgba(24,23,20,.55)' : 'rgba(24,23,20,.35)'
+        };
+      })
+    }));
+
+    const f = this.state.filter;
+    const counts = { All: 43, Confirmed: 34, 'Awaiting deposit': 6, Cancelled: 3 };
+    const bookingFilters = Object.keys(counts).map(label => ({
+      label, count: counts[label], go: () => this.setState({ filter: label }),
+      bg: f === label ? 'rgba(24,23,20,.07)' : 'transparent',
+      color: f === label ? INK : 'rgba(24,23,20,.6)',
+      weight: f === label ? 500 : 400
+    }));
+
+    const rows = BOOKINGS.filter(r => {
+      if (f === 'All') return true;
+      if (f === 'Confirmed') return r[4] === 'confirmed';
+      if (f === 'Awaiting deposit') return r[4] === 'awaiting';
+      return r[4] === 'cancelled';
+    }).map(([when, customer, pet, service, kind, status, amount]) => ({
+      when, customer, pet, service, status, amount, staff: 'sad',
+      pillBg: PILL[kind].bg, pillFg: PILL[kind].fg,
+      dim: kind === 'cancelled' ? 0.86 : 1,
+      amtColor: kind === 'cancelled' ? 'rgba(24,23,20,.4)' : INK,
+      amtLine: kind === 'cancelled' ? 'line-through' : 'none',
+      open: this.go('detail')
+    }));
+
+    const waitlist = WAIT.map(([customer, pet, service, window, waited], i) => ({
+      customer, pet: pet + ' · ' + service.split(' — ')[0], service, window, waited,
+      rank: '#' + (i + 1),
+      rankColor: i === 0 ? accent : 'rgba(24,23,20,.4)',
+      waitColor: i === 0 ? INK : 'rgba(24,23,20,.6)',
+      status: i === 0 ? 'Next up' : 'Waiting',
+      statusFg: i === 0 ? TER_D : 'rgba(24,23,20,.55)',
+      dot: i === 0 ? accent : 'rgba(24,23,20,.3)',
+      anim: i === 0 ? 'ddpulse 2s ease-in-out infinite' : 'none'
+    }));
+
+    const vals = [3.0, 2.8, 3.2, 2.6, 3.1, 2.9, 3.4, 3.0, 4.1, 4.6, 5.0, 5.4, 5.9, 6.2];
+    const spark = vals.map((n, i) => ({
+      h: Math.round((n / 6.2) * 100) + '%',
+      fill: i >= vals.length - 4 ? accent : 'rgba(24,23,20,.16)'
+    }));
+
+    const attention = [
+      { title: '3 deposits unpaid', sub: 'Oldest requested 4 days ago', val: '£90.00', valColor: TER_D, bar: accent },
+      { title: '1 slot freed today', sub: '16:30 · 15 min with sad', val: '1 waiting', valColor: 'rgba(24,23,20,.6)', bar: 'rgba(24,23,20,.2)' },
+      { title: '4 on the waitlist', sub: 'Longest waiting 9 days', val: '9 d', valColor: 'rgba(24,23,20,.6)', bar: 'rgba(24,23,20,.2)' },
+      { title: 'Email not confirmed', sub: 'Clients cannot reply to reminders', val: 'Resend', valColor: 'rgba(24,23,20,.6)', bar: 'rgba(24,23,20,.2)' }
+    ];
+
+    const M = "'Geist Mono',monospace";
+    const wrapOf = (o) => Object.assign({ wrap: o.font === M ? 'nowrap' : 'normal' }, o);
+    const detailGroups = [
+      { label: 'Customer', rows: [
+        wrapOf({ k: 'Name', v: 'Tom Fricke', font: 'inherit' }),
+        wrapOf({ k: 'Pet', v: 'Willow — small dog', font: 'inherit' }),
+        wrapOf({ k: 'Email', v: 'tom.fricke.08@example.test', font: M }),
+        wrapOf({ k: 'Phone', v: '07700 900 108', font: M }),
+        wrapOf({ k: 'History', v: '6 bookings · 1 no-show', font: 'inherit' })
+      ]},
+      { label: 'Scheduling', rows: [
+        wrapOf({ k: 'Date', v: 'Saturday 26 September 2026', font: 'inherit' }),
+        wrapOf({ k: 'Time', v: '12:00 — 13:00', font: M }),
+        wrapOf({ k: 'Duration', v: '60 min', font: M }),
+        wrapOf({ k: 'Staff', v: 'sad', font: 'inherit' }),
+        wrapOf({ k: 'Booked', v: '22 Sept 2026, 09:14', font: M })
+      ]},
+      { label: 'Payment', rows: [
+        wrapOf({ k: 'Service price', v: '£35.00', font: M }),
+        wrapOf({ k: 'Deposit due', v: '£10.00', font: M }),
+        wrapOf({ k: 'Deposit paid', v: '£0.00', font: M }),
+        wrapOf({ k: 'Balance on the day', v: '£35.00', font: M }),
+        wrapOf({ k: 'Method', v: 'Card · test mode', font: 'inherit' })
+      ]},
+      { label: 'Status', rows: [
+        wrapOf({ k: 'Booking', v: 'Awaiting deposit', font: 'inherit' }),
+        wrapOf({ k: 'Deposit request', v: 'Sent 22 Sept, 09:15', font: M }),
+        wrapOf({ k: 'Reminder', v: 'Scheduled 25 Sept, 12:00', font: M }),
+        wrapOf({ k: 'Auto-release', v: '25 Sept, 12:00', font: M }),
+        wrapOf({ k: 'Source', v: 'Booking page', font: 'inherit' })
+      ]}
+    ];
+
+    const activity = [
+      { t: '22 Sept 09:14', text: 'Booked by Tom Fricke on the booking page.' },
+      { t: '22 Sept 09:15', text: 'Deposit request of £10.00 emailed.' },
+      { t: '24 Sept 08:00', text: 'Reminder queued for 25 Sept, 12:00.' }
+    ];
+
+    const staff = [
+      { initial: 'S', name: 'sad', role: 'Owner · Groomer', hours: 'Mon–Fri · 09:00–17:00 · closed Sat & Sun', week: '40 h', load: '11 booked this week' }
+    ];
+
+    const stubTitles = { diary: 'Diary', overdue: 'Overdue', customers: 'Customers', services: 'Services', hours: 'Hours', timeoff: 'Time off', import: 'Import', settings: 'Settings' };
+
+    return {
+      navGroups, bookingFilters, bookings: rows, bookingCount: rows.length,
+      waitlist, spark, attention, detailGroups, activity, staff,
+      noticeOpen: this.state.notice && (this.props.showNotice !== false),
+      dismissNotice: () => this.setState({ notice: false }),
+      goBookings: this.go('bookings'),
+      isBookings: v === 'bookings', isWaitlist: v === 'waitlist', isOverview: v === 'overview',
+      isDetail: v === 'detail', isStaff: v === 'staff',
+      isStub: !!stubTitles[v], stubTitle: stubTitles[v] || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

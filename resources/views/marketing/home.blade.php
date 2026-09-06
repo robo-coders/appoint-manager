@@ -88,21 +88,25 @@
     </section>
 
     <section class="week">
-        <div class="week-inner">
-            <div class="eyebrow accent">The whole week</div>
+        <div class="week-inner dd-r">
+            <span class="week-eyebrow">The whole week</span>
             <h2>Every slot accounted for, without you counting.</h2>
             <p class="sub">
                 Deposits taken, reminders sent, gaps refilled. What you see on a Monday morning is
                 the week as it actually stands.
             </p>
+        </div>
+
+        <div class="week-frame dd-r">
+            <div class="week-glow"></div>
 
             <div class="grid-card">
                 <div class="grid-head">
                     <span class="wk">Week of 1 September</span>
                     <span class="grid-meta">
-                        <span><span class="fig">38</span> booked</span>
-                        <span><span class="fig">12</span> deposits held</span>
-                        <span class="won"><span class="fig">3</span> reclaimed</span>
+                        <span>38 booked</span>
+                        <span>£1,340 deposits held</span>
+                        <span class="won">3 reclaimed</span>
                     </span>
                 </div>
 
@@ -110,7 +114,7 @@
                     <div class="day-col">
                         <div class="day-name">Mon</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">11:30</span><span class="v">£25</span></div>
+                        <div class="chip"><span class="t">11:30</span><span class="v">£28</span></div>
                         <div class="chip"><span class="t">14:15</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">16:00</span><span class="v">£35</span></div>
                     </div>
@@ -131,26 +135,28 @@
                     <div class="day-col">
                         <div class="day-name">Thu</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">10:15</span><span class="v">£45</span></div>
+                        <div class="chip"><span class="t">10:15</span><span class="v">£60</span></div>
                         <div class="chip won"><span class="t">13:00</span><span class="v">reclaimed</span></div>
-                        <div class="chip"><span class="t">15:30</span><span class="v">£25</span></div>
+                        <div class="chip"><span class="t">15:30</span><span class="v">£28</span></div>
                     </div>
                     <div class="day-col">
                         <div class="day-name">Fri</div>
                         <div class="chip"><span class="t">08:45</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">10:30</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">12:15</span><span class="v">£35</span></div>
-                        <div class="chip"><span class="t">14:00</span><span class="v">£45</span></div>
+                        <div class="chip"><span class="t">14:00</span><span class="v">£60</span></div>
                     </div>
                     <div class="day-col">
                         <div class="day-name">Sat</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
                         <div class="chip won"><span class="t">11:00</span><span class="v">reclaimed</span></div>
                         <div class="chip"><span class="t">13:30</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">15:15</span><span class="v">£25</span></div>
+                        <div class="chip"><span class="t">15:15</span><span class="v">£28</span></div>
                     </div>
                 </div>
             </div>
+
+            <div class="week-fade"></div>
         </div>
     </section>
 
@@ -235,5 +241,53 @@
         'heading' => 'Put your own week in it.',
         'note' => 'Set up your services, open your booking page, see what a cancellation does.',
     ])
+
+    {{--
+        The scroll reveal for `.dd-r`, which on this page is the whole-week
+        band and nothing else.
+
+        `dd-ready` goes on the body from here rather than from the stylesheet,
+        so the hidden state only ever exists on a page where something is
+        running to undo it. The rule it gates is in
+        `resources/css/marketing-editorial.css`; the stylesheet on its own
+        hides nothing.
+
+        Reads are batched into one animation frame, so a scroll that fires the
+        handler forty times in a second still measures once per paint.
+    --}}
+    <script>
+    (function () {
+        if (!document.querySelector('.dd-r')) return;
+
+        document.body.classList.add('dd-ready');
+
+        var queued = false;
+
+        function reveal() {
+            queued = false;
+
+            var mark = window.innerHeight * 0.94;
+            var pending = document.querySelectorAll('.dd-r:not(.dd-in)');
+
+            for (var i = 0; i < pending.length; i++) {
+                if (pending[i].getBoundingClientRect().top < mark) {
+                    pending[i].classList.add('dd-in');
+                }
+            }
+        }
+
+        function schedule() {
+            if (queued) return;
+            queued = true;
+            window.requestAnimationFrame(reveal);
+        }
+
+        window.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', schedule, { passive: true });
+        window.addEventListener('load', schedule);
+
+        reveal();
+    })();
+    </script>
 
 @endsection

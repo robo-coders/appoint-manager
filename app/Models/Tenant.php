@@ -52,6 +52,7 @@ class Tenant extends Model
         'is_comped',
         // BetaSandbox — see BETA_SANDBOX.md.
         'is_beta',
+        'sandbox_state',
         'booking_page_live',
         'preview_token',
         'last_activity_at',
@@ -128,6 +129,7 @@ class Tenant extends Model
             'is_comped' => 'boolean',
             // BetaSandbox — see BETA_SANDBOX.md.
             'is_beta' => 'boolean',
+            'sandbox_state' => 'array',
             'booking_page_live' => 'boolean',
             'dunning_emails_sent' => 'integer',
             'feature_flags' => 'array',

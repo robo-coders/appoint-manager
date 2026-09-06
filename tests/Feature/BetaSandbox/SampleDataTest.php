@@ -191,6 +191,72 @@ it('creates no loyalty rows for a shop that has not switched loyalty on', functi
     expect(LoyaltyEnrolment::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->count())->toBe(0);
 });
 
+it('loads a quiet shop with five customers and ten appointments', function () {
+    $salon = aBetaSalon();
+
+    $counts = app(SampleData::class)->load($salon['tenant'], 'quiet');
+
+    expect($counts['customers'])->toBe(5);
+    expect($counts['bookings'])->toBe(10);
+    expect(Customer::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->count())->toBe(5);
+    expect(Booking::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->count())->toBe(10);
+});
+
+it('loads the typical shop with twenty-four customers and a hundred and fifteen appointments', function () {
+    $salon = aBetaSalon();
+
+    $counts = app(SampleData::class)->load($salon['tenant'], 'typical');
+
+    expect($counts['customers'])->toBe(24);
+    expect($counts['bookings'])->toBe(115);
+});
+
+it('loads a busy shop with a packed day and overlapping staff', function () {
+    $salon = aBetaSalon();
+    User::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'is_bookable' => true,
+        'is_active' => true,
+    ]);
+
+    $counts = app(SampleData::class)->load($salon['tenant'], 'busy');
+
+    expect($counts['customers'])->toBeGreaterThanOrEqual(60);
+    expect($counts['bookings'])->toBeGreaterThanOrEqual(300);
+
+    $busiest = Booking::withoutGlobalScopes()
+        ->where('tenant_id', $salon['tenant']->id)
+        ->selectRaw('date(starts_at) as day, count(*) as total')
+        ->groupBy('day')
+        ->orderByDesc('total')
+        ->first();
+
+    expect((int) $busiest->total)->toBeGreaterThanOrEqual(11);
+
+    $overlap = Booking::withoutGlobalScopes()
+        ->where('tenant_id', $salon['tenant']->id)
+        ->selectRaw('starts_at, count(distinct staff_id) as staffed')
+        ->groupBy('starts_at')
+        ->havingRaw('count(distinct staff_id) > 1')
+        ->exists();
+
+    expect($overlap)->toBeTrue();
+});
+
+it('always includes a customer whose card is labelled as a decline test card', function () {
+    $salon = aBetaSalon();
+
+    app(SampleData::class)->load($salon['tenant'], 'quiet');
+
+    $customer = Customer::withoutGlobalScopes()
+        ->where('tenant_id', $salon['tenant']->id)
+        ->where('notes', SampleData::DECLINE_LABEL)
+        ->first();
+
+    expect($customer)->not->toBeNull();
+    expect($customer->name)->toBe('Pat Cardwell');
+});
+
 it('keeps the shop\'s own staff, services and hours rather than inventing any', function () {
     $salon = aBetaSalon();
     $tenantId = $salon['tenant']->id;
