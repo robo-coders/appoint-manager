@@ -104,7 +104,19 @@ describe('at 148px', () => {
 
         expect(current).toHaveLength(1);
         expect(current[0].text()).toContain('Diary');
-        expect(current[0].classes()).toContain('bg-ink-tint');
+        expect(current[0].classes()).toContain('bg-accent-tint');
+
+        /*
+         * The marker is an inset element, not the item's left border. As
+         * `border-l-2` it ran the item's full height and butted into the items
+         * above and below, so a run of them drew one continuous rule; it hangs
+         * in the nav's left padding now and is absent entirely from an item that
+         * is not current, which is what keeps the label from shifting.
+         */
+        const marker = current[0].find('span[aria-hidden="true"].bg-accent');
+
+        expect(marker.exists()).toBe(true);
+        expect(wrapper.findAll('nav a span[aria-hidden="true"].bg-accent')).toHaveLength(1);
     });
 });
 
@@ -140,11 +152,17 @@ describe('at 56px', () => {
         expect(wrapper.findAll('nav a svg[aria-hidden="false"]')).toHaveLength(0);
     });
 
+    /*
+     * Search sits in the rail's footer block beside the account control, below
+     * the rule — not as the last item of `nav`, where it scrolled away with the
+     * destinations and read as a thirteenth one.
+     */
     it('names the search control too, since its label is gone as well', () => {
         const wrapper = rail({ collapsed: true });
-        const search = wrapper.find('nav button');
+        const search = wrapper.findAll('button').filter((b) => b.attributes('aria-label') === 'Search');
 
-        expect(search.attributes('aria-label')).toBe('Search');
+        expect(search).toHaveLength(1);
+        expect(wrapper.find('nav button').exists()).toBe(false);
     });
 
     /*
@@ -167,6 +185,77 @@ describe('at 56px', () => {
 
         expect(wrapper.find('nav a svg').exists()).toBe(false);
         expect(wrapper.find('nav a').text()).toContain('Sn');
+    });
+});
+
+describe('the groups', () => {
+    const grouped: NavLink[] = [
+        { href: '/diary', label: 'Diary', glyph: 'Di', group: 'Day-to-day' },
+        { href: '/bookings', label: 'Bookings', glyph: 'Bk', group: 'Day-to-day', count: 12 },
+        { href: '/staff', label: 'Staff', glyph: 'St', group: 'Setup' },
+        { href: '/settings', label: 'Settings', glyph: 'Se', group: 'Account' },
+    ];
+
+    const groupedRail = (props: Record<string, unknown> = {}) =>
+        mount(NavRail, {
+            props: {
+                links: grouped,
+                isCurrent: () => false,
+                homeHref: '/',
+                userName: 'R',
+                profileHref: '/p',
+                logoutHref: '/l',
+                ...props,
+            },
+        });
+
+    it('draws one heading per group, in the order the caller declared them', () => {
+        const headings = groupedRail().findAll('nav .eyebrow');
+
+        expect(headings.map((h) => h.text())).toEqual(['Day-to-day', 'Setup', 'Account']);
+    });
+
+    /*
+     * Small caps, never `text-transform`. The system bans ALL CAPS and the check
+     * that enforces it reads class names, so a heading that shouts would pass
+     * every test in this file and fail the build.
+     */
+    it('sets the headings in small caps rather than shouting them', () => {
+        const heading = groupedRail().find('nav .eyebrow');
+
+        expect(heading.text()).toBe('Day-to-day');
+        expect(heading.classes()).not.toContain('uppercase');
+    });
+
+    /*
+     * A run breaks where the caller broke it. Gathering two items declared eight
+     * apart into one block would turn a typo into a reordered nav that looks
+     * deliberate.
+     */
+    it('never gathers items that are not next to each other', () => {
+        const wrapper = groupedRail({
+            links: [
+                { href: '/a', label: 'Diary', group: 'Day-to-day' },
+                { href: '/b', label: 'Staff', group: 'Setup' },
+                { href: '/c', label: 'Bookings', group: 'Day-to-day' },
+            ],
+        });
+
+        expect(wrapper.findAll('nav .eyebrow').map((h) => h.text())).toEqual([
+            'Day-to-day',
+            'Setup',
+            'Day-to-day',
+        ]);
+    });
+
+    it('draws no heading at all for a rail whose items name no group', () => {
+        expect(rail().findAll('nav .eyebrow')).toHaveLength(0);
+    });
+
+    it('hides the headings with every other word at 56px', () => {
+        const headings = groupedRail({ collapsed: true }).findAll('nav .eyebrow');
+
+        for (const heading of headings) expect(heading.classes()).toContain('md:hidden');
     });
 });
 

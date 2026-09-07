@@ -233,6 +233,28 @@
         color: var(--ink-2);
     }
 
+    /*
+     * The label above a section, a nav group or a column of figures.
+     *
+     * Real small caps, not `text-transform`. The system bans ALL CAPS and means
+     * it — a shouted label is a shouted label whoever set it — but a small cap
+     * is a different letterform doing a different job: it sits on the x-height,
+     * so it reads as a rule with words on it rather than as a heading competing
+     * with the one below it. Geist has no `smcp` table, so this is the
+     * browser's own synthesis, which is the same drawing at this size.
+     *
+     * `.caption` is still the caption. This is the eyebrow, and the two are not
+     * interchangeable: a field label is sentence case, always.
+     */
+    .eyebrow {
+        font-size: var(--text-12);
+        font-weight: 500;
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.08em;
+        line-height: 1.4;
+        color: var(--ink-2);
+    }
+
     /* A full-bleed hairline. Screens are composed with rules, not with cards. */
     .rule-line {
         border-top: 1px solid var(--rule);

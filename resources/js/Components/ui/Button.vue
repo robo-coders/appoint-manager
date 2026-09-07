@@ -5,7 +5,7 @@ import Spinner from './Spinner.vue';
 const props = withDefaults(
     defineProps<{
         type?: 'button' | 'submit';
-        variant?: 'primary' | 'secondary' | 'ghost' | 'brand' | 'accent' | 'danger';
+        variant?: 'primary' | 'secondary' | 'ghost' | 'brand' | 'accent' | 'accent-solid' | 'danger';
         disabled?: boolean;
         loading?: boolean;
         href?: string;
@@ -42,6 +42,7 @@ const classes = computed(() => {
          * row are one use of it, not three.
          */
         accent: 'border border-accent text-accent hover:bg-accent-tint',
+        'accent-solid': 'bg-accent text-paper hover:bg-accent-strong',
         secondary: 'border border-rule bg-paper-sunk text-ink hover:border-rule-strong',
         ghost: 'text-ink-2 hover:bg-paper-sunk hover:text-ink',
         danger: 'border border-rule bg-paper-sunk text-danger hover:border-danger',

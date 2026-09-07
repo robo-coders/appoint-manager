@@ -7,6 +7,7 @@ import State from './State.vue';
 
 import AppLogo from '@/Components/AppLogo.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
+import AddCard from '@/Components/ui/AddCard.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import ChoiceRow from '@/Components/ui/ChoiceRow.vue';
 import Countdown from '@/Components/ui/Countdown.vue';
@@ -154,7 +155,7 @@ const badgeLabel = (status: string) =>
 
 const SECTIONS = [
     'Button', 'TextInput', 'Select', 'Combobox', 'Textarea', 'Checkbox', 'RadioGroup', 'Toggle',
-    'Table', 'Badge', 'Modal', 'SlideOver', 'ConfirmDialog', 'Toast', 'EmptyState',
+    'Table', 'Badge', 'AddCard', 'Modal', 'SlideOver', 'ConfirmDialog', 'Toast', 'EmptyState',
     'Skeleton', 'Money', 'DateTime', 'PageHeader', 'Tabs', 'Menu', 'UserMenu',
     'CommandPalette', 'AppLogo', 'Card', 'Stat', 'Callout', 'Label and Field',
     'KeyHint', 'Spinner',
@@ -391,8 +392,8 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </State>
                 </Specimen>
 
-                <Specimen name="Badge" note="Status carries its own label always — meaning is never in the colour. Fixed height so a column of them sits on one baseline. Only a cancellation earns colour.">
-                    <State name="Tones">
+                <Specimen name="Badge" note="Status carries its own label always — meaning is never in the colour. Fixed height so a column of them sits on one baseline. Outline where a badge appears once and has to be found; solid down a list, where nine outlined boxes are nine boxes.">
+                    <State name="Outline">
                         <div class="flex flex-wrap items-center gap-2">
                             <Badge tone="confirmed">Confirmed</Badge>
                             <Badge tone="pending">Awaiting deposit</Badge>
@@ -400,6 +401,24 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                             <Badge tone="neutral">Draft</Badge>
                             <Badge tone="accent">First available</Badge>
                         </div>
+                    </State>
+                    <State name="Solid">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Badge variant="solid" tone="confirmed">Confirmed</Badge>
+                            <Badge variant="solid" tone="accent">Awaiting deposit</Badge>
+                            <Badge variant="solid" tone="cancelled">Cancelled</Badge>
+                            <Badge variant="solid" tone="neutral">Completed</Badge>
+                            <Badge variant="solid" tone="pending">Waiting</Badge>
+                        </div>
+                    </State>
+                </Specimen>
+
+                <Specimen name="AddCard" note="The last row of a list, and the one that adds to it. A dashed hairline is the shape of the record that is not there yet; the accent arrives on hover, when she is already pointing at it.">
+                    <State name="Resting">
+                        <AddCard
+                            title="Invite a team member"
+                            description="They get their own diary, hours and time off, and become a column alongside yours."
+                        />
                     </State>
                 </Specimen>
 

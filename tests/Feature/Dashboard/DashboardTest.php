@@ -3,6 +3,8 @@
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Enums\PreferredTime;
+use App\Enums\Weekday;
+use App\Models\AvailabilityRule;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
@@ -304,4 +306,140 @@ it('names the staff who are in today', function () {
         ->assertInertia(fn ($page) => $page
             ->where('heading.staff_today', 'Marek in today')
             ->where('heading.date', 'Wednesday 19 August'));
+});
+
+/*
+ * The headline and the panel beside it.
+ *
+ * The no-show rate leads the screen now, and a rate on its own says nothing —
+ * `change` is the movement it is judged against, and the sign is what decides
+ * whether the arrow is ink or danger. It is asserted here rather than looked at
+ * because a `+` that should be a `-` is a screen telling an owner the opposite
+ * of the truth.
+ */
+it('states the movement in the no-show rate, signed', function () {
+    $salon = aDashboardSalon();
+
+    // August: one missed of four finished = 25.0%.
+    aDashboardBooking($salon, '2026-08-03 09:00:00', '2026-08-03 10:00:00', ['status' => BookingStatus::NoShow]);
+    foreach (['2026-08-04', '2026-08-05', '2026-08-06'] as $day) {
+        aDashboardBooking($salon, $day.' 09:00:00', $day.' 10:00:00', ['status' => BookingStatus::Completed]);
+    }
+
+    // July: one missed of two finished = 50.0%. So the rate has halved.
+    aDashboardBooking($salon, '2026-07-06 09:00:00', '2026-07-06 10:00:00', ['status' => BookingStatus::NoShow]);
+    aDashboardBooking($salon, '2026-07-07 09:00:00', '2026-07-07 10:00:00', ['status' => BookingStatus::Completed]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('band.no_shows.value', '25.0%')
+            ->where('band.no_shows.direction', 'down')
+            ->where('band.no_shows.change', '-25.0'));
+});
+
+it('has no movement to state when there is no month to compare with', function () {
+    $salon = aDashboardSalon();
+
+    aDashboardBooking($salon, '2026-08-03 09:00:00', '2026-08-03 10:00:00', ['status' => BookingStatus::Completed]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('band.no_shows.change', null));
+});
+
+it('aggregates what is waiting on her into one panel', function () {
+    $salon = aDashboardSalon();
+
+    // Two deposits requested and not paid, the older one four days ago.
+    $old = aDashboardBooking($salon, '2026-08-25 09:00:00', '2026-08-25 10:30:00', [
+        'deposit_status' => DepositStatus::Required,
+        'deposit_at_booking' => 1000,
+    ]);
+    $old->forceFill(['created_at' => CarbonImmutable::parse('2026-08-15 09:00:00', 'Europe/London')->utc()])->save();
+
+    aDashboardBooking($salon, '2026-08-26 09:00:00', '2026-08-26 10:30:00', [
+        'deposit_status' => DepositStatus::Required,
+        'deposit_at_booking' => 1500,
+    ]);
+
+    // Already happened: she cannot chase a deposit for an appointment that is over.
+    aDashboardBooking($salon, '2026-08-01 09:00:00', '2026-08-01 10:30:00', [
+        'deposit_status' => DepositStatus::Required,
+        'deposit_at_booking' => 9900,
+    ]);
+
+    $entry = WaitlistEntry::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'customer_id' => $salon['customer']->id,
+        'service_id' => $salon['service']->id,
+        'is_active' => true,
+    ]);
+    $entry->forceFill(['created_at' => CarbonImmutable::parse('2026-08-12 13:00:00', 'Europe/London')->utc()])->save();
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.deposits.count', 2)
+            ->where('attention.deposits.value', '£25.00')
+            ->where('attention.deposits.oldest_days', 4)
+            ->where('attention.waitlist.count', 1)
+            ->where('attention.waitlist.longest_days', 7));
+});
+
+it('says nothing is waiting on her when nothing is', function () {
+    $salon = aDashboardSalon();
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.deposits.count', 0)
+            ->where('attention.deposits.oldest_days', null)
+            ->where('attention.waitlist.count', 0));
+});
+
+/*
+ * "Closed today" and "nothing booked" are different facts, and the empty panel
+ * says which. Read off the opening hours, so a salon that never works Saturdays
+ * is never told to go and fill one.
+ */
+it('knows the shop is shut today and when it opens next', function () {
+    $salon = aDashboardSalon();
+
+    // Wednesday is the 19th. Open Mondays and Fridays only.
+    foreach ([Weekday::Monday, Weekday::Friday] as $weekday) {
+        AvailabilityRule::factory()->create([
+            'tenant_id' => $salon['tenant']->id,
+            'user_id' => $salon['staff']->id,
+            'weekday' => $weekday,
+        ]);
+    }
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('diary.open_today', false)
+            ->where('diary.weekday_plural', 'Wednesdays')
+            ->where('diary.next_open.date', '2026-08-21')
+            ->where('diary.next_open.label', 'Friday 21 August'));
+});
+
+it('knows the shop is open today', function () {
+    $salon = aDashboardSalon();
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $salon['tenant']->id,
+        'user_id' => $salon['staff']->id,
+        'weekday' => Weekday::Wednesday,
+    ]);
+
+    actingAsTenant($salon['user'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('diary.open_today', true));
 });

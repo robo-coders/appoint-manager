@@ -35,7 +35,7 @@ const drawerOpen = ref(false);
 const collapsed = ref(false);
 const paletteOpen = ref(false);
 
-type NavLink = { href: string; label: string; glyph: string; hint: string; count?: number | null };
+type NavLink = { href: string; label: string; glyph: string; hint: string; group?: string; count?: number | null };
 
 const counts = computed(() => (page.props.navCounts as Record<string, number> | null) ?? null);
 
@@ -66,21 +66,41 @@ const links = computed<NavLink[]>(() => {
 
     const n = counts.value;
 
+    /*
+     * Three groups, in the order a week is worked rather than alphabetically.
+     *
+     * Day-to-day is what she opens the app for. Setup is what was decided once
+     * and is changed a few times a year. Account is the shop rather than the
+     * diary. Twelve flat items had the diary and the SMS settings sitting the
+     * same distance from her eye, which is not what they are worth.
+     *
+     * `glyph` is the 56px rail's label. Services / Staff / Settings all start
+     * with S, so these are chosen rather than derived.
+     */
+    const dayToDay = 'Day-to-day';
+    const setup = 'Setup';
+    const account = 'Account';
+
     return [
-        // `glyph` is the 56px rail's label. Services / Staff / Settings all
-        // start with S, so these are chosen rather than derived.
-        { href: route('diary.index'), label: 'Diary', glyph: 'Di', hint: 'D' },
-        { href: route('bookings.index'), label: 'Bookings', glyph: 'Bk', hint: 'B', count: n?.bookings },
-        { href: route('customers.index'), label: 'Customers', glyph: 'Cu', hint: 'C', count: n?.customers },
-        { href: route('waitlist.index'), label: 'Waitlist', glyph: 'Wl', hint: 'W', count: n?.waitlist },
-        { href: route('overdue.index'), label: 'Overdue', glyph: 'Od', hint: 'U', count: n?.overdue },
-        { href: route('services.index'), label: 'Services', glyph: 'Sv', hint: 'S', count: n?.services },
-        { href: route('staff.index'), label: 'Staff', glyph: 'St', hint: 'P', count: n?.staff },
-        { href: route('availability.index'), label: 'Hours', glyph: 'Hr', hint: 'H' },
-        { href: route('time-off.index'), label: 'Time off', glyph: 'To', hint: 'O' },
-        { href: route('dashboard'), label: 'Overview', glyph: 'Ov', hint: 'V' },
-        { href: route('imports.show'), label: 'Import', glyph: 'Im', hint: '' },
-        { href: route('settings.edit'), label: 'Settings', glyph: 'Se', hint: ',' },
+        { href: route('diary.index'), label: 'Diary', glyph: 'Di', hint: 'D', group: dayToDay },
+        { href: route('bookings.index'), label: 'Bookings', glyph: 'Bk', hint: 'B', group: dayToDay, count: n?.bookings },
+        /*
+         * Waitlist and Overdue before Customers, which is the redesign's order
+         * and the order a day is worked: the two lists that are *owed something
+         * today* sit under the two you live in, and the directory of everyone
+         * who has ever booked comes last. It had Customers third, so the two
+         * queues somebody is meant to clear were the bottom of the group.
+         */
+        { href: route('waitlist.index'), label: 'Waitlist', glyph: 'Wl', hint: 'W', group: dayToDay, count: n?.waitlist },
+        { href: route('overdue.index'), label: 'Overdue', glyph: 'Od', hint: 'U', group: dayToDay, count: n?.overdue },
+        { href: route('customers.index'), label: 'Customers', glyph: 'Cu', hint: 'C', group: dayToDay, count: n?.customers },
+        { href: route('services.index'), label: 'Services', glyph: 'Sv', hint: 'S', group: setup, count: n?.services },
+        { href: route('staff.index'), label: 'Staff', glyph: 'St', hint: 'P', group: setup, count: n?.staff },
+        { href: route('availability.index'), label: 'Hours', glyph: 'Hr', hint: 'H', group: setup },
+        { href: route('time-off.index'), label: 'Time off', glyph: 'To', hint: 'O', group: setup },
+        { href: route('dashboard'), label: 'Overview', glyph: 'Ov', hint: 'V', group: account },
+        { href: route('imports.show'), label: 'Import', glyph: 'Im', hint: '', group: account },
+        { href: route('settings.edit'), label: 'Settings', glyph: 'Se', hint: ',', group: account },
     ];
 });
 

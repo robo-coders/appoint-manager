@@ -8,6 +8,8 @@ const props = withDefaults(
     defineProps<{
         id?: string;
         label: string;
+        /** Visually hidden, still announced. See `ui/Field`. */
+        labelHidden?: boolean;
         type?: string;
         error?: string;
         hint?: string;
@@ -23,7 +25,7 @@ const props = withDefaults(
         prefix?: string;
         suffix?: string;
     }>(),
-    { type: 'text', disabled: false, readonly: false, required: false, autofocus: false, mono: false },
+    { type: 'text', disabled: false, readonly: false, required: false, autofocus: false, mono: false, labelHidden: false },
 );
 
 const uid = useId();
@@ -40,7 +42,7 @@ defineExpose({ focus: () => el.value?.focus() });
 </script>
 
 <template>
-    <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
+    <Field :input-id="inputId" :label="label" :label-hidden="labelHidden" :error="error" :hint="hint" :required="required">
         <div class="relative flex items-center">
             <span v-if="prefix" class="pointer-events-none absolute left-pad-x text-field text-ink-2">{{ prefix }}</span>
             <input

@@ -1,26 +1,56 @@
 <script setup lang="ts">
 /**
- * Status at a glance.
+ * Status at a glance, in one of two shapes.
  *
- * The admin app is monochrome: status reads from ink weight, not hue. Only a
- * cancellation earns colour. Meaning is never carried by colour alone — the
- * label is always present, and the dot is decoration on top of it.
+ * `outline` is the original: a hairline box with a dot, for a badge that
+ * appears once or twice on a screen and has to be found.
  *
- * Height is `--badge-h` (20px) rather than vertical padding, so a badge is the
- * same height whatever is inside it and a row of them sits on one baseline.
+ * `solid` is the list shape, and it is what Bookings, Waitlist and Staff wear.
+ * Nine outlined boxes down a column is nine boxes; a filled 6px tint gives the
+ * row back and still reads as one object. There is no dot in that shape — the
+ * fill is the mark, and the label was always the meaning.
  *
- * The `accent` tone puts accent *type* on white, not on `--accent-tint`. Accent
- * on accent-tint measures 4.50:1 — exactly on the threshold, which is not a
- * margin, it is a coin toss.
+ * Meaning is never carried by colour alone in either shape: every tone renders
+ * its label, and the fills are washes rather than solid colour, so the type is
+ * read against paper whichever one it lands on.
+ *
+ * The `accent` tone is the one that means something rather than the one that
+ * looks nicest — a booking awaiting a deposit is the single state on a list a
+ * salon can act on. Solid accent puts `--accent-strong` on `--pill-accent` at
+ * 5.74:1; plain `--accent` on that same fill is 4.21:1 and fails outright.
+ *
+ * Every solid pill is set at 500, which is what the redesign draws: a 12px
+ * label on a wash is already the quietest thing in its row, and at 400 it read
+ * as a caption that happened to have a box round it. Confirmed and pending share
+ * a fill and separate on the row's own ink rather than on the pill's — they
+ * separated on `--ink-2` at first, and that measures 4.35:1 on `--pill-neutral`:
+ * under the line, on a 12px label, which is the worst place to be a little bit
+ * short. `npm run check:contrast` measures all four.
  */
 withDefaults(
-    defineProps<{ tone?: 'confirmed' | 'pending' | 'cancelled' | 'neutral' | 'accent' }>(),
-    { tone: 'neutral' },
+    defineProps<{
+        tone?: 'confirmed' | 'pending' | 'cancelled' | 'neutral' | 'accent';
+        variant?: 'outline' | 'solid';
+    }>(),
+    { tone: 'neutral', variant: 'outline' },
 );
 </script>
 
 <template>
     <span
+        v-if="variant === 'solid'"
+        class="inline-flex h-badge items-center whitespace-nowrap rounded px-2 text-12 font-medium"
+        :class="{
+            'bg-pill-neutral text-ink': tone === 'confirmed' || tone === 'pending',
+            'bg-pill-accent text-accent-strong': tone === 'accent',
+            'bg-pill-muted text-ink-2': tone === 'cancelled' || tone === 'neutral',
+        }"
+    >
+        <slot />
+    </span>
+
+    <span
+        v-else
         class="inline-flex h-badge items-center gap-1 whitespace-nowrap rounded border px-2 text-12"
         :class="{
             'border-rule bg-white text-ink': tone === 'confirmed',

@@ -106,7 +106,9 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
 </script>
 
 <template>
-    <div ref="root" class="relative border-t border-t-rule p-2" @keydown="onKeydown">
+    <!-- The rule is on the rail's footer block now, which is what this and the
+         search button share. Two rules here drew a line between them. -->
+    <div ref="root" class="relative" @keydown="onKeydown">
         <!--
             Impersonating. Not a subtle tint: a border in --danger and the
             salon's name, so there is no version of this session where a super

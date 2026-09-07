@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
+use App\Enums\Weekday;
+use App\Models\AvailabilityRule;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Tenant;
+use App\Models\WaitlistEntry;
 use App\Services\Booking\FreedSlots;
 use App\Services\Rebooking\OverdueSubjects;
 use App\Support\Money;
@@ -42,6 +45,16 @@ class DashboardController extends Controller
                 'date' => $now->format('l j F'),
                 'tenant' => $tenant->name,
                 'staff_today' => $this->staffInToday($todayStart, $tz),
+                /*
+                 * The zone every time on this screen is in, said once.
+                 *
+                 * The redesign puts it under the heading — "Saturday 26
+                 * September · Europe/London" — and it is not decoration: a salon
+                 * owner reading "15:00" on a laptop that travelled has no other
+                 * way to know whose three o'clock it is, and every figure on the
+                 * page below is bucketed by this zone on the server.
+                 */
+                'timezone' => $tz,
             ],
             'band' => [
                 'recovered' => $this->recovered($tenant->currency, $monthStart, $nextMonth),
@@ -50,8 +63,94 @@ class DashboardController extends Controller
                 'no_shows' => $this->noShowRate($monthStart, $nextMonth, $lastMonth),
             ],
             'today' => $this->today($tenant, $freed, $todayStart, $now),
+            'diary' => $this->diaryDay($now),
+            'attention' => $this->attention($tenant, $now),
             'pending_requests' => PendingRequestPayload::forTenant($tenant),
         ]);
+    }
+
+    /**
+     * Whether the salon is open today, and when it is next.
+     *
+     * Read off the opening hours rather than off the diary: "nothing booked" and
+     * "closed" are different facts and the empty panel has to say which one it
+     * is looking at. A Saturday with no appointments on a salon that never works
+     * Saturdays is not a quiet day, and telling her to go and fill it is the
+     * kind of advice that gets a product closed.
+     *
+     * Hours only, deliberately. Time off is per-person and this is the shop's
+     * pattern; a day everybody happens to be away still reads as an open day
+     * with nobody in, which is what the diary itself will say when she opens it.
+     *
+     * @return array<string, mixed>
+     */
+    private function diaryDay(CarbonImmutable $now): array
+    {
+        $open = AvailabilityRule::query()
+            ->distinct()
+            ->pluck('weekday')
+            ->map(fn ($weekday) => (int) ($weekday instanceof Weekday ? $weekday->value : $weekday))
+            ->all();
+
+        $openToday = in_array((int) $now->isoWeekday(), $open, true);
+        $next = null;
+
+        if ($open !== []) {
+            for ($ahead = 1; $ahead <= 7; $ahead++) {
+                $day = $now->addDays($ahead);
+
+                if (in_array((int) $day->isoWeekday(), $open, true)) {
+                    $next = ['date' => $day->format('Y-m-d'), 'label' => $day->format('l j F')];
+                    break;
+                }
+            }
+        }
+
+        return [
+            'date' => $now->format('Y-m-d'),
+            'day' => $now->format('j M'),
+            'weekday_plural' => $now->format('l').'s',
+            'open_today' => $openToday,
+            'next_open' => $next,
+        ];
+    }
+
+    /**
+     * The things waiting on somebody, in one place.
+     *
+     * Everything here is a number she can act on and a screen it opens. The
+     * email row is decided in the shell, from the signed-in user rather than
+     * from the tenant, so it is not built here.
+     *
+     * @return array<string, mixed>
+     */
+    private function attention(Tenant $tenant, CarbonImmutable $now): array
+    {
+        $unpaid = Booking::query()
+            ->where('deposit_status', DepositStatus::Required->value)
+            ->whereNotIn('status', [BookingStatus::Cancelled->value, BookingStatus::Declined->value])
+            ->where('starts_at', '>=', $now->utc())
+            ->get(['id', 'created_at', 'deposit_at_booking']);
+
+        $oldest = $unpaid->min('created_at');
+
+        $waiting = WaitlistEntry::query()
+            ->where('is_active', true)
+            ->get(['id', 'created_at']);
+
+        $longest = $waiting->min('created_at');
+
+        return [
+            'deposits' => [
+                'count' => $unpaid->count(),
+                'value' => (new Money((int) $unpaid->sum(fn (Booking $b) => $b->deposit_at_booking->amount), $tenant->currency))->formatted(),
+                'oldest_days' => $oldest === null ? null : (int) $now->diffInDays(CarbonImmutable::parse($oldest), true),
+            ],
+            'waitlist' => [
+                'count' => $waiting->count(),
+                'longest_days' => $longest === null ? null : (int) $now->diffInDays(CarbonImmutable::parse($longest), true),
+            ],
+        ];
     }
 
     /**
@@ -152,6 +251,14 @@ class DashboardController extends Controller
             'previous' => $before === null ? null : number_format($before, 1).'%',
             'previous_month' => $previous->format('F'),
             'direction' => $current === null || $before === null ? null : ($current <= $before ? 'down' : 'up'),
+            /*
+             * The movement, signed, in percentage points. The headline needs a
+             * figure beside the arrow and "6.2% (up from 3.1%)" makes a reader
+             * do the subtraction; this is the answer they were going to work out.
+             */
+            'change' => $current === null || $before === null
+                ? null
+                : sprintf('%+.1f', round($current - $before, 1)),
         ];
     }
 

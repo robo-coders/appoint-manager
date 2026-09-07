@@ -243,10 +243,18 @@ for (const mirror of MIRRORS) {
  * inlined variables and no `:root` block to compare. It is a reference
  * photograph, not a mockup this repo maintains, so gating it asserts nothing
  * except that an export has the shape of a hand-written file.
+ *
+ * `*.dc.html` is the same thing named by its extension rather than by the
+ * folder it happened to land in. The operator redesign arrived as one, and it
+ * failed this gate three times over for having no `:root` block at all — which
+ * is a fact about the exporter, not a drifted value. Matching the extension
+ * means the next export is exempt where it lands rather than after somebody
+ * adds a directory to this list.
  */
 const MOCKUPS = globSync('.design/mockups/**/*.html').filter((f) => {
     const skip = f.includes('/directions/')
         || f.includes('/Market-site/')
+        || /\.dc\.html$/.test(f)
         || /direction-a-/.test(f)
         || /archived-/.test(f);
 

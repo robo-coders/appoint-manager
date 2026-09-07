@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PreferredTime;
+use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
+use App\Models\Tenant;
 use App\Models\WaitlistEntry;
+use App\Services\Booking\FreedSlots;
+use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\PhoneNumber;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,12 +19,14 @@ use Inertia\Response;
 
 class WaitlistController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request, FreedSlots $freed): Response
     {
         $this->authorize('viewAny', WaitlistEntry::class);
+        $tenant = current_tenant();
+        abort_unless($tenant, 403);
 
         $entries = WaitlistEntry::query()
-            ->with(['customer', 'service'])
+            ->with(['customer', 'service', 'subject'])
             ->orderBy('created_at')
             ->get()
             ->map(fn (WaitlistEntry $entry) => [
@@ -27,6 +34,7 @@ class WaitlistController extends Controller
                 'customer_id' => $entry->customer_id,
                 'customer_name' => $entry->customer?->name,
                 'phone' => $entry->customer?->phone,
+                'subject_name' => $entry->subject?->name,
                 'service_name' => $entry->service?->name,
                 'preferred_days' => $entry->preferred_days ?? [],
                 'preferred_times' => $entry->preferred_times?->value,
@@ -37,6 +45,7 @@ class WaitlistController extends Controller
         return Inertia::render('Waitlist/Index', [
             'entries' => $entries,
             'services' => Service::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'freed' => $this->freedSlot($tenant, $freed, $request->integer('slot') ?: null),
         ]);
     }
 
@@ -78,5 +87,68 @@ class WaitlistController extends Controller
         $entry->save();
 
         return redirect()->route('waitlist.index')->with('toast', 'Added to the waitlist.');
+    }
+
+    /** @return array<string, mixed>|null */
+    private function freedSlot(Tenant $tenant, FreedSlots $freed, ?int $preferred): ?array
+    {
+        $tz = $tenant->timezone;
+        $now = CarbonImmutable::now($tz);
+        $dayStart = $now->startOfDay();
+
+        $rows = Booking::query()
+            ->with(['customer', 'service', 'staff'])
+            ->where('starts_at', '>=', $dayStart->utc())
+            ->where('starts_at', '<', $dayStart->addDay()->utc())
+            ->orderBy('starts_at')
+            ->get();
+
+        $annotations = $freed->annotate($tenant, $rows);
+
+        $candidates = $rows->filter(fn (Booking $booking) => $annotations[$booking->id]['is_freed'] ?? false);
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $booking = $candidates->first(fn (Booking $row) => $row->id === $preferred)
+            ?? $candidates->sortBy(fn (Booking $row) => $annotations[$row->id]['gap_starts_at'])->first();
+
+        $annotation = $annotations[$booking->id];
+        $starts = CarbonImmutable::parse($annotation['gap_starts_at'])->timezone($tz);
+
+        return [
+            'booking_id' => $booking->id,
+            'time' => $starts->format('H:i'),
+            'date' => $starts->format('D j M'),
+            'customer' => $booking->customer?->name,
+            'staff' => $booking->staff?->name,
+            'minutes' => $annotation['minutes'],
+            'waiting' => $annotation['waiting'],
+            'offers_sent' => $annotation['offers_sent'],
+        ];
+    }
+
+    public function offer(Request $request, Booking $booking, FreedSlots $freed, WaitlistOfferer $offerer): RedirectResponse
+    {
+        $this->authorize('viewAny', WaitlistEntry::class);
+        $tenant = current_tenant();
+        abort_unless($tenant, 403);
+
+        $day = CarbonImmutable::parse($booking->starts_at)->timezone($tenant->timezone)->startOfDay();
+
+        $rows = Booking::query()
+            ->where('starts_at', '>=', $day->utc())
+            ->where('starts_at', '<', $day->addDay()->utc())
+            ->get();
+
+        abort_unless($freed->annotate($tenant, $rows)[$booking->id]['is_freed'] ?? false, 404);
+
+        $sent = $offerer->offerForBooking($booking);
+
+        return redirect()->route('waitlist.index')->with(
+            'toast',
+            $sent === 0 ? 'Nobody on the waitlist matches that slot.' : 'Offer sent to '.$sent.' waiting.',
+        );
     }
 }

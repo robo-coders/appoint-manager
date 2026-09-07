@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
-import PhoneLink from '@/Components/ui/PhoneLink.vue';
 import Select from '@/Components/ui/Select.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
@@ -19,6 +17,11 @@ import { computed, ref } from 'vue';
  * taking up the top of the screen for something a salon does a few times a
  * week. It is a `SlideOver` now, behind one button, on the shared components
  * with real error binding.
+ *
+ * The queue is ordered, so it says so. A position column and a wait measured in
+ * days and hours are what turn a list into a queue, and the person at the top of
+ * it wears the same filled pill Bookings uses — one status language across the
+ * two lists, and the accent spent on the one row that is next.
  */
 const props = defineProps<{
     entries: Array<{
@@ -26,6 +29,7 @@ const props = defineProps<{
         customer_id: number | null;
         customer_name: string | null;
         phone: string | null;
+        subject_name: string | null;
         service_name: string | null;
         preferred_days: number[];
         preferred_times: string | null;
@@ -33,6 +37,16 @@ const props = defineProps<{
         is_active: boolean;
     }>;
     services: Array<{ id: number; name: string }>;
+    freed: {
+        booking_id: number;
+        time: string;
+        date: string;
+        customer: string | null;
+        staff: string | null;
+        minutes: number;
+        waiting: number;
+        offers_sent: number;
+    } | null;
 }>();
 
 const sheetOpen = ref(false);
@@ -61,12 +75,13 @@ const submit = () =>
  * list whose whole purpose is ringing somebody up.
  */
 const columns: Column[] = [
+    { key: 'rank', label: '#', width: 'time', numeric: true },
     { key: 'customer_name', label: 'Customer', sortable: true, narrow: 'title' },
-    { key: 'service_name', label: 'Service', sortable: true, narrow: 'line' },
-    { key: 'preference', label: 'Prefers', secondary: true, narrow: 'line' },
+    { key: 'service_name', label: 'Wants', sortable: true, narrow: 'line' },
+    { key: 'preference', label: 'Flexible on', secondary: true, narrow: 'line' },
     {
         key: 'waited',
-        label: 'Waiting',
+        label: 'Waited',
         width: 'staff',
         align: 'right',
         numeric: true,
@@ -87,60 +102,127 @@ const preference = (entry: (typeof props.entries)[number]) => {
     return [days.length ? days.join(', ') : 'Any day', time ?? 'any time'].join(' · ');
 };
 
-/** Days waited. A number, so it sorts — the column shows it with its unit. */
-const daysWaiting = (since: string | null) => {
+/** Hours waited. A number, so it sorts — the column renders it with its units. */
+const hoursWaiting = (since: string | null) => {
     if (!since) return 0;
 
-    return Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 86_400_000));
+    return Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 3_600_000));
 };
 
-const rows = computed(() =>
-    props.entries.map((entry) => ({
-        ...entry,
-        preference: preference(entry),
-        waited: daysWaiting(entry.waiting_since),
-        state: entry.is_active ? 'Waiting' : 'Done',
-    })),
+/*
+ * "9 d 04 h". Days alone is the wrong precision at both ends of this list: on
+ * the first morning every entry reads "0 d", and after a week the difference
+ * between two of them is the whole question of who gets rung first.
+ */
+const waitLabel = (hours: number) => `${Math.floor(hours / 24)} d ${String(hours % 24).padStart(2, '0')} h`;
+
+/*
+ * Position, over the people actually waiting. A finished entry keeps its place
+ * in the table — it is history, and removing it would make the list jump — but
+ * it is not in the queue, so it is not numbered.
+ */
+const rows = computed(() => {
+    let place = 0;
+
+    return props.entries.map((entry) => {
+        const rank = entry.is_active ? ++place : null;
+
+        return {
+            ...entry,
+            rank,
+            preference: preference(entry),
+            waited: hoursWaiting(entry.waiting_since),
+            state: entry.is_active ? (rank === 1 ? 'Next up' : 'Waiting') : 'Done',
+        };
+    });
+});
+
+const subtitle = (row: { subject_name: string | null; service_name: string | null }) =>
+    [row.subject_name, row.service_name?.split(' — ')[0]].filter(Boolean).join(' · ');
+
+const offerLabel = computed(() => {
+    const freed = props.freed;
+    if (!freed) return '';
+    if (freed.offers_sent > 0) return `${freed.offers_sent} offer${freed.offers_sent === 1 ? '' : 's'} out`;
+
+    return freed.waiting > 0 ? `Offer to ${freed.waiting} waiting` : 'Fill this slot';
+});
+
+const freedLine = computed(() => {
+    const freed = props.freed;
+    if (!freed) return '';
+
+    return `Freed — ${freed.customer ?? 'Somebody'} cancelled, ${freed.minutes} min open with ${freed.staff ?? 'nobody'} on ${freed.date}.`;
+});
+
+const sendOffer = () => {
+    if (props.freed) router.post(route('waitlist.offer', props.freed.booking_id));
+};
+
+const waiting = computed(() => rows.value.filter((row) => row.is_active));
+
+const longest = computed(() =>
+    waiting.value.length === 0 ? null : waitLabel(Math.max(...waiting.value.map((row) => row.waited))),
 );
 </script>
 
 <template>
     <AppLayout>
         <Head title="Waitlist" />
-        <PageHeader title="Waitlist" description="Who is waiting, for what, and for how long.">
+        <PageHeader title="Waitlist" description="A live queue, ordered by how long they have waited.">
             <Button @click="sheetOpen = true">Add to waitlist</Button>
         </PageHeader>
 
+        <div
+            v-if="freed"
+            class="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-accent-rule bg-accent-tint px-3.5 py-3"
+        >
+            <span aria-hidden="true" class="size-1.5 shrink-0 animate-pulse rounded bg-accent"></span>
+            <span class="numeral shrink-0 text-12 text-accent-strong">{{ freed.time }}</span>
+            <span class="text-13 text-ink">{{ freedLine }}</span>
+            <Button variant="accent-solid" class="ml-auto shrink-0" @click="sendOffer">{{ offerLabel }}</Button>
+        </div>
+
         <Table
+            chrome="bare"
             :columns="columns"
             :rows="rows"
+            :initial-sort="{ key: 'waited', direction: 'desc' }"
             label="Waitlist"
             :row-label="(row) => `Actions for ${row.customer_name}`"
             empty-title="Nobody is waiting"
             empty-description="When somebody cancels, this is the list the offer goes out to. An empty waitlist is a cancellation that costs you the whole slot."
         >
-            <!--
-                The number is a `tel:` link here for the same reason it is on
-                Customers, and more so: this list exists to ring people up when a
-                slot frees. `ui/PhoneLink`.
-            -->
             <template #cell:customer_name="{ row }">
-                {{ row.customer_name }}
-                <template v-if="row.phone">
-                    <!-- `&nbsp;` because Vue's template compiler condenses a
-                         whitespace-only text node containing a newline, so the
-                         separator rendered as "Nia Oyelaran ·07653880591". -->
-                    <span aria-hidden="true" class="text-ink-2">·&nbsp;</span>
-                    <PhoneLink :phone="row.phone as string | null" />
-                </template>
+                <span class="block font-medium text-ink">{{ row.customer_name }}</span>
+                <span v-if="subtitle(row)" class="mt-0.5 block truncate text-12 text-ink-2">{{ subtitle(row) }}</span>
+            </template>
+
+            <!-- The queue position, and the one row that is next wears the
+                 accent. A finished entry has no place in the queue, so it
+                 shows nothing rather than a number that means nothing. -->
+            <template #cell:rank="{ row }">
+                <span v-if="row.rank" :class="row.rank === 1 ? 'font-medium text-accent-strong' : 'text-ink-2'">
+                    #{{ row.rank }}
+                </span>
             </template>
 
             <template #cell:waited="{ row }">
-                <span class="numeral">{{ row.waited }}</span> d
+                {{ waitLabel(Number(row.waited)) }}
             </template>
 
             <template #cell:state="{ row }">
-                <Badge :tone="row.is_active ? 'accent' : 'neutral'">{{ row.state }}</Badge>
+                <span class="flex items-center gap-2">
+                    <span
+                        aria-hidden="true"
+                        class="size-1.5 shrink-0 rounded"
+                        :class="row.rank === 1 ? 'animate-pulse bg-accent' : 'bg-ink-3'"
+                    ></span>
+                    <span
+                        class="text-12 font-medium"
+                        :class="row.rank === 1 ? 'text-accent-strong' : 'text-ink-2'"
+                    >{{ row.state }}</span>
+                </span>
             </template>
 
             <template #actions="{ row }">
@@ -151,8 +233,9 @@ const rows = computed(() =>
             </template>
 
             <template #footer>
-                <span class="numeral">{{ rows.filter((r) => r.is_active).length }}</span> still waiting of
+                <span class="numeral">{{ waiting.length }}</span> waiting of
                 <span class="numeral">{{ rows.length }}</span>
+                <template v-if="longest"> · longest <span class="numeral">{{ longest }}</span></template>
             </template>
 
             <template #empty-action>

@@ -115,6 +115,14 @@ const columns = computed<Column[]>(() => [
 ]);
 
 const rows = computed(() => props.customers.data.map((customer) => ({ ...customer })));
+
+/*
+ * The row opens the record. Same finding as Bookings and the same fix: "Open"
+ * was the first item of a menu on a row that already highlighted under the
+ * pointer, so the list's whole purpose cost two clicks. See `ui/Table`'s
+ * `rowHref`, which is where the behaviour lives.
+ */
+const rowHref = (row: Record<string, unknown>) => route('customers.show', Number(row.id));
 </script>
 
 <template>
@@ -131,6 +139,8 @@ const rows = computed(() => props.customers.data.map((customer) => ({ ...custome
             :rows="rows"
             :sort="{ key: filters.sort, direction: filters.direction }"
             label="Customers"
+            :row-href="rowHref"
+            row-link-column="name"
             :row-label="(row) => `Actions for ${row.name}`"
             :empty-title="filters.search ? `No customers match “${filters.search}”` : 'No customers yet'"
             :empty-description="
@@ -157,8 +167,8 @@ const rows = computed(() => props.customers.data.map((customer) => ({ ...custome
                 <PhoneLink :phone="row.phone as string | null" />
             </template>
 
+            <!-- Secondary only. The row is "Open" — see `rowHref`. -->
             <template #actions="{ row }">
-                <MenuItem @click="router.get(route('customers.show', Number(row.id)))">Open</MenuItem>
                 <MenuItem @click="router.get(route('bookings.index'), { customer: Number(row.id) })">
                     Their bookings
                 </MenuItem>
@@ -170,26 +180,26 @@ const rows = computed(() => props.customers.data.map((customer) => ({ ...custome
                 of <span class="numeral">{{ customers.total }}</span>
             </template>
 
+            <template v-if="customers.last_page > 1" #footer-action>
+                <Button
+                    variant="secondary"
+                    :disabled="customers.prev_page_url === null"
+                    @click="visit({ page: customers.current_page - 1 })"
+                >
+                    Previous
+                </Button>
+                <Button
+                    variant="secondary"
+                    :disabled="customers.next_page_url === null"
+                    @click="visit({ page: customers.current_page + 1 })"
+                >
+                    Next
+                </Button>
+            </template>
+
             <template #empty-action>
                 <Button v-if="filters.search" variant="ghost" @click="query = ''">Clear the search</Button>
             </template>
         </Table>
-
-        <div v-if="customers.last_page > 1" class="mt-2 flex gap-2">
-            <Button
-                variant="secondary"
-                :disabled="customers.prev_page_url === null"
-                @click="visit({ page: customers.current_page - 1 })"
-            >
-                Previous
-            </Button>
-            <Button
-                variant="secondary"
-                :disabled="customers.next_page_url === null"
-                @click="visit({ page: customers.current_page + 1 })"
-            >
-                Next
-            </Button>
-        </div>
     </AppLayout>
 </template>

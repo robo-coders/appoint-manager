@@ -90,7 +90,7 @@ test.describe('the operator app', () => {
             await freezeTime(page);
             await page.setViewportSize({ width: size.width, height: size.height });
             await page.goto('/dashboard');
-            await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Today’s diary' })).toBeVisible();
             await settled(page);
 
             await expect(page).toHaveScreenshot(`dashboard-${size.name}.png`, {
@@ -105,6 +105,15 @@ test.describe('the operator app', () => {
             await page.goto('/bookings');
             await expect(page.getByRole('heading', { name: 'Bookings' })).toBeVisible();
             await settled(page);
+
+            /*
+             * The status strip is four tabs with their counts, which is wider
+             * than a phone. It scrolls inside itself; the page does not scroll
+             * with it. Asserted rather than left to the snapshot, because a
+             * document 60px wider than the viewport looks like a cropped
+             * screenshot and reads as a rendering artefact.
+             */
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
             // Not `fullPage`: the table is long and its length is a property of
             // the seed, not of the design. The viewport holds the header, the

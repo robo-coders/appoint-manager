@@ -86,6 +86,11 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
+    /*
+     * Before `/bookings/{booking}`, or the model binding claims the word and
+     * "export" 404s as a booking id that is not a number.
+     */
+    Route::get('/bookings/export', [BookingController::class, 'export'])->name('bookings.export');
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/approve', [BookingController::class, 'approve'])->name('bookings.approve');
@@ -152,6 +157,7 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/waitlist', [WaitlistController::class, 'index'])->name('waitlist.index');
     Route::post('/waitlist', [WaitlistController::class, 'store'])->name('waitlist.store');
+    Route::post('/waitlist/{booking}/offer', [WaitlistController::class, 'offer'])->name('waitlist.offer');
 
     Route::get('/overdue', [OverdueController::class, 'index'])->name('overdue.index');
     Route::post('/overdue/preview-enable', [OverdueController::class, 'previewEnable'])->name('overdue.preview-enable');

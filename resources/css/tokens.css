@@ -73,6 +73,11 @@
      * so this is a fill behind ink, never behind accent text. */
     --accent-tint: rgb(168 87 41 / 0.08);
 
+    /* The hairline round the one row that has earned the accent. A softened
+     * edge rather than the accent at full strength, which reads as a warning
+     * box round something that is an opportunity. */
+    --accent-rule: rgb(168 87 41 / 0.28);
+
     /* ---- Brand ----------------------------------------------------------
      * The tenant's own colour, and it appears in exactly two places on the
      * public booking page: the salon's initial mark, and the primary button.
@@ -109,6 +114,23 @@
     --status-confirmed: var(--ink);
     --status-pending: var(--ink-3);
     --status-cancelled: var(--danger);
+
+    /* ---- Status pills ---------------------------------------------------
+     * The list surfaces state a booking's status as a filled 6px pill rather
+     * than an outlined one: at nine rows an outline per row is nine boxes, and
+     * what a filled tint gives back is the row itself. The fills are washes,
+     * never a solid colour — the label is read against paper either way, and
+     * every one of these carries its label, so nothing is said in hue alone.
+     *
+     * --pill-accent is the one that means something: awaiting a deposit is the
+     * single state on a bookings list a salon can act on, and it spends the
+     * screen's one accent. --accent-strong is the type that sits on it; the
+     * plain accent measures 4.50:1 on its own tint, which is a coin toss.
+     */
+    --pill-neutral: rgb(24 23 20 / 0.07);
+    --pill-muted: rgb(24 23 20 / 0.045);
+    --pill-accent: rgb(168 87 41 / 0.13);
+    --accent-strong: #8a461f;
 
     /* An ink tint for the active nav item and other selected-but-not-filled
      * states. 5.5% keeps it a whisper. */
@@ -210,12 +232,35 @@
      * link drops its padding and centres instead. 40px is the floor; this is
      * the surface that decides how much above it there is room for.
      */
-    --rail: 192px;
+    /*
+     * 236, from the redesign. It was 192, derived from the 40px lockup (163px of
+     * artwork plus the link's `px-3`, rounded up to the next multiple of four) —
+     * which is the narrowest the rail *can* be rather than the width it is drawn
+     * at. At 192 a 13px label and its count share 176px of usable width, so
+     * "Time off" and its number sit closer together than the group heading above
+     * them is from the rail's edge, and the whole column reads cramped beside a
+     * 32px page gutter. 236 is on the 4px grid, still comfortably clears the
+     * lockup, and is the value the mockup measures.
+     */
+    --rail: 236px;
     --rail-collapsed: 56px;
     --topbar: 56px;
 
     /* The public booking column. One thumb, one column, never wider. */
     --booking-w: 440px;
+
+    /*
+     * A record, and a list that is a list of records: the booking detail page
+     * and Staff. Both were unbounded, so at 1600px the booking record put a 96px
+     * label 700px from its value and a staff row put "Hours" and "Edit" a screen
+     * away from the name they belong to — a row you have to track across with a
+     * finger. The redesign caps both at 900, which is about as wide as a
+     * two-column label/value grid reads as two columns rather than as two lists.
+     *
+     * Not `--measure`: that is 68ch, sized for one column of prose, and half of
+     * what these two surfaces hold is tabular.
+     */
+    --record: 900px;
 
     /* The auth surface's two columns. --auth-col is the working column: wide
      * enough that the form is never the whole page on a laptop, narrow enough

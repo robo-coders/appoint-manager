@@ -59,7 +59,13 @@ const emit = defineEmits<{ open: [] }>();
             :class="[
                 tone === 'past' ? 'text-ink-2' : '',
                 tone === 'gap' ? 'transition duration-fast ease-product hover:bg-ink-tint' : '',
-                interactive && tone !== 'gap' ? 'transition duration-fast ease-product' : '',
+                /*
+                 * A row that opens something lights up under the pointer. It
+                 * had the transition and nothing to transition *to*, so an
+                 * interactive row looked exactly like an inert one — which is
+                 * the same fault the bookings table had, one component along.
+                 */
+                interactive && tone !== 'gap' ? 'transition duration-fast ease-product hover:bg-paper-sunk' : '',
             ]"
             :aria-label="ariaLabel"
             @click="interactive && emit('open')"

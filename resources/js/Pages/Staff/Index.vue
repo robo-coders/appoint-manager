@@ -1,21 +1,48 @@
 <script setup lang="ts">
 import { DEFAULT_STAFF_COLOUR } from '@/lib/staffColour';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import AddCard from '@/Components/ui/AddCard.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import StaffColourField from '@/Components/ui/StaffColourField.vue';
 import Button from '@/Components/ui/Button.vue';
 import Checkbox from '@/Components/ui/Checkbox.vue';
+import EmptyState from '@/Components/ui/EmptyState.vue';
+import Menu from '@/Components/ui/Menu.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
-import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import type { StaffRecord } from '@/types/models';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
+/**
+ * The people who work in the business.
+ *
+ * **Not a table.** It was four columns — name, email, two badges — which is a
+ * grid built for comparing down a column, and nobody compares two groomers'
+ * "Bookable" flags. What is actually asked of this screen is "who is this, when
+ * do they work, how busy are they", and that is a row: the initial, the name
+ * and role, the week's hours underneath, the load hard right, and the two things
+ * she does to a person at the end of it.
+ *
+ * The email is gone from the row and stays in the edit sheet. It is how the
+ * account signs in, not something anybody reads down a list.
+ *
+ * The last row adds one — `ui/AddCard`. An invite living in the list rather than
+ * only behind the header button is what makes a one-person salon look like a
+ * salon that could have two.
+ */
 const props = defineProps<{
-    staff: StaffRecord[];
+    staff: Array<
+        StaffRecord & {
+            initial: string;
+            role_label: string;
+            hours: string;
+            weekly_hours: string | null;
+            booked_this_week: number;
+        }
+    >;
 }>();
 
 const page = usePage();
@@ -65,79 +92,116 @@ const deactivate = (person: StaffRecord) => {
     router.patch(route('staff.update', person.id), { is_active: false });
 };
 
-const columns: Column[] = [
-    { key: 'name', label: 'Name', sortable: true },
-    { key: 'email', label: 'Email', secondary: true },
-    { key: 'bookable', label: 'Takes bookings', width: 'status' },
-    { key: 'status', label: 'Status', width: 'status' },
-];
+const openHours = (person: StaffRecord) => router.get(route('availability.index'), { staff: person.id });
 
-/*
- * `colour` is per-user data, not a token — the one legitimate colour outside
- * the system, and the only place the admin app is not monochrome. It is a 6px
- * square beside the name and nothing else; it never fills a row or a block.
- */
-const rows = computed(() => props.staff.map((person) => ({ ...person })));
+const load = (count: number) => `${count} booked this week`;
+
+const active = computed(() => props.staff.filter((person) => person.is_active).length);
 </script>
 
 <template>
     <AppLayout>
         <Head title="Staff" />
+        <!-- Capped at `--record`. A staff row is a record, and unbounded it put
+             "Hours" and "Edit" a screen away from the name they act on. -->
+        <div class="max-w-record">
         <PageHeader title="Staff" description="People who work in the business.">
             <Button @click="openCreate">Add staff</Button>
         </PageHeader>
 
-        <Table
-            :columns="columns"
-            :rows="rows"
-            label="Staff"
-            :row-label="(row) => `Actions for ${row.name}`"
-            empty-title="Nobody here yet"
-            empty-description="Add the people who take appointments and they become columns in the diary."
-        >
-            <template #cell:name="{ row }">
-                <span class="flex items-center gap-2">
-                    <span
-                        class="inline-block h-2 w-2 shrink-0 rounded"
-                        :style="{ backgroundColor: (row.colour as string) ?? DEFAULT_STAFF_COLOUR }"
-                        aria-hidden="true"
-                    />
-                    {{ row.name }}
-                </span>
-            </template>
+        <EmptyState
+            v-if="staff.length === 0"
+            title="Nobody here yet"
+            description="Add the people who take appointments and they become columns in the diary."
+            action-label="Add someone"
+            @action="openCreate"
+        />
 
-            <template #cell:bookable="{ row }">
-                <Badge :tone="row.is_bookable ? 'confirmed' : 'neutral'">
-                    {{ row.is_bookable ? 'Bookable' : 'Not bookable' }}
-                </Badge>
-            </template>
-
-            <template #cell:status="{ row }">
-                <Badge :tone="row.is_active ? 'confirmed' : 'neutral'">
-                    {{ row.is_active ? 'Active' : 'Inactive' }}
-                </Badge>
-            </template>
-
-            <template #actions="{ row }">
-                <MenuItem @click="openEdit(row as unknown as StaffRecord)">Edit</MenuItem>
-                <MenuItem @click="router.get(route('availability.index'), { staff: Number(row.id) })">Hours</MenuItem>
-                <MenuItem
-                    v-if="row.is_active && row.id !== page.props.auth.user?.id"
-                    danger
-                    @click="deactivate(row as unknown as StaffRecord)"
+        <div v-else class="border-t border-t-rule-strong">
+            <ul>
+                <li
+                    v-for="person in staff"
+                    :key="person.id"
+                    class="flex flex-wrap items-center gap-4 border-b border-b-rule px-2 py-4 transition duration-fast ease-product hover:bg-paper-sunk"
+                    :class="person.is_active ? '' : 'opacity-60'"
                 >
-                    Deactivate
-                </MenuItem>
-            </template>
+                    <!--
+                        The initial, on a wash rather than filled with ink. A
+                        black square per row is the weight of a primary button
+                        spent on a decoration, and eight of them down a list is
+                        eight full-contrast marks competing with the eight names
+                        beside them. `colour` is per-user data and stays a 6px
+                        square by the name — it identifies a column in the diary,
+                        and a mark filled with it would put six unrelated hues
+                        down one list.
+                    -->
+                    <span
+                        class="numeral flex size-10 shrink-0 items-center justify-center rounded bg-pill-neutral text-14 text-ink-2"
+                        aria-hidden="true"
+                    >
+                        {{ person.initial }}
+                    </span>
 
-            <template #footer>
-                <span class="numeral">{{ rows.length }}</span> on the team
-            </template>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span
+                                class="inline-block size-2 shrink-0 rounded"
+                                :style="{ backgroundColor: person.colour ?? DEFAULT_STAFF_COLOUR }"
+                                aria-hidden="true"
+                            />
+                            <span class="text-14 font-medium text-ink">{{ person.name }}</span>
+                            <!-- The role is a description, not a state, so it
+                                 wears the quietest pill there is. An inactive
+                                 person is already said by the row's own opacity
+                                 and does not need a second, contradictory
+                                 reading of the same fact in the badge. -->
+                            <Badge variant="solid" tone="neutral">{{ person.role_label }}</Badge>
+                        </div>
+                        <p class="mt-1 text-13 text-ink-2">{{ person.hours }}</p>
+                    </div>
 
-            <template #empty-action>
-                <Button variant="ghost" @click="openCreate">Add someone</Button>
-            </template>
-        </Table>
+                    <div class="shrink-0 text-right">
+                        <p class="numeral text-13 text-ink">{{ person.weekly_hours ?? '—' }}</p>
+                        <p class="mt-0.5 text-12 text-ink-2">{{ load(person.booked_this_week) }}</p>
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-1">
+                        <Button variant="ghost" @click="openHours(person)">Hours</Button>
+                        <Button variant="ghost" @click="openEdit(person)">Edit</Button>
+                        <!--
+                            The menu, or the space where it would be. She has no
+                            "Deactivate" on her own row and neither does an
+                            already-inactive person, and without the placeholder
+                            those rows pull Hours and Edit 32px right of every
+                            other row's — a ragged right edge down the one column
+                            the eye uses to find a control.
+                        -->
+                        <Menu
+                            v-if="person.is_active && person.id !== page.props.auth.user?.id"
+                            :label="`More actions for ${person.name}`"
+                        >
+                            <MenuItem danger @click="deactivate(person)">Deactivate</MenuItem>
+                        </Menu>
+                        <span v-else class="size-8" aria-hidden="true" />
+                    </div>
+                </li>
+            </ul>
+
+            <AddCard
+                title="Invite a team member"
+                description="They get their own diary, hours and time off, and become a column alongside yours."
+                @click="openCreate"
+            />
+
+            <p class="caption mt-4">
+                <span class="numeral">{{ active }}</span> on the team
+                <template v-if="active !== staff.length">
+                    · <span class="numeral">{{ staff.length - active }}</span> inactive
+                </template>
+            </p>
+        </div>
+
+        </div>
 
         <SlideOver :show="sheetOpen" :title="editingId ? 'Edit staff' : 'Add staff'" @close="sheetOpen = false">
             <form class="space-y-4" @submit.prevent="submit">

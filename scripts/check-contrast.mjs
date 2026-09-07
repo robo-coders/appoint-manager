@@ -54,6 +54,32 @@ const ratio = (a, b) => {
     return (x + 0.05) / (y + 0.05);
 };
 
+/*
+ * The status pills, which are the one place in this product where type sits on
+ * a *composite* surface — a wash of ink or accent over paper — rather than on a
+ * declared one. Nothing above measures that, and the first version of the solid
+ * pill shipped `--ink-2` on `--pill-neutral` at 4.35:1 because nothing did.
+ *
+ * `over()` flattens the wash against paper first, which is what the eye sees:
+ * these fills are never laid on anything else.
+ */
+const PILLS = [
+    ['ink', 'pill-neutral', 'confirmed and pending'],
+    ['ink-2', 'pill-muted', 'cancelled and completed'],
+    ['accent-strong', 'pill-accent', 'awaiting a deposit'],
+];
+
+const over = (fg, bg) => {
+    const match = fg.match(/rgb\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)\s*\)/);
+
+    if (!match) return toRgb(fg);
+
+    const alpha = +match[4];
+    const wash = [+match[1], +match[2], +match[3]];
+
+    return wash.map((channel, index) => alpha * channel + (1 - alpha) * bg[index]);
+};
+
 const SURFACES = ['paper', 'paper-sunk', 'white'];
 
 // [foreground, minimum, note]. ink-3 and ink-4 are deliberately not text at
@@ -112,6 +138,11 @@ const check = (label, fg, bg, min) => {
 console.log('text on every surface it lands on');
 for (const [name, min] of TEXT) {
     for (const s of SURFACES) check(`${name} on ${s}`, toRgb(resolve(name)), toRgb(resolve(s)), min);
+}
+
+console.log('\nstatus pills — a wash over paper, so the fill is flattened first');
+for (const [fg, fill, note] of PILLS) {
+    check(`${fg} on ${fill} — ${note}`, toRgb(resolve(fg)), over(resolve(fill), toRgb(resolve('paper'))), 4.5);
 }
 
 console.log('\nnon-text, held to 3:1 or noted');

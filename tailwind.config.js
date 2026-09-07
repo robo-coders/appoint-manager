@@ -40,6 +40,12 @@ export default {
             danger: 'var(--danger)',
             accent: 'var(--accent)',
             'accent-tint': 'var(--accent-tint)',
+            'accent-rule': 'var(--accent-rule)',
+            'accent-strong': 'var(--accent-strong)',
+
+            'pill-neutral': 'var(--pill-neutral)',
+            'pill-muted': 'var(--pill-muted)',
+            'pill-accent': 'var(--pill-accent)',
 
             'status-confirmed': 'var(--status-confirmed)',
             'status-pending': 'var(--status-pending)',
@@ -121,6 +127,8 @@ export default {
             maxWidth: {
                 measure: 'var(--measure)',
                 booking: 'var(--booking-w)',
+                // A record page, and a list of records. See tokens.css.
+                record: 'var(--record)',
                 // The auth surface. See tokens.css.
                 'auth-form': 'var(--auth-form)',
                 // A name that truncates caps at its column rather than filling it.
