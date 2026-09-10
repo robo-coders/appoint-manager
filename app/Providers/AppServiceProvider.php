@@ -290,8 +290,23 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->ip().'|'.$request->route('tenant_slug'));
         });
 
+        /*
+         * Two limits, and the second is the one that matters.
+         *
+         * Keyed by `ip|token` alone, a limiter caps how hard one booking link
+         * can be hammered and does nothing at all about somebody walking the
+         * token space: every guess carries a different token, so every guess
+         * lands in a bucket of its own and the limit never trips. The per-IP
+         * limit is what makes the route non-enumerable, which is the property
+         * an unauthenticated magic link depends on.
+         */
         RateLimiter::for('booking-manage', function (Request $request) {
-            return Limit::perMinute(30)->by($request->ip().'|'.$request->route('token'));
+            return [
+                Limit::perMinute((int) config('booking_management.rate_limit_per_minute'))
+                    ->by($request->ip().'|'.$request->route('token')),
+                Limit::perMinute((int) config('booking_management.rate_limit_per_ip_per_minute'))
+                    ->by($request->ip()),
+            ];
         });
 
         RateLimiter::for('calendar-feed', function (Request $request) {

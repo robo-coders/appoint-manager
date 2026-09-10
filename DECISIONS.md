@@ -3553,3 +3553,79 @@ The narrow state already existed. It could not express the mockup's rows:
   and the diary — and there is no per-entry offer endpoint. The brief says the
   offer-triggering logic is untouched, so a button that only looked like one was
   not added. See the audit report.
+
+# Phase 15 — the manage page, filled in
+
+`.design/mockups/booking/manage-booking.dc.html`. Most of this flow already
+existed: `ManageBookingController`, `bookings.public_token`, the
+`booking-manage` throttle, `refundPreview` / `canCancel` / `canReschedule`,
+`BookingService::reschedule` and `::cancel` with their staff-row locking and
+`RefundPending` state, and the waitlist offer on both paths. None of that was
+rewritten — the engine is audited and tested, and the mockup does not ask for a
+different one. What follows is the edges it did not cover.
+
+## What a dead link may say
+
+- **One response for every unresolvable token.** A token that never existed, one
+  of the wrong shape, and one belonging to another tenant now return a
+  byte-identical `booking-link-inactive` page at 404. An attacker cannot tell a
+  valid-but-dead token from a guess, which is the property an unauthenticated
+  magic link rests on. `booking()` returns null rather than aborting, and the
+  format is checked against `config('booking_management.token_length')` before
+  the query, so a too-short token never reaches the database.
+- **A token that *does* resolve always speaks about its own booking.** Cancelled
+  says cancelled; an appointment that has been says so and offers no controls.
+  §2.5 of the brief wants that status view and §2.1 wants expired to look like
+  never-valid; they only conflict if the token expires, and this one does not —
+  it is the booking's permanent public token. So: resolves, and you see your
+  booking's state; does not resolve, and you see one generic page.
+
+## The throttle was not protecting the thing it looks like it protects
+
+`booking-manage` was `Limit::perMinute(30)->by($ip.'|'.$token)`. Keyed by the
+token, every guess in a token-space walk lands in a bucket of its own and the
+limit never trips — it capped hammering of one known link and did nothing about
+enumeration. There are two limits now, and the per-IP one is the one that
+matters. **`calendar-feed` has the identical shape and was left alone**: its
+clients are polling calendar apps, and an IP cap there can break a real
+subscription behind shared NAT. Flagged rather than changed.
+
+## Not fixable here: the masked card
+
+The mockup refunds to "•••• 4241". `tenants.card_last4` is the **salon's own
+subscription card** — showing it to a customer would leak the owner's card
+digits to a stranger. The customer's deposit card is not stored anywhere: it
+lives on the Stripe PaymentIntent. So the refund line names the amount and not
+the instrument. Flagged; it needs a column and webhook work in the payments
+path.
+
+## Two bugs the screenshots found
+
+- **"Cancel and refund £0.00."** `cancelConsequence` branched on
+  `deposit_status !== Paid`, and a salon with deposits switched off has bookings
+  that are `Paid` for £0. It reads as a refund that is coming. Zero is now no
+  deposit.
+- **The bookings list had no sort tiebreaker.** Every sort it offers has ties by
+  construction — two appointments at 09:00, four all `confirmed` — so MySQL was
+  free to order tied rows differently between identical queries. That is a
+  paginated list that can show one row twice and skip another, and it is why the
+  768px snapshot failed with two pairs of same-minute rows swapped. `orderBy(id)`
+  last. The snapshots are stable across a full seed rebuild now, which they were
+  not before.
+
+## Also
+
+- `SelfServiceTest`'s invalid-token test asserted against `/b/...`, which is not
+  a path the suite serves — with `APP_DOMAIN` unset the book surface sits under
+  `/book`. Both requests 404'd because there was no route there, so the test
+  passed without reaching the controller and would have passed with token
+  checking deleted. It goes through `route()` now.
+- **"Message the salon" is an `sms:` link** to the tenant's number, and is
+  absent when there is no number rather than dead. A contact form or an in-app
+  thread would be a feature with an inbox behind it, which is a product
+  decision.
+- **The corner code is derived, not invented.** The mockup's "EK · G74" is city
+  initials and postcode district — East Kilbride, G74. It comes from
+  `tenants.city` and `tenants.postcode` and is omitted when there is no
+  postcode. It is passed to `public-shell` as an optional `headerCode` so the
+  booking page and the offer page are untouched.

@@ -27,6 +27,8 @@ final class FakeStripeGateway implements StripeGateway
 
     public bool $throwOnCreate = false;
 
+    public bool $throwOnRefund = false;
+
     /**
      * A last line of defence: this class accepts a hardcoded signature and takes no
      * money. If it is ever reachable in production, that is the emergency.
@@ -121,6 +123,10 @@ final class FakeStripeGateway implements StripeGateway
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string
     {
+        if ($this->throwOnRefund) {
+            throw new RuntimeException('Stripe refund failed.');
+        }
+
         $id = 're_fake_'.$paymentIntentId;
         $this->refunds[] = $paymentIntentId;
 

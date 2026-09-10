@@ -51,7 +51,9 @@ const props = defineProps<{
         free_until: string | null;
         context: string;
     };
-    tenant: { name: string; timezone: string; address: string; phone: string | null };
+    tenant: { name: string; timezone: string; address: string; phone: string | null; code: string | null };
+    state: 'live' | 'cancelled' | 'finished';
+    horizon_days: number;
     can_cancel: boolean;
     can_reschedule: boolean;
     /** Already a sentence, and already the *consequence* rather than a policy. */
@@ -64,6 +66,8 @@ const error = ref('');
 const notice = ref('');
 const confirming = ref(false);
 const working = ref(false);
+const finished = ref(props.state === 'finished');
+const retry = ref<null | (() => void)>(null);
 
 const pickerOpen = ref(false);
 const loadingDays = ref(false);
@@ -76,7 +80,16 @@ const heading = ref({
     context: props.booking.context,
 });
 
-const cancelled = computed(() => status.value === 'cancelled');
+const cancelled = computed(() => status.value === 'cancelled' || props.state === 'cancelled');
+
+const messageHref = computed(() => (props.tenant.phone ? `sms:${props.tenant.phone}` : null));
+
+const noAvailability = computed(
+    () =>
+        !loadingDays.value &&
+        Object.keys(days.value).length > 0 &&
+        Object.values(days.value).every((slots) => slots.every((slot) => !slot.available)),
+);
 
 const shiftDays = (iso: string, amount: number) => {
     const [y, m, d] = iso.split('-').map(Number);
@@ -96,6 +109,7 @@ const week = computed(() => {
 const loadDays = async () => {
     loadingDays.value = true;
     error.value = '';
+    retry.value = null;
 
     try {
         const { data } = await axios.get(props.urls.availability, {
@@ -104,6 +118,7 @@ const loadDays = async () => {
         days.value = { ...days.value, ...(data.days ?? {}) };
     } catch {
         error.value = 'Times didn’t load. Check your connection and try again.';
+        retry.value = loadDays;
     } finally {
         loadingDays.value = false;
     }
@@ -120,8 +135,11 @@ const shiftWeek = async (direction: number) => {
 };
 
 const reschedule = async (slot: Slot) => {
+    if (working.value) return;
+
     working.value = true;
     error.value = '';
+    retry.value = null;
 
     try {
         await axios.post(props.urls.reschedule, {
@@ -138,27 +156,48 @@ const reschedule = async (slot: Slot) => {
         notice.value = 'Moved. We’ve sent you a new confirmation.';
         pickerOpen.value = false;
     } catch (err: unknown) {
-        error.value =
-            axios.isAxiosError(err) && err.response?.status === 409
-                ? 'That time has just gone. Here is what is still free.'
-                : 'We couldn’t move this appointment.';
+        const taken = axios.isAxiosError(err) && err.response?.status === 409;
+        const dead = axios.isAxiosError(err) && err.response?.status === 404;
+
+        if (taken) {
+            error.value = 'That time has just gone. Here is what is still free.';
+            await loadDays();
+        } else if (dead) {
+            error.value = 'This booking link is no longer active.';
+            finished.value = true;
+        } else {
+            error.value =
+                'We couldn’t tell whether that went through. Nothing has been changed — try again.';
+            retry.value = () => reschedule(slot);
+        }
     } finally {
         working.value = false;
     }
 };
 
 const cancel = async () => {
+    if (working.value) return;
+
     working.value = true;
     error.value = '';
+    retry.value = null;
 
     try {
         const { data } = await axios.post(props.urls.cancel);
         status.value = data.status;
         notice.value = data.refund;
         confirming.value = false;
-    } catch {
-        error.value = 'We couldn’t cancel this appointment.';
+    } catch (err: unknown) {
         confirming.value = false;
+
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+            error.value = 'This booking link is no longer active.';
+            finished.value = true;
+        } else {
+            error.value =
+                'We couldn’t tell whether that went through. The appointment is still booked — try again.';
+            retry.value = cancel;
+        }
     } finally {
         working.value = false;
     }
@@ -167,13 +206,33 @@ const cancel = async () => {
 
 <template>
     <div>
-        <p v-if="error" class="mb-4 text-15 text-danger" role="alert">{{ error }}</p>
+        <div v-if="error" class="mb-4" role="alert">
+            <p class="text-15 text-danger">{{ error }}</p>
+            <p v-if="retry" class="mt-2">
+                <Button variant="secondary" :loading="working" @click="retry?.()">Try again</Button>
+            </p>
+        </div>
 
         <!-- ============================================================
              Cancelled. One statement, no controls: there is nothing left
              to do here and a row of dead buttons says otherwise.
              ============================================================ -->
-        <section v-if="cancelled" class="space-y-3">
+        <section v-if="finished && !cancelled" class="space-y-3">
+            <h1 class="text-34 font-medium">That appointment has been</h1>
+            <p class="text-15 text-ink-2">
+                {{ heading.dayLabel }} at <span class="font-mono">{{ heading.time }}</span> is in the past, so there
+                is nothing to change here.
+            </p>
+            <p class="text-15 text-ink-2">
+                <template v-if="tenant.phone">
+                    To book again, call {{ tenant.name }} on
+                    <span class="font-mono">{{ tenant.phone }}</span>.
+                </template>
+                <template v-else>To book again, get in touch with {{ tenant.name }}.</template>
+            </p>
+        </section>
+
+        <section v-else-if="cancelled" class="space-y-3">
             <h1 class="text-34 font-medium">Cancelled</h1>
             <p class="text-15 text-ink-2">
                 {{ heading.dayLabel }} at <span class="font-mono">{{ heading.time }}</span> is no longer booked.
@@ -181,19 +240,30 @@ const cancel = async () => {
             <p v-if="notice" class="text-15">{{ notice }}</p>
         </section>
 
-        <template v-else>
+        <template v-else-if="!finished">
             <SlotPicker
                 v-if="pickerOpen"
                 :week="week"
                 :days="days"
                 :selected-date="booking.starts_at_local.slice(0, 10)"
                 :selected-starts-at="booking.starts_at"
-                :loading="loadingDays"
+                :loading="loadingDays || working"
                 :context="heading.context"
                 @pick-day="(iso) => (weekStart = iso)"
                 @pick-slot="reschedule"
                 @shift-week="shiftWeek"
             />
+
+            <p v-if="pickerOpen && noAvailability" class="mt-6 text-15 text-ink-2">
+                No availability in the next {{ horizon_days }} days.
+                <template v-if="messageHref">
+                    <a :href="messageHref" class="underline decoration-rule underline-offset-4">
+                        Message {{ tenant.name }}
+                    </a>
+                    to find a time.
+                </template>
+                <template v-else>Get in touch with {{ tenant.name }} to find a time.</template>
+            </p>
 
             <template v-else>
                 <!-- The same 34px statement as the booking page. Same
@@ -259,6 +329,20 @@ const cancel = async () => {
                 </QuietAction>
             </p>
         </template>
+
+        <div class="mt-8 flex items-baseline justify-between gap-4 border-t border-t-rule pt-4">
+            <span class="numeral text-12 text-ink-2">
+                Ref {{ booking.public_token.slice(0, 8) }}
+                <template v-if="tenant.code"> · {{ tenant.code }}</template>
+            </span>
+            <a
+                v-if="messageHref"
+                :href="messageHref"
+                class="shrink-0 text-12 text-ink-2 underline decoration-rule underline-offset-4"
+            >
+                Message the salon
+            </a>
+        </div>
 
         <ConfirmDialog
             :show="confirming"

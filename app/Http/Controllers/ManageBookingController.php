@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Exceptions\SlotUnavailableException;
 use App\Models\Booking;
@@ -21,12 +22,19 @@ class ManageBookingController extends Controller
     public function show(Request $request, string $token, BookingService $bookings): Response
     {
         $booking = $this->booking($token);
+
+        if ($booking === null) {
+            return $this->inactive();
+        }
+
         $tenant = $booking->tenant;
         $tz = $tenant->timezone;
         $starts = CarbonImmutable::parse($booking->starts_at)->timezone($tz);
+        $state = $this->state($booking);
 
         $response = response()->view('manage-booking', [
             'tenant' => $tenant,
+            'headerCode' => $this->salonCode($tenant),
             'props' => [
                 'booking' => BookingPayload::toArray($booking, $tz, [
                     // The same three strings the booking page's proposal uses,
@@ -43,9 +51,12 @@ class ManageBookingController extends Controller
                     'timezone' => $tz,
                     'address' => trim($tenant->address_line_1.' '.$tenant->city.' '.$tenant->postcode),
                     'phone' => $tenant->phone,
+                    'code' => $this->salonCode($tenant),
                 ],
-                'can_cancel' => $bookings->canCancel($tenant, $booking),
-                'can_reschedule' => $bookings->canReschedule($tenant, $booking),
+                'state' => $state,
+                'horizon_days' => (int) config('booking.horizon_days'),
+                'can_cancel' => $state === 'live' && $bookings->canCancel($tenant, $booking),
+                'can_reschedule' => $state === 'live' && $bookings->canReschedule($tenant, $booking),
                 'cancel_consequence' => $this->cancelConsequence($booking, $tenant, $bookings),
                 'urls' => [
                     'cancel' => route('booking.manage.cancel', $booking->public_token),
@@ -77,6 +88,11 @@ class ManageBookingController extends Controller
     public function availability(string $token, Request $request, AvailabilityEngine $engine): JsonResponse
     {
         $booking = $this->booking($token);
+
+        if ($booking === null) {
+            return $this->gone();
+        }
+
         $tenant = $booking->tenant;
         $from = (string) $request->query('from');
         $to = (string) $request->query('to');
@@ -124,6 +140,11 @@ class ManageBookingController extends Controller
     public function cancel(string $token, BookingService $bookings): JsonResponse
     {
         $booking = $this->booking($token);
+
+        if ($booking === null) {
+            return $this->gone();
+        }
+
         $preview = $bookings->refundPreview($booking->tenant, $booking);
         abort_unless($bookings->canCancel($booking->tenant, $booking), 422, 'This booking cannot be cancelled.');
 
@@ -138,6 +159,11 @@ class ManageBookingController extends Controller
     public function reschedule(string $token, Request $request, BookingService $bookings): JsonResponse
     {
         $booking = $this->booking($token);
+
+        if ($booking === null) {
+            return $this->gone();
+        }
+
         abort_unless($bookings->canReschedule($booking->tenant, $booking), 422, 'This booking cannot be moved.');
 
         $startsAt = CarbonImmutable::parse($request->string('starts_at')->toString())->utc();
@@ -167,7 +193,7 @@ class ManageBookingController extends Controller
      */
     private function cancelConsequence(Booking $booking, Tenant $tenant, BookingService $bookings): string
     {
-        if ($booking->deposit_status !== DepositStatus::Paid) {
+        if ($booking->deposit_status !== DepositStatus::Paid || $booking->deposit_at_booking->amount === 0) {
             return 'Cancel this appointment';
         }
 
@@ -222,8 +248,14 @@ class ManageBookingController extends Controller
         ]));
     }
 
-    private function booking(string $token): Booking
+    private function booking(string $token): ?Booking
     {
+        $floor = (int) config('booking_management.token_length');
+
+        if (preg_match('/^[A-Za-z0-9-]{'.$floor.',128}$/', $token) !== 1) {
+            return null;
+        }
+
         $booking = Booking::withoutGlobalScopes()
             ->with([
                 'tenant',
@@ -235,8 +267,44 @@ class ManageBookingController extends Controller
             ->where('public_token', $token)
             ->first();
 
-        abort_if($booking === null, 404);
-
         return $booking;
+    }
+
+    private function inactive(): Response
+    {
+        return response()->view('booking-link-inactive', [], 404);
+    }
+
+    private function gone(): JsonResponse
+    {
+        return response()->json(['message' => 'This booking link is no longer active.'], 404);
+    }
+
+    private function state(Booking $booking): string
+    {
+        if ($booking->status === BookingStatus::Cancelled) {
+            return 'cancelled';
+        }
+
+        if (in_array($booking->status, [BookingStatus::Completed, BookingStatus::NoShow, BookingStatus::Declined], true)) {
+            return 'finished';
+        }
+
+        return CarbonImmutable::parse($booking->starts_at)->utc()->isPast() ? 'finished' : 'live';
+    }
+
+    private function salonCode(Tenant $tenant): ?string
+    {
+        $outward = strtoupper(trim(explode(' ', trim((string) $tenant->postcode))[0] ?? ''));
+
+        if ($outward === '') {
+            return null;
+        }
+
+        $initials = collect(preg_split('/[\s-]+/', trim((string) $tenant->city), -1, PREG_SPLIT_NO_EMPTY) ?: [])
+            ->map(fn (string $word) => strtoupper($word[0]))
+            ->implode('');
+
+        return $initials === '' ? $outward : $initials.' · '.$outward;
     }
 }

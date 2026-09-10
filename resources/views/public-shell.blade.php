@@ -98,6 +98,9 @@
                     aria-hidden="true"
                 >{{ $initial }}</span>
                 <p class="truncate text-13 font-medium">{{ $tenant->name }}</p>
+                @if (! empty($headerCode ?? null))
+                    <span class="numeral ml-auto shrink-0 text-12 text-ink-2">{{ $headerCode }}</span>
+                @endif
             </div>
         </header>
 

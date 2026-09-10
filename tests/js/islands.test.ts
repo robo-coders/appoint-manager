@@ -329,12 +329,53 @@ describe('ManageIsland — the same page, a different hat', () => {
             free_until: 'Sunday 8 March',
             context: 'Full groom for Bramble · 90 min with Ana',
         },
-        tenant: { name: 'Willow Street Grooming', timezone: 'Europe/London', address: '1 Willow St', phone: '01422 000000' },
+        tenant: {
+            name: 'Willow Street Grooming',
+            timezone: 'Europe/London',
+            address: '1 Willow St',
+            phone: '01422 000000',
+            code: 'HX · HX1',
+        },
+        state: 'live',
+        horizon_days: 60,
         can_cancel: true,
         can_reschedule: true,
         cancel_consequence: 'Cancel and refund £10.00',
         urls: { cancel: '/c', reschedule: '/r', availability: '/a' },
         ...over,
+    });
+
+    it('states an appointment that has been, rather than offering dead controls', () => {
+        const wrapper = mount(ManageIsland, { props: manageProps({ state: 'finished' }) });
+
+        expect(wrapper.text()).toContain('That appointment has been');
+        expect(wrapper.text()).toContain('01422 000000');
+        expect(wrapper.find('h1').text()).not.toContain('09:45');
+        expect(wrapper.findAll('button')).toHaveLength(0);
+    });
+
+    it('says cancelled from the server state, not only from a status field', () => {
+        const wrapper = mount(ManageIsland, { props: manageProps({ state: 'cancelled' }) });
+
+        expect(wrapper.find('h1').text()).toBe('Cancelled');
+    });
+
+    it('carries the reference and the salon code, and a way to reach a person', () => {
+        const wrapper = mount(ManageIsland, { props: manageProps() });
+
+        expect(wrapper.text()).toContain('HX · HX1');
+        const message = wrapper.findAll('a').find((node) => node.text() === 'Message the salon');
+        expect(message?.attributes('href')).toBe('sms:01422 000000');
+    });
+
+    it('offers no way to message a salon that has given no number', () => {
+        const wrapper = mount(ManageIsland, {
+            props: manageProps({
+                tenant: { name: 'Willow Street Grooming', timezone: 'Europe/London', address: '1 Willow St', phone: null, code: null },
+            }),
+        });
+
+        expect(wrapper.findAll('a').some((node) => node.text() === 'Message the salon')).toBe(false);
     });
 
     it('states the appointment in the same 34px heading the booking page uses', () => {

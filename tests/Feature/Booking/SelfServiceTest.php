@@ -148,7 +148,16 @@ it('cancels with a refund outside the window and without one inside it', functio
         ->and($far->fresh()->status)->toBe(BookingStatus::Cancelled);
 });
 
+/*
+ * Through `route()`, not a literal path.
+ *
+ * This asserted against `/b/...`, which is not a path this suite serves at all:
+ * with APP_DOMAIN unset the book surface sits under `/book`, so both requests
+ * 404'd because there was no route there — the assertion passed without ever
+ * reaching the controller and would have passed with token checking removed
+ * altogether. See `ManageBookingTest` for what a dead link is allowed to say.
+ */
 it('returns 404 for an invalid or tampered public token', function () {
-    $this->get('/b/not-a-real-token')->assertNotFound();
-    $this->postJson('/b/'.str_repeat('a', 36).'/cancel')->assertNotFound();
+    $this->get(route('booking.manage.show', 'not-a-real-token'))->assertNotFound();
+    $this->postJson(route('booking.manage.cancel', str_repeat('a', 36)))->assertNotFound();
 });

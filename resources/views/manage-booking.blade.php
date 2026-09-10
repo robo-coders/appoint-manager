@@ -3,4 +3,5 @@
     'mount' => 'manage-app',
     'propsId' => 'manage-props',
     'stripe' => false,
+    'headerCode' => $headerCode ?? null,
 ])

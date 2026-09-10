@@ -254,6 +254,19 @@ class BookingController extends Controller
             ),
             default => $query->orderBy(self::SORTS[$sort], $direction),
         };
+
+        /*
+         * A tiebreaker, so the list has one order rather than whichever order
+         * the engine happens to return.
+         *
+         * Every sort here has ties by construction: two appointments at 09:00,
+         * two customers called Oyelaran, four bookings all `confirmed`. Without
+         * a final key, MySQL is free to order tied rows differently between
+         * identical queries — so pagination could show a row twice and skip
+         * another, and the 768px snapshot of this table failed with two pairs of
+         * same-minute rows swapped.
+         */
+        $query->orderBy('bookings.id', 'desc');
     }
 
     public function show(Booking $booking): Response
