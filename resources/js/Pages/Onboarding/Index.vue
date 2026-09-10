@@ -7,7 +7,9 @@ import FieldError from '@/Components/ui/FieldError.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
 import RadioGroup from '@/Components/ui/RadioGroup.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
+import ToastContainer from '@/Components/ui/ToastContainer.vue';
 import Toggle from '@/Components/ui/Toggle.vue';
+import { toast } from '@/lib/toast';
 import { penceToPoundsInput, poundsInputToPence } from '@/lib/money';
 import { weekdays } from '@/lib/weekdays';
 import type { FormDataConvertible } from '@inertiajs/core';
@@ -421,7 +423,7 @@ const liveBookingUrl = computed(() =>
 
 const displayUrl = computed(() => liveBookingUrl.value.replace(/^https?:\/\//, ''));
 
-const copyState = ref<'idle' | 'copied' | 'manual'>('idle');
+const copyState = ref<'idle' | 'manual'>('idle');
 const urlEl = ref<HTMLElement | null>(null);
 
 /**
@@ -440,10 +442,8 @@ const copy = async () => {
         }
 
         await navigator.clipboard.writeText(liveBookingUrl.value);
-        copyState.value = 'copied';
-        setTimeout(() => {
-            copyState.value = 'idle';
-        }, 1600);
+        copyState.value = 'idle';
+        toast.success('Link copied');
     } catch {
         copyState.value = 'manual';
         selectUrl();
@@ -464,9 +464,7 @@ const selectUrl = () => {
     selection?.addRange(range);
 };
 
-const copyLabel = computed(() =>
-    copyState.value === 'copied' ? 'Copied' : copyState.value === 'manual' ? 'Selected' : 'Copy',
-);
+const copyLabel = computed(() => (copyState.value === 'manual' ? 'Selected' : 'Copy'));
 
 const qr = ref('');
 
@@ -548,6 +546,7 @@ const onNext = () => {
 <template>
     <div class="flex min-h-screen flex-col bg-paper">
         <Head :title="`Set up · ${label}`" />
+        <ToastContainer />
 
         <div class="flex gap-1" role="presentation">
             <div

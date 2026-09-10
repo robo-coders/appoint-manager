@@ -74,7 +74,7 @@ watch(mode, (chosen) => {
                 mode.value = props.contentMode;
                 modeError.value = true;
             },
-            onSuccess: () => toast('Saved.'),
+            onSuccess: () => toast.success('Saved'),
         },
     );
 });

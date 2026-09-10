@@ -250,7 +250,7 @@ const submit = () => {
 
     optimistic.value.push(temp);
     createOpen.value = false;
-    toast('Booking saved.');
+    toast.success('Booking saved');
 
     form.post(route('bookings.store'), {
         preserveScroll: true,

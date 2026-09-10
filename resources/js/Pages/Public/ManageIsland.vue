@@ -5,6 +5,8 @@ import Button from '@/Components/ui/Button.vue';
 import ChoiceRow from '@/Components/ui/ChoiceRow.vue';
 import ConfirmDialog from '@/Components/ui/ConfirmDialog.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
+import ToastContainer from '@/Components/ui/ToastContainer.vue';
+import { toast } from '@/lib/toast';
 import axios from 'axios';
 import { computed, ref } from 'vue';
 
@@ -62,12 +64,10 @@ const props = defineProps<{
 }>();
 
 const status = ref(props.booking.status);
-const error = ref('');
 const notice = ref('');
 const confirming = ref(false);
 const working = ref(false);
 const finished = ref(props.state === 'finished');
-const retry = ref<null | (() => void)>(null);
 
 const pickerOpen = ref(false);
 const loadingDays = ref(false);
@@ -108,8 +108,6 @@ const week = computed(() => {
 
 const loadDays = async () => {
     loadingDays.value = true;
-    error.value = '';
-    retry.value = null;
 
     try {
         const { data } = await axios.get(props.urls.availability, {
@@ -117,8 +115,10 @@ const loadDays = async () => {
         });
         days.value = { ...days.value, ...(data.days ?? {}) };
     } catch {
-        error.value = 'Times didn’t load. Check your connection and try again.';
-        retry.value = loadDays;
+        toast.error('Times didn’t load. Check your connection and try again.', {
+            actionLabel: 'Try again',
+            onAction: loadDays,
+        });
     } finally {
         loadingDays.value = false;
     }
@@ -138,8 +138,6 @@ const reschedule = async (slot: Slot) => {
     if (working.value) return;
 
     working.value = true;
-    error.value = '';
-    retry.value = null;
 
     try {
         await axios.post(props.urls.reschedule, {
@@ -153,22 +151,23 @@ const reschedule = async (slot: Slot) => {
             time: slot.starts_at_local,
             context: props.booking.context,
         };
-        notice.value = 'Moved. We’ve sent you a new confirmation.';
+        toast.success('Moved. We’ve sent you a new confirmation.');
         pickerOpen.value = false;
     } catch (err: unknown) {
         const taken = axios.isAxiosError(err) && err.response?.status === 409;
         const dead = axios.isAxiosError(err) && err.response?.status === 404;
 
         if (taken) {
-            error.value = 'That time has just gone. Here is what is still free.';
+            toast.error('That time has just gone. Here is what is still free.');
             await loadDays();
         } else if (dead) {
-            error.value = 'This booking link is no longer active.';
+            toast.error('This booking link is no longer active.');
             finished.value = true;
         } else {
-            error.value =
-                'We couldn’t tell whether that went through. Nothing has been changed — try again.';
-            retry.value = () => reschedule(slot);
+            toast.error('We couldn’t tell whether that went through. Nothing has been changed — try again.', {
+                actionLabel: 'Try again',
+                onAction: () => reschedule(slot),
+            });
         }
     } finally {
         working.value = false;
@@ -179,8 +178,6 @@ const cancel = async () => {
     if (working.value) return;
 
     working.value = true;
-    error.value = '';
-    retry.value = null;
 
     try {
         const { data } = await axios.post(props.urls.cancel);
@@ -191,12 +188,13 @@ const cancel = async () => {
         confirming.value = false;
 
         if (axios.isAxiosError(err) && err.response?.status === 404) {
-            error.value = 'This booking link is no longer active.';
+            toast.error('This booking link is no longer active.');
             finished.value = true;
         } else {
-            error.value =
-                'We couldn’t tell whether that went through. The appointment is still booked — try again.';
-            retry.value = cancel;
+            toast.error('We couldn’t tell whether that went through. The appointment is still booked — try again.', {
+                actionLabel: 'Try again',
+                onAction: cancel,
+            });
         }
     } finally {
         working.value = false;
@@ -206,12 +204,7 @@ const cancel = async () => {
 
 <template>
     <div>
-        <div v-if="error" class="mb-4" role="alert">
-            <p class="text-15 text-danger">{{ error }}</p>
-            <p v-if="retry" class="mt-2">
-                <Button variant="secondary" :loading="working" @click="retry?.()">Try again</Button>
-            </p>
-        </div>
+        <ToastContainer />
 
         <!-- ============================================================
              Cancelled. One statement, no controls: there is nothing left
@@ -274,8 +267,6 @@ const cancel = async () => {
                     :time="heading.time"
                     :cost-line="booking.cost_line"
                 />
-
-                <p v-if="notice" class="mt-4 text-15" role="status">{{ notice }}</p>
 
                 <p class="mt-3 text-13 text-ink-2">{{ tenant.address }}</p>
 

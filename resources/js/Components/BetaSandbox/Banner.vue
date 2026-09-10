@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Banner from '@/Components/ui/Banner.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -52,7 +53,7 @@ const beta = computed(() => page.props.tenant?.is_beta === true);
 </script>
 
 <template>
-    <div v-if="beta" class="flex flex-wrap items-center gap-3 border-b border-b-rule px-4 py-2 text-13 md:px-8">
+    <Banner v-if="beta" row>
         <!--
             The tag's edge is `--accent-rule`, not `--accent`.
 
@@ -76,5 +77,5 @@ const beta = computed(() => page.props.tenant?.is_beta === true);
         <Link :href="route('beta-sandbox.show')" class="underline decoration-rule underline-offset-4">
             Sandbox tools
         </Link>
-    </div>
+    </Banner>
 </template>

@@ -1,4 +1,5 @@
 import CustomerNotesPanel from '@/Components/CustomerNotesPanel.vue';
+import { clearToasts, useToasts } from '@/lib/toast';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { forms, resetForms } from '../../../../../tests/js/setup';
@@ -21,7 +22,10 @@ const type = async (wrapper: ReturnType<typeof mountPanel>, value: string) => {
     await wrapper.get('textarea').setValue(value);
 };
 
-beforeEach(() => resetForms());
+beforeEach(() => {
+    resetForms();
+    clearToasts();
+});
 
 describe('the save button', () => {
     it('starts disabled, because nothing has changed', () => {
@@ -50,7 +54,7 @@ describe('the save button', () => {
 });
 
 describe('saving', () => {
-    it('patches the note and reports it saved', async () => {
+    it('patches the note, and leaves the confirmation to the server flash', async () => {
         const wrapper = mountPanel();
 
         await type(wrapper, 'Allow ten more minutes.');
@@ -66,7 +70,31 @@ describe('saving', () => {
         options.onSuccess();
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.text()).toContain('Saved');
+        expect(saveButton(wrapper).attributes('disabled')).toBeDefined();
+        expect(useToasts().items).toHaveLength(0);
+    });
+
+    it('raises an error toast with a retry when the save is refused', async () => {
+        const wrapper = mountPanel();
+
+        await type(wrapper, 'A note that will not land.');
+        await saveButton(wrapper).trigger('click');
+
+        const form = forms[0];
+        const options = form.patch.mock.calls[0][1] as { onError: (errors: Record<string, string>) => void };
+
+        options.onError({ notes: 'That note is too long.' });
+        await wrapper.vm.$nextTick();
+
+        const failure = useToasts().items.at(-1);
+
+        expect(failure?.tone).toBe('error');
+        expect(failure?.message).toBe('That note is too long.');
+        expect(failure?.action?.label).toBe('Retry');
+
+        failure?.action?.run();
+
+        expect(form.patch).toHaveBeenCalledTimes(2);
     });
 
     it('keeps what was typed and says why when the save is refused', async () => {

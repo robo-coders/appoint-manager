@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Button from '@/Components/ui/Button.vue';
-import Callout from '@/Components/ui/Callout.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { toast } from '@/lib/toast';
@@ -19,19 +18,15 @@ const props = defineProps<{
 const field = ref<InstanceType<typeof TextInput> | null>(null);
 const banner = ref<HTMLElement | null>(null);
 
-const copied = ref(false);
 const confirming = ref(false);
 const pending = ref(false);
-const failed = ref(false);
 
 const pulled = computed(() =>
     props.lastPulledAt === null ? 'Not yet synced' : `Last pulled ${props.lastPulledAt}`,
 );
 
 const settled = () => {
-    copied.value = true;
-    window.setTimeout(() => (copied.value = false), 1600);
-    toast('Link copied.');
+    toast.success('Link copied');
     props.onCopy?.(props.url);
 };
 
@@ -74,13 +69,12 @@ const copy = async () => {
     }
 
     field.value?.select();
-    toast('Copy failed — text is selected, press ⌘C / Ctrl+C.', { tone: 'danger' });
+    toast.error('Copy failed — text is selected, press ⌘C / Ctrl+C.');
 };
 
 const ask = async () => {
     if (pending.value) return;
 
-    failed.value = false;
     confirming.value = true;
     await nextTick();
     banner.value?.focus();
@@ -95,13 +89,15 @@ const confirm = async () => {
 
     confirming.value = false;
     pending.value = true;
-    failed.value = false;
 
     try {
         await props.onRegenerate();
-        toast('Link regenerated — the old link stopped working.');
+        toast.success('Link regenerated — the old link stopped working');
     } catch {
-        failed.value = true;
+        toast.error(
+            'That did not go through, so the current link is still the live one. Nobody’s calendar has changed.',
+            { actionLabel: 'Try again', onAction: ask },
+        );
     } finally {
         pending.value = false;
     }
@@ -130,9 +126,7 @@ const confirm = async () => {
                     data-testid="calendar-feed-url"
                 />
             </div>
-            <Button variant="secondary" data-testid="calendar-feed-copy" @click="copy">
-                {{ copied ? 'Copied' : 'Copy' }}
-            </Button>
+            <Button variant="secondary" data-testid="calendar-feed-copy" @click="copy">Copy</Button>
             <QuietAction :disabled="pending" data-testid="calendar-feed-regenerate" @click="ask">
                 Regenerate link
             </QuietAction>
@@ -164,15 +158,5 @@ const confirm = async () => {
                 <QuietAction @click="dismiss">Keep current link</QuietAction>
             </div>
         </div>
-
-        <Callout v-if="failed" tone="danger" class="mt-3" data-testid="calendar-feed-error">
-            <p role="alert">
-                That did not go through, so the current link is still the live one. Nobody's calendar has
-                changed.
-            </p>
-            <template #action>
-                <QuietAction @click="ask">Try again</QuietAction>
-            </template>
-        </Callout>
     </div>
 </template>

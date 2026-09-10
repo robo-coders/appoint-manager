@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Button from '@/Components/ui/Button.vue';
-import SaveState from '@/Components/ui/SaveState.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
+import { toast } from '@/lib/toast';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -16,7 +16,6 @@ const FALLBACK_ERROR = 'That note did not save. Check your connection and try ag
 
 const form = useForm({ notes: props.text ?? '' });
 
-const savedAt = ref<number | null>(null);
 const failure = ref<string | null>(null);
 const baseline = ref(props.text ?? '');
 
@@ -36,17 +35,16 @@ const meta = computed(() =>
 );
 
 const save = () => {
-    savedAt.value = null;
     failure.value = null;
 
     form.patch(route('customers.notes.update', props.customerId), {
         preserveScroll: true,
         onSuccess: () => {
             baseline.value = form.notes ?? '';
-            savedAt.value = Date.now();
         },
         onError: (errors: Record<string, string>) => {
             failure.value = errors.notes ?? FALLBACK_ERROR;
+            toast.error(failure.value, { actionLabel: 'Retry', onAction: save });
         },
     });
 };
@@ -71,7 +69,6 @@ const save = () => {
         <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p class="text-12 text-ink-2">{{ meta }}</p>
             <div class="flex items-center gap-3">
-                <SaveState :dirty="changed" :processing="form.processing" :saved-at="savedAt" />
                 <Button
                     variant="secondary"
                     :disabled="!changed || form.processing"

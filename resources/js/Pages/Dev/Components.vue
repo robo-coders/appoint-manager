@@ -50,7 +50,8 @@ import Table, { type Column } from '@/Components/ui/Table.vue';
 import Tabs from '@/Components/ui/Tabs.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
-import Toaster from '@/Components/ui/Toaster.vue';
+import Banner from '@/Components/ui/Banner.vue';
+import ToastContainer from '@/Components/ui/ToastContainer.vue';
 import Toggle from '@/Components/ui/Toggle.vue';
 import UserMenu from '@/Components/ui/UserMenu.vue';
 import { toast } from '@/lib/toast';
@@ -167,7 +168,7 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 <template>
     <div :data-density="density" class="min-h-screen bg-paper text-ink">
         <Head title="Components" />
-        <Toaster />
+        <ToastContainer />
         <CommandPalette :show="palette" @close="palette = false" />
 
         <header class="sticky top-0 z-20 border-b border-b-rule bg-paper/95 px-6 py-3">
@@ -498,18 +499,26 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </State>
                 </Specimen>
 
-                <Specimen name="Toast" note="Confirms something that already happened, and carries the undo if there is one. Never the only place an error appears — an error belongs under the field that caused it.">
+                <Specimen name="Toast" note="Confirms something that already happened, and carries the retry if there is one. Two tones and no third: ink for anything that worked, accent only for a failure the person has to act on. Never the only place an error appears — an error belongs under the field that caused it.">
                     <State name="Tones">
                         <div class="flex flex-wrap gap-3">
-                            <Button variant="secondary" @click="toast('Booking confirmed.')">Neutral</Button>
-                            <Button variant="secondary" @click="toast('Service saved.', { tone: 'success' })">Success</Button>
-                            <Button variant="secondary" @click="toast('Could not reach Stripe.', { tone: 'danger' })">Danger</Button>
+                            <Button variant="secondary" @click="toast.success('Service saved')">Success</Button>
+                            <Button variant="secondary" @click="toast.error('Could not reach Stripe')">Error</Button>
                             <Button
                                 variant="secondary"
-                                @click="toast('Booking cancelled.', { action: { label: 'Undo', run: () => toast('Restored.') } })"
+                                @click="toast.error('Refund did not go through', { actionLabel: 'Try again', onAction: () => toast.success('Refunded') })"
                             >
-                                With an action
+                                Error with an action
                             </Button>
+                        </div>
+                    </State>
+                </Specimen>
+
+                <Specimen name="Banner" note="The one line a whole screen carries, at the top of the content column. The same hairline strip the sandbox and email-confirmation notices already used, now one component. `attention` adds an accent edge; nothing here is ever a filled band.">
+                    <State name="Tones">
+                        <div class="space-y-2">
+                            <Banner message="Trial ends in 9 days." />
+                            <Banner tone="attention" message="Admin is read-only until billing is up to date." />
                         </div>
                     </State>
                 </Specimen>

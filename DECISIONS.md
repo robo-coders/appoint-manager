@@ -3825,3 +3825,122 @@ would pass while the bug was back.
 
 The two placement tests changed shape: there are no `top-full` / `bottom-full`
 classes to assert any more, so they assert the computed `style.top` instead.
+
+# The alert system
+
+There was already a toast system — `lib/toast.ts` and `ui/Toaster.vue`, seven
+client call sites and 60 server `->with('toast', …)` flashes behind it. This is a
+consolidation and a redesign of that, not a new build, and the whole inventory
+is in `docs/fix-report-2026-09-10-alert-system.md`.
+
+## Two tones, and no way to add a third
+
+`toast.success(message)` and `toast.error(message, { actionLabel, onAction })`.
+That is the whole API. The old one took a free `tone` option with three values,
+and `neutral` was doing most of the work — which meant the difference between
+"saved" and "the refund did not process" was a caller's judgement, expressed
+three ways.
+
+Ink for anything that worked. Accent for a failure the person has to act on, and
+nothing else. `ToastTone` is a two-value union and `push()` is private, so a
+warning variant cannot be added at a call site — it would have to be a change
+here, which is where that argument belongs.
+
+Solid fill rather than the old bordered white card: a toast is the one surface
+in this product that has to be read while looking somewhere else, and a hairline
+on paper in the corner of a paper page is not that. It is the one deliberate
+exception to "compose with rules, not fills" — and the reason `Banner` is *not*
+allowed the same exception is that a banner is permanent chrome and a toast is
+gone in four seconds.
+
+## `config('ui.toast_duration_ms')`
+
+4000, shared through the `ui` prop the same way `mobile_breakpoint` already was,
+and applied once by `configureToasts()` from `AppLayout`. The old timeouts were
+three literals inside `lib/toast.ts` (`2600`, `6000`, `0`).
+
+An error carrying an action never auto-dismisses, whatever the config says. A
+failure with a retry on it that vanishes before the person can reach it is worse
+than no notice at all. An error with nothing to do about it takes the ordinary
+duration.
+
+## The server flash was dropping repeats
+
+`AppLayout` consumed `page.props.toast` with a `watch`. Vue compares a watched
+getter's value with `Object.is`, so two identical consecutive flashes fired
+**once** — saving the same thing twice showed one confirmation. Measured in a
+browser, three saves of one record: one toast before, three after.
+
+Consumption moved to `app.ts` at boot — the initial props once, then
+`router.on('success')` per response. One consumer for the whole app, no matter
+which layout is mounted, which is also what lets `Onboarding` — which has no
+`AppLayout` — receive a flash at all.
+
+## The container, and why it is teleported
+
+`Teleport to="body"`, like every other overlay in the library and for the same
+reason part 2 gives about the row-actions menu. It also keeps the ARIA live
+region out of a subtree a page transition could unmount mid-announcement.
+
+Two levels of urgency, because a receipt and a failure are not the same thing:
+the container is `aria-live="polite"` / `aria-atomic="false"` so a new toast is
+announced without re-reading the stack, and each toast carries its own role —
+`status` for success, `alert` for error, which implies assertive. The innermost
+live region wins for that node.
+
+Toasts survive an Inertia navigation because the store and its timers are
+module-level; the container re-renders whatever is live whenever it mounts.
+Nothing coalesces by message: a batch action that fails on three rows shows
+three toasts, because "3 items failed" is not a sentence anybody can act on.
+
+## `Banner`, and the brief's description of it
+
+The brief called the existing banner treatment a "left-border accent". It was
+not — all eight strips were a bottom hairline on paper, and
+`BetaSandbox/Banner.vue` records that a fill with a 2px accent edge was
+deliberately *removed* for reading as an alarm. The instruction that governs is
+the other one in the same section: extend the existing style, do not invent one.
+
+So `neutral` is the existing treatment class for class, and all eight banners
+render exactly as they did. `attention` adds the accent left edge — on the tone
+that had no prior appearance to preserve, so nothing regresses. Never a fill, in
+either tone.
+
+`Banner` owns the strip and nothing else. The content stays at each call site,
+which is what makes "content unchanged" something a reader can verify rather
+than take on trust — the sandbox strip's flex row and the other seven's inline
+sentence are different layouts, and forcing both through one prop shape would
+have changed six banners' appearance to save a line each.
+
+Whitespace bit once: `<slot>` followed by `<Link>` loses the space between them,
+because Vue condenses whitespace-only text between two elements. "…reach
+you.Resend the email". There is an explicit `{{ ' ' }}` for that, and a browser
+check that the space is back.
+
+## Dismissal was not added
+
+The brief asks that existing banner dismiss-persistence be preserved. There is
+none: no banner has a dismiss control, the app contains zero uses of
+`localStorage` or `sessionStorage`, and there is no dismissed-at column
+anywhere. `BetaSandbox/Banner.vue` says why it does not dismiss, at length.
+Adding dismissal would have contradicted a recorded decision while claiming to
+preserve behaviour, so `Banner` renders no button of its own.
+
+## What stayed inline, and why that is not an omission
+
+`Callout`, `FieldError` and `SaveState` are not this system. A callout is an
+inline prompt where the thing it is about lives; a field error belongs under its
+field — which `lib/toast.ts` already said in its own docblock; `SaveState` is a
+settings form's dirty/saving/saved indicator, not an event.
+
+Two judgements worth recording. The refund sentence on the manage-booking
+"Cancelled" screen stays inline, because it is a persistent record on a terminal
+screen — the same category as the "Last edited by X" line, which the brief
+itself says to keep — and as a four-second toast the refund amount would be
+unreadable again. The reschedule confirmation *did* move, because the heading
+next to it already restates the new appointment.
+
+And `Onboarding`'s clipboard fallback keeps its "Selected" label and its
+`Ctrl`/`Cmd`+`C` line: that is an instruction about text selected on screen
+right now, not a notification of something that happened, and a toast would
+outlive the selection it refers to.

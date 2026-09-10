@@ -162,7 +162,7 @@ vi.mock('@inertiajs/vue3', () => ({
 
 /*
  * jsdom implements neither. `NavRail` reads `matchMedia` through `AppLayout`
- * and `Toaster` uses `ResizeObserver`; without these a component that is
+ * and `Combobox` uses `ResizeObserver`; without these a component that is
  * perfectly correct throws on mount and the failure says nothing about the
  * markup.
  */

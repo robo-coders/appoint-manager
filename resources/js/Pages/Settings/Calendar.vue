@@ -39,9 +39,9 @@ const props = defineProps<{
 const copy = async (url: string) => {
     try {
         await navigator.clipboard.writeText(url);
-        toast('Link copied.');
+        toast.success('Link copied');
     } catch {
-        toast('Could not copy. The address is on screen — read it from there.', { tone: 'danger' });
+        toast.error('Could not copy. The address is on screen — read it from there.');
     }
 };
 

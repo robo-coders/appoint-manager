@@ -13,9 +13,9 @@ defineProps<{
 const copy = async (url: string) => {
     try {
         await navigator.clipboard.writeText(url);
-        toast('Copied.');
+        toast.success('Link copied');
     } catch {
-        toast('Could not copy.', { tone: 'danger' });
+        toast.error('Could not copy the link');
     }
 };
 </script>

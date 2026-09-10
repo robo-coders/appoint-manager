@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import Banner from '@/Components/ui/Banner.vue';
 import BetaSandboxBanner from '@/Components/BetaSandbox/Banner.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
 import MobileTabBar from '@/Components/ui/MobileTabBar.vue';
 import NavRail from '@/Components/ui/NavRail.vue';
-import Toaster from '@/Components/ui/Toaster.vue';
-import { toast } from '@/lib/toast';
+import ToastContainer from '@/Components/ui/ToastContainer.vue';
+import { configureToasts } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -217,14 +218,6 @@ const onKey = (event: KeyboardEvent) => {
     }
 };
 
-watch(
-    () => page.props.toast,
-    (message) => {
-        if (typeof message === 'string' && message !== '') toast(message);
-    },
-    { immediate: true },
-);
-
 /*
  * Two rail widths, one media query. The rail collapses to 56px across the
  * tablet band — where 148px of chrome is 15% of the viewport — and is replaced
@@ -236,9 +229,13 @@ let media: MediaQueryList | undefined;
 const onMediaChange = (event: MediaQueryListEvent | MediaQueryList) => (collapsed.value = event.matches);
 
 onMounted(() => {
-    const ui = page.props.ui as { mobile_breakpoint: number; rail_collapsed_ceiling: number } | undefined;
+    const ui = page.props.ui as
+        | { mobile_breakpoint: number; rail_collapsed_ceiling: number; toast_duration_ms?: number }
+        | undefined;
     const from = ui?.mobile_breakpoint ?? DEFAULT_MOBILE_BREAKPOINT;
     const to = ui?.rail_collapsed_ceiling ?? DEFAULT_RAIL_CEILING;
+
+    configureToasts(ui?.toast_duration_ms);
 
     media = window.matchMedia(`(min-width: ${from}px) and (max-width: ${to}px)`);
     onMediaChange(media);
@@ -284,62 +281,48 @@ onUnmounted(() => {
             -->
             <BetaSandboxBanner />
 
-            <div
+            <Banner
                 v-if="page.props.auth.user && !page.props.auth.user.email_verified_at"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                Confirm your email so clients can reach you.
-                <Link
-                    :href="route('verification.send')"
-                    method="post"
-                    as="button"
-                    class="underline decoration-rule underline-offset-4"
-                >
-                    Resend the email
-                </Link>
-            </div>
+                message="Confirm your email so clients can reach you."
+                action-label="Resend the email"
+                :action-href="route('verification.send')"
+                action-method="post"
+            />
 
-            <div
+            <Banner
                 v-if="page.props.tenant?.show_trial_banner"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                Trial ends in {{ page.props.tenant.trial_days_remaining }} days.
-                <Link :href="route('settings.billing')" class="underline decoration-rule underline-offset-4">Add a card</Link>
-            </div>
+                :message="`Trial ends in ${page.props.tenant.trial_days_remaining} days.`"
+                action-label="Add a card"
+                :action-href="route('settings.billing')"
+            />
 
-            <div v-if="page.props.tenant?.read_only" class="border-b border-b-rule px-4 py-2 text-13 md:px-8">
-                Admin is read-only until billing is up to date. Clients can still book online.
-                <Link :href="route('settings.billing')" class="underline decoration-rule underline-offset-4">Billing</Link>
-            </div>
+            <Banner
+                v-if="page.props.tenant?.read_only"
+                message="Admin is read-only until billing is up to date. Clients can still book online."
+                action-label="Billing"
+                :action-href="route('settings.billing')"
+            />
 
-            <div
+            <Banner
                 v-if="page.props.sms?.stopped === 'killed'"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                SMS is switched off for this salon. Email still goes out, and you can still ring people.
-            </div>
-            <div
+                message="SMS is switched off for this salon. Email still goes out, and you can still ring people."
+            />
+            <Banner
                 v-else-if="page.props.sms?.stopped === 'ceiling'"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                SMS has reached this salon's send limit. Email still goes out. The overdue list still works.
-            </div>
-            <div
+                message="SMS has reached this salon's send limit. Email still goes out. The overdue list still works."
+            />
+            <Banner
                 v-else-if="page.props.sms?.stopped === 'allowance'"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                This cycle’s texts are used up. Email still goes out.
-                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">
-                    Buy {{ page.props.sms.topup_size }} more for {{ page.props.sms.topup_price }}
-                </Link>
-            </div>
-            <div
+                message="This cycle’s texts are used up. Email still goes out."
+                :action-label="`Buy ${page.props.sms.topup_size} more for ${page.props.sms.topup_price}`"
+                :action-href="route('billing.index')"
+            />
+            <Banner
                 v-else-if="page.props.sms?.warning === 80"
-                class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
-            >
-                You have used {{ page.props.sms.used }} of {{ page.props.sms.included }} texts this cycle.
-                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
-            </div>
+                :message="`You have used ${page.props.sms.used} of ${page.props.sms.included} texts this cycle.`"
+                action-label="Billing"
+                :action-href="route('billing.index')"
+            />
 
             <main class="under-tabbar px-4 pt-6 md:px-8">
                 <slot />
@@ -357,6 +340,6 @@ onUnmounted(() => {
         />
 
         <CommandPalette :show="paletteOpen" @close="paletteOpen = false" @create="createBooking" />
-        <Toaster />
+        <ToastContainer />
     </div>
 </template>

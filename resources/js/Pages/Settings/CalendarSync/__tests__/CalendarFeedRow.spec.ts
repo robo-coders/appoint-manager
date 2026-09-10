@@ -1,5 +1,5 @@
 import CalendarFeedRow from '@/Components/CalendarFeedRow.vue';
-import { useToasts } from '@/lib/toast';
+import { clearToasts, useToasts } from '@/lib/toast';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,7 +31,7 @@ let originalClipboard: unknown;
 
 beforeEach(() => {
     originalClipboard = (navigator as unknown as { clipboard?: unknown }).clipboard;
-    useToasts().items.splice(0);
+    clearToasts();
     vi.useFakeTimers();
 });
 
@@ -53,13 +53,8 @@ describe('copying the link', () => {
         await flushPromises();
 
         expect(writeText).toHaveBeenCalledWith(urlFor(LONG_TOKEN));
-        expect(messages()).toContain('Link copied.');
+        expect(messages()).toContain('Link copied');
         expect(onCopy).toHaveBeenCalledWith(urlFor(LONG_TOKEN));
-        expect(wrapper.get('[data-testid="calendar-feed-copy"]').text()).toBe('Copied');
-
-        vi.advanceTimersByTime(2000);
-        await flushPromises();
-
         expect(wrapper.get('[data-testid="calendar-feed-copy"]').text()).toBe('Copy');
     });
 
@@ -75,7 +70,7 @@ describe('copying the link', () => {
         await flushPromises();
 
         expect(execCommand).toHaveBeenCalledWith('copy');
-        expect(messages()).toContain('Link copied.');
+        expect(messages()).toContain('Link copied');
     });
 
     it('falls back to a selection copy when the clipboard API refuses', async () => {
@@ -90,7 +85,7 @@ describe('copying the link', () => {
         await flushPromises();
 
         expect(execCommand).toHaveBeenCalledWith('copy');
-        expect(messages()).toContain('Link copied.');
+        expect(messages()).toContain('Link copied');
     });
 
     it('selects the address and names the shortcut when both routes fail', async () => {
@@ -106,7 +101,7 @@ describe('copying the link', () => {
 
         expect(select).toHaveBeenCalled();
         expect(messages().join(' ')).toContain('Copy failed');
-        expect(useToasts().items.at(-1)?.tone).toBe('danger');
+        expect(useToasts().items.at(-1)?.tone).toBe('error');
     });
 });
 
@@ -129,7 +124,7 @@ describe('regenerating the link', () => {
         await flushPromises();
 
         expect(onRegenerate).toHaveBeenCalledTimes(1);
-        expect(messages()).toContain('Link regenerated — the old link stopped working.');
+        expect(messages()).toContain('Link regenerated — the old link stopped working');
         expect(wrapper.find('[data-testid="calendar-feed-confirm"]').exists()).toBe(false);
     });
 
@@ -176,7 +171,7 @@ describe('regenerating the link', () => {
         ).toBeUndefined();
     });
 
-    it('reports a failure on the row instead of failing quietly', async () => {
+    it('reports a failure through an error toast that carries the retry', async () => {
         const onRegenerate = vi.fn().mockRejectedValue(new Error('422'));
         const wrapper = mountRow({ onRegenerate });
 
@@ -184,15 +179,17 @@ describe('regenerating the link', () => {
         await wrapper.get('[data-testid="calendar-feed-confirm-regenerate"]').trigger('click');
         await flushPromises();
 
-        const error = wrapper.get('[data-testid="calendar-feed-error"]');
+        const failure = useToasts().items.at(-1);
 
-        expect(error.text()).toContain('the current link is still the live one');
-        expect(error.text()).toContain('Try again');
-        expect(messages()).not.toContain('Link regenerated — the old link stopped working.');
+        expect(failure?.tone).toBe('error');
+        expect(failure?.message).toContain('the current link is still the live one');
+        expect(failure?.action?.label).toBe('Try again');
+        expect(messages()).not.toContain('Link regenerated — the old link stopped working');
+        expect(wrapper.find('[data-testid="calendar-feed-confirm"]').exists()).toBe(false);
 
-        await error.get('button').trigger('click');
+        failure?.action?.run();
+        await flushPromises();
 
-        expect(wrapper.find('[data-testid="calendar-feed-error"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="calendar-feed-confirm"]').exists()).toBe(true);
     });
 });
