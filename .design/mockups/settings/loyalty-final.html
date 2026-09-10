@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"><style>*{box-sizing:border-box}body{margin:0;background:#F4F2EE;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#A85729;text-decoration:none}a:hover{color:#8C4720}button{font-family:inherit}@keyframes ddglow{0%,100%{box-shadow:0 0 0 0 rgba(168,87,41,.3)}50%{box-shadow:0 0 0 9px rgba(168,87,41,0)}}@keyframes ddsweep{from{stroke-dashoffset:var(--dd-len)}to{stroke-dashoffset:0}}@keyframes ddspin{to{transform:rotate(360deg)}}@keyframes ddspinrev{to{transform:rotate(-360deg)}}@keyframes ddscan{0%{transform:translateX(-8%);opacity:0}12%{opacity:.85}88%{opacity:.85}100%{transform:translateX(108%);opacity:0}}@keyframes ddbreathe{0%,100%{opacity:.35}50%{opacity:.9}}@keyframes ddpress{0%{transform:scale(2.5);opacity:0}52%{transform:scale(.92);opacity:1}76%{transform:scale(1.05)}100%{transform:scale(1)}}@keyframes ddpressa{0%{transform:scale(2.5);opacity:0}52%{transform:scale(.92);opacity:1}76%{transform:scale(1.05)}100%{transform:scale(1)}}@keyframes ddpressb{0%{transform:scale(2.5);opacity:0}52%{transform:scale(.92);opacity:1}76%{transform:scale(1.05)}100%{transform:scale(1)}}</style></helmet>
+
+<section id="t4" style="padding:44px 48px 40px;border-bottom:1px solid rgba(24,23,20,.1)">
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+<a href="#t4" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;padding:3px 7px;background:#181714;color:#FCFBF9;border-radius:6px">4</a>
+<span style="font-size:13px;font-weight:500">Stamping — the impression is the interaction</span>
+</div>
+<p style="margin:0 0 30px;font-size:13.5px;line-height:1.6;color:rgba(24,23,20,.6);max-width:74ch">A visit is not a cell turning on, it is a die pressed into the page: the mark lands from above, overshoots, settles a degree or two off square, and holds a slightly different ink weight from its neighbours. Press the counter and the newest stamp performs that press. The tenth is a terracotta seal.</p>
+
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:32px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Visits</span>
+<button onClick="{{ dec }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">–</button>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;min-width:46px;text-align:center">{{ filled }} / {{ target }}</span>
+<button onClick="{{ inc }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">+</button>
+<span style="font-size:12.5px;color:rgba(24,23,20,.5)">each press stamps the next mark</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="4a" style="display:flex;flex-direction:column;gap:9px;width:392px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#4a" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">4a</a>
+<span>Date stamp — every impression carries its visit</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:24px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · stamped on completion</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px 12px;margin-bottom:24px">
+<sc-for list="{{ stamps }}" as="s" hint-placeholder-count="10">
+<span style="position:relative;aspect-ratio:1;display:block">
+<span style="position:absolute;inset:0;border-radius:50%;border:{{ s.emptyBorder }}"></span>
+<span style="position:absolute;inset:0;transform:{{ s.rot }};opacity:{{ s.show }}">
+<span style="display:block;width:100%;height:100%;opacity:{{ s.ink }};animation:{{ s.anim }}">
+<span style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ s.ringColor }}"></span>
+<span style="position:absolute;inset:4px;border-radius:50%;border:1px solid {{ s.ringColor }};opacity:.5"></span>
+<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:-.02em;color:{{ s.dateColor }}">{{ s.date }}</span>
+<span style="width:16px;height:1px;background:{{ s.ringColor }};opacity:.45"></span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:8px;letter-spacing:.06em;color:{{ s.dateColor }};opacity:.7">{{ s.n }}</span>
+</span>
+</span>
+</span>
+</span>
+</sc-for>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.013em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:14px">The date is inside the impression, so the card doubles as the visit history — no separate timeline needed on the profile.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px;animation:ddglow 2.8s ease-out infinite;border-radius:6px;padding:2px">
+<sc-for list="{{ stampsAll }}" as="s" hint-placeholder-count="10">
+<span style="position:relative;aspect-ratio:1;transform:{{ s.rot }};opacity:{{ s.ink }}">
+<span style="position:absolute;inset:0;border-radius:50%;border:1.5px solid {{ s.ringColor }}"></span>
+<span style="position:absolute;inset:3px;border-radius:50%;border:1px solid {{ s.ringColor }};opacity:.45"></span>
+</span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:18px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">card stamped out</span>
+</div>
+</div>
+</div>
+
+<div id="4b" style="display:flex;flex-direction:column;gap:9px;width:392px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#4b" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">4b</a>
+<span>Monogram die — the mark is the brand</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:24px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · DD die, 10 up</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:13px 12px;margin-bottom:24px">
+<sc-for list="{{ dies }}" as="d" hint-placeholder-count="10">
+<span style="position:relative;aspect-ratio:1;display:block">
+<span style="position:absolute;inset:0;border-radius:6px;border:1px dashed rgba(24,23,20,.14)"></span>
+<span style="position:absolute;inset:0;transform:{{ d.rot }};opacity:{{ d.show }}">
+<span style="display:block;width:100%;height:100%;opacity:{{ d.ink }};animation:{{ d.anim }}">
+<span style="position:absolute;inset:0;border-radius:6px;background:{{ d.bg }};display:flex;align-items:center;justify-content:center">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:19px;letter-spacing:-.03em;color:#FCFBF9">DD</span>
+</span>
+<span style="position:absolute;bottom:3px;right:5px;font-family:'Geist Mono',ui-monospace,monospace;font-size:7.5px;color:rgba(252,251,249,.65)">{{ d.n }}</span>
+</span>
+</span>
+</span>
+</sc-for>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.013em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:14px">Solid ink blocks carrying the DiaryDesk monogram. Every tenant stamps the same die, which is what makes the card recognisable across businesses.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;animation:ddglow 2.8s ease-out infinite;border-radius:6px;padding:2px">
+<sc-for list="{{ diesAll }}" as="d" hint-placeholder-count="10">
+<span style="aspect-ratio:1;border-radius:4px;background:{{ d.bg }};transform:{{ d.rot }};opacity:{{ d.ink }}"></span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:18px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">ten up, ten struck</span>
+</div>
+</div>
+</div>
+
+<div id="4c" style="display:flex;flex-direction:column;gap:9px;width:392px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#4c" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">4c</a>
+<span>The press — customer confirmation moment</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:30px 24px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:12px">Booked</div>
+<h2 style="margin:0 0 6px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:26px;letter-spacing:-.015em">Thu 10 Sep, 09:30</h2>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.55)">£10.00 deposit paid · £32.00 on the day</div>
+<div style="display:flex;align-items:center;gap:26px;margin-top:30px;padding-top:26px;border-top:1px solid rgba(24,23,20,.1)">
+<span style="flex:none;position:relative;width:126px;height:126px;transform:rotate(-6deg)">
+<span style="display:block;width:100%;height:100%;position:relative;animation:{{ heroAnim }}">
+<span style="position:absolute;inset:0;border-radius:50%;border:2.5px solid {{ heroRing }}"></span>
+<span style="position:absolute;inset:7px;border-radius:50%;border:1px solid {{ heroRing }};opacity:.45"></span>
+<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:{{ heroInk }};opacity:.75">{{ heroLabel }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:34px;line-height:1;letter-spacing:-.03em;color:{{ heroInk }}">{{ heroN }}</span>
+<span style="width:34px;height:1px;background:{{ heroRing }};opacity:.4"></span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;color:{{ heroInk }};opacity:.75">{{ heroDate }}</span>
+</span>
+</span>
+</span>
+<div style="flex:1;min-width:0">
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:22px;line-height:1.15;letter-spacing:-.012em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }};line-height:1.5">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">One large impression lands on the confirmation page the instant the booking is paid. Same die, printed on the receipt.</div>
+</div>
+</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px;display:flex;align-items:center;gap:24px">
+<span style="flex:none;position:relative;width:104px;height:104px;transform:rotate(-6deg);border-radius:50%;animation:ddglow 2.8s ease-out infinite">
+<span style="position:absolute;inset:0;border-radius:50%;border:2.5px solid #A85729"></span>
+<span style="position:absolute;inset:6px;border-radius:50%;border:1px solid #A85729;opacity:.45"></span>
+<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#A85729">Free groom</span>
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:23px;letter-spacing:-.02em;color:#A85729">10/10</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:8.5px;color:#A85729;opacity:.8">redeem in shop</span>
+</span>
+</span>
+<div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.55);margin-top:5px">Seal struck in terracotta</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:rgba(24,23,20,.5)">Try next: "take <a href="#4a" style="font-family:'Geist Mono',ui-monospace,monospace">4a</a> through to the settings panel and payment summary" · "make <a href="#4c" style="font-family:'Geist Mono',ui-monospace,monospace">4c</a> the hero of the customer profile" · "give <a href="#4b" style="font-family:'Geist Mono',ui-monospace,monospace">4b</a> a rougher ink edge"</p>
+</section>
+
+<section id="t3" style="padding:44px 48px 40px;border-bottom:1px solid rgba(24,23,20,.1)">
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+<a href="#t3" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;padding:3px 7px;background:#181714;color:#FCFBF9;border-radius:6px">3</a>
+<span style="font-size:13px;font-weight:500">Motion is the design — still 10 visits, one free session</span>
+</div>
+<p style="margin:0 0 30px;font-size:13.5px;line-height:1.6;color:rgba(24,23,20,.6);max-width:74ch">Nothing analogue and no needles. Each of these is a live object that changes state when a visit lands: press the counter and watch the transition — the cascade, the segment closing, the stratum sliding in. That behaviour is the thing customers remember, so it is the same in the app, on the confirmation page and in the email.</p>
+
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:32px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Visits</span>
+<button onClick="{{ dec }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">–</button>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;min-width:46px;text-align:center">{{ filled }} / {{ target }}</span>
+<button onClick="{{ inc }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">+</button>
+<span style="font-size:12.5px;color:rgba(24,23,20,.5)">press it — the motion is the point</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="3a" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#3a" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">3a</a>
+<span>Charge — the row cascades as it fills</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:22px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · live</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:52px;line-height:.9;letter-spacing:-.045em;font-variant-numeric:tabular-nums">{{ filled }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;color:rgba(24,23,20,.42)">/ {{ target }}</span>
+</div>
+<div style="position:relative;overflow:hidden;border-radius:6px">
+<div style="display:flex;align-items:flex-end;gap:6px;height:74px">
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="10">
+<span style="flex:1;height:{{ b.h }};background:{{ b.bg }};border-radius:3px;transition:{{ b.trans }}"></span>
+</sc-for>
+</div>
+<span style="position:absolute;top:0;bottom:0;left:0;width:46px;display:{{ scanShow }};background:linear-gradient(90deg,rgba(168,87,41,0),rgba(168,87,41,.16),rgba(168,87,41,0));animation:ddscan 3.6s cubic-bezier(.4,0,.6,1) infinite;pointer-events:none"></span>
+</div>
+<div style="display:flex;gap:6px;margin-top:7px">
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="10">
+<span style="flex:1;text-align:center;font-family:'Geist Mono',ui-monospace,monospace;font-size:8.5px;color:{{ b.nColor }};transition:color .4s linear">{{ b.n }}</span>
+</sc-for>
+</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }};margin-top:20px">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">A new visit raises its bar and every bar after it settles in sequence, so the card visibly recomputes rather than just being redrawn.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:flex;align-items:flex-end;gap:5px;height:38px;animation:ddglow 2.8s ease-out infinite;border-radius:6px">
+<sc-for list="{{ barsDone }}" as="b" hint-placeholder-count="10">
+<span style="flex:1;height:{{ b.h }};background:{{ b.bg }};border-radius:3px"></span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:16px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">charged</span>
+</div>
+</div>
+</div>
+
+<div id="3b" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#3b" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">3b</a>
+<span>Halo — a slowly turning object that closes</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · orbiting</span>
+</div>
+<div style="display:flex;align-items:center;gap:24px">
+<div style="flex:none;position:relative;width:150px;height:150px">
+<svg width="150" height="150" viewBox="0 0 200 200" fill="none" style="display:block">
+<g style="animation:ddspinrev 90s linear infinite;transform-origin:100px 100px;opacity:.5">
+<circle cx="100" cy="100" r="92" stroke="rgba(24,23,20,.12)" stroke-width="1" stroke-dasharray="3 9"></circle>
+</g>
+<g style="animation:ddspin 46s linear infinite;transform-origin:100px 100px">
+<sc-for list="{{ arcs }}" as="a" hint-placeholder-count="10">
+<path d="{{ a.d }}" stroke="{{ a.stroke }}" stroke-width="{{ a.w }}" stroke-linecap="round" style="transition:{{ a.trans }}"></path>
+</sc-for>
+</g>
+<circle cx="100" cy="100" r="26" fill="{{ coreColor }}" style="transform:{{ coreScale }};transform-origin:100px 100px;transition:transform .7s cubic-bezier(.16,.84,.24,1),fill .5s linear"></circle>
+</svg>
+</div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:38px;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums">{{ filled }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.42)">/ {{ target }}</span>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;line-height:1.15;letter-spacing:-.012em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }};line-height:1.5">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">Segments thicken into ink as they are earned while the ring turns once every 46 seconds. The core grows with the count and only ignites terracotta when the halo closes.</div>
+</div>
+</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px;display:flex;align-items:center;gap:22px">
+<span style="flex:none;border-radius:50%;animation:ddglow 2.8s ease-out infinite;line-height:0">
+<svg width="74" height="74" viewBox="0 0 200 200" fill="none">
+<g style="animation:ddspin 46s linear infinite;transform-origin:100px 100px">
+<sc-for list="{{ arcsDone }}" as="a" hint-placeholder-count="10">
+<path d="{{ a.d }}" stroke="{{ a.stroke }}" stroke-width="{{ a.w }}" stroke-linecap="round"></path>
+</sc-for>
+</g>
+<circle cx="100" cy="100" r="26" fill="#A85729"></circle>
+</svg>
+</span>
+<div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.55);margin-top:5px">Halo closed · core lit</div>
+</div>
+</div>
+</div>
+
+<div id="3c" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#3c" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">3c</a>
+<span>Strata — each visit slides in and stacks</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:22px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · accruing</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:22px">
+<sc-for list="{{ strata }}" as="s" hint-placeholder-count="10">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="flex:none;width:16px;font-family:'Geist Mono',ui-monospace,monospace;font-size:9px;color:{{ s.nColor }};transition:color .4s linear">{{ s.n }}</span>
+<span style="flex:1;display:block;height:9px">
+<span style="display:block;width:{{ s.w }};height:{{ s.h }};background:{{ s.bg }};border-radius:2px;transition:{{ s.trans }}"></span>
+</span>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;gap:12px;padding-top:18px;border-top:1px solid rgba(24,23,20,.1)">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:34px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ filled }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</span>
+</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">The stack builds from the base up. A landed visit widens its own stratum and the ones under it settle with it, so the object reads as accumulating mass rather than a bar filling.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:flex;flex-direction:column;gap:5px;animation:ddglow 2.8s ease-out infinite;border-radius:6px;padding:2px 0">
+<sc-for list="{{ strataDone }}" as="s" hint-placeholder-count="10">
+<span style="display:block;width:{{ s.w }};height:6px;background:{{ s.bg }};border-radius:2px"></span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:16px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">stack complete</span>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:rgba(24,23,20,.5)">Try next: "take <a href="#3a" style="font-family:'Geist Mono',ui-monospace,monospace">3a</a> through to the customer page and settings" · "make the <a href="#3b" style="font-family:'Geist Mono',ui-monospace,monospace">3b</a> halo the hero of the profile" · "combine <a href="#3a" style="font-family:'Geist Mono',ui-monospace,monospace">3a</a>'s numeral with <a href="#3c" style="font-family:'Geist Mono',ui-monospace,monospace">3c</a>'s stack"</p>
+</section>
+
+<section id="t2" style="padding:44px 48px 40px;border-bottom:1px solid rgba(24,23,20,.1)">
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+<a href="#t2" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;padding:3px 7px;background:#181714;color:#FCFBF9;border-radius:6px">2</a>
+<span style="font-size:13px;font-weight:500">New directions — physical, handwritten, journey</span>
+</div>
+<p style="margin:0 0 30px;font-size:13.5px;line-height:1.6;color:rgba(24,23,20,.6);max-width:74ch">Away from meters and progress arcs. These borrow from things that already existed in the shop before software did: the tally on the back of the door, the punched card in the wallet, the line you follow to the end.</p>
+
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:32px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Visits</span>
+<button onClick="{{ dec }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">–</button>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;min-width:46px;text-align:center">{{ filled }} / {{ target }}</span>
+<button onClick="{{ inc }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">+</button>
+<span style="font-size:12.5px;color:rgba(24,23,20,.5)">drives all three cards below</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="2a" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#2a" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">2a</a>
+<span>Tally — the mark the shop already makes</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:26px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · two hands of five</span>
+</div>
+<div style="display:flex;gap:34px;padding-left:2px;margin-bottom:26px">
+<sc-for list="{{ tally }}" as="g" hint-placeholder-count="2">
+<div style="position:relative;width:66px;height:56px">
+<sc-for list="{{ g.strokes }}" as="s" hint-placeholder-count="4">
+<span style="position:absolute;left:{{ s.left }};top:4px;width:2px;height:48px;background:{{ s.color }};border-radius:2px"></span>
+</sc-for>
+<span style="position:absolute;left:-4px;top:27px;width:72px;height:2px;background:{{ g.diagColor }};border-radius:2px;transform:rotate(-19deg)"></span>
+</div>
+</sc-for>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.013em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:14px">Five strokes to a hand, two hands to a free groom. The tenth stroke is the only terracotta, and the whole mark is legible at 20px in a text message.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px;display:flex;align-items:center;gap:26px">
+<div style="display:flex;gap:24px;flex:none;animation:ddglow 2.8s ease-out infinite;border-radius:6px;padding:2px 4px">
+<sc-for list="{{ tallyDone }}" as="g" hint-placeholder-count="2">
+<div style="position:relative;width:44px;height:38px">
+<sc-for list="{{ g.strokes }}" as="s" hint-placeholder-count="4">
+<span style="position:absolute;left:{{ s.leftSmall }};top:3px;width:1.6px;height:32px;background:{{ s.color }};border-radius:2px"></span>
+</sc-for>
+<span style="position:absolute;left:-3px;top:18px;width:49px;height:1.6px;background:{{ g.diagColor }};border-radius:2px;transform:rotate(-19deg)"></span>
+</div>
+</sc-for>
+</div>
+<div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.55);margin-top:5px">Both hands marked</div>
+</div>
+</div>
+</div>
+
+<div id="2b" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#2b" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">2b</a>
+<span>Punch card — material removed, not added</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:stretch;gap:0;border:1px solid rgba(24,23,20,.16);border-radius:6px;overflow:hidden">
+<div style="flex:1;padding:18px 16px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:16px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.42)">{{ serial }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;color:rgba(24,23,20,.35)">full groom</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+<sc-for list="{{ punch }}" as="p" hint-placeholder-count="10">
+<span style="aspect-ratio:1;border-radius:50%;background:{{ p.bg }};border:{{ p.border }};display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;color:{{ p.numColor }}">{{ p.n }}</span>
+</sc-for>
+</div>
+</div>
+<div style="flex:none;width:52px;border-left:1px dashed rgba(24,23,20,.3);background:{{ stubBg }};display:flex;align-items:center;justify-content:center">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:{{ stubFg }};writing-mode:vertical-rl;transform:rotate(180deg)">Free groom</span>
+</div>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.013em;margin:24px 0 8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:14px">Each visit takes a hole out of the card. The stub down the perforation only colours in once it can be torn off.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:flex;align-items:stretch;gap:9px;animation:ddglow 2.8s ease-out infinite;border-radius:6px">
+<div style="flex:1;border:1px solid rgba(24,23,20,.16);border-radius:6px;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:9px">
+<sc-for list="{{ punchDone }}" as="p" hint-placeholder-count="10">
+<span style="aspect-ratio:1;border-radius:50%;background:{{ p.bg }};border:{{ p.border }}"></span>
+</sc-for>
+</div>
+<div style="flex:none;width:48px;border:1px dashed rgba(168,87,41,.6);border-radius:6px;background:#A85729;display:flex;align-items:center;justify-content:center">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#FCFBF9;writing-mode:vertical-rl;transform:rotate(180deg)">Torn off</span>
+</div>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:16px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">card spent</span>
+</div>
+</div>
+</div>
+
+<div id="2c" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#2c" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">2c</a>
+<span>Line — a route with a terminus</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:34px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · line 1</span>
+</div>
+<div style="position:relative;height:74px;margin:0 9px">
+<span style="position:absolute;left:0;right:0;top:24px;height:1px;background:rgba(24,23,20,.18)"></span>
+<span style="position:absolute;left:0;width:{{ routeProg }};top:23.5px;height:2px;background:#181714"></span>
+<span style="position:absolute;left:{{ hereLeft }};top:0;transform:translateX(-50%);display:{{ hereShow }};font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(24,23,20,.45)">here</span>
+<sc-for list="{{ route }}" as="r" hint-placeholder-count="10">
+<span style="position:absolute;left:{{ r.left }};top:25px;transform:translate(-50%,-50%);width:{{ r.size }};height:{{ r.size }};border-radius:50%;background:{{ r.bg }};border:{{ r.border }};box-sizing:border-box"></span>
+</sc-for>
+<sc-for list="{{ route }}" as="r" hint-placeholder-count="10">
+<span style="position:absolute;left:{{ r.left }};top:44px;transform:translateX(-50%);white-space:nowrap;font-family:'Geist Mono',ui-monospace,monospace;font-size:9.5px;color:{{ r.labelColor }}">{{ r.label }}</span>
+</sc-for>
+</div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.013em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:14px">Read like a transit line: stops behind you are solid, the terminus is the free groom. A second tier is drawn as a branch off the same line rather than a second widget.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="position:relative;height:26px;margin:0 9px 16px;animation:ddglow 2.8s ease-out infinite;border-radius:6px">
+<span style="position:absolute;left:0;right:0;top:12px;height:2px;background:#181714"></span>
+<sc-for list="{{ routeDone }}" as="r" hint-placeholder-count="10">
+<span style="position:absolute;left:{{ r.left }};top:13px;transform:translate(-50%,-50%);width:{{ r.size }};height:{{ r.size }};border-radius:50%;background:{{ r.bg }};border:{{ r.border }};box-sizing:border-box"></span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">terminus</span>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:rgba(24,23,20,.5)">Try next: "take <a href="#2a" style="font-family:'Geist Mono',ui-monospace,monospace">2a</a> through to the customer page and settings" · "let the <a href="#2b" style="font-family:'Geist Mono',ui-monospace,monospace">2b</a> stub actually tear off" · "show <a href="#2c" style="font-family:'Geist Mono',ui-monospace,monospace">2c</a> with the second tier branching"</p>
+</section>
+
+<section id="t1" style="padding:44px 48px 40px;border-bottom:1px solid rgba(24,23,20,.1)">
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+<a href="#t1" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;padding:3px 7px;background:#181714;color:#FCFBF9;border-radius:6px">1</a>
+<span style="font-size:13px;font-weight:500">Loyalty mark — three conceptual directions</span>
+</div>
+<p style="margin:0 0 26px;font-size:13.5px;line-height:1.6;color:rgba(24,23,20,.6);max-width:74ch">Each one replaces the row of circles with a device DiaryDesk can own and reuse everywhere the brand appears — in the app, on the confirmation page, in the SMS, on the shop window. All three read the same data and use only ink, paper and one terracotta moment.</p>
+
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:34px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Visits</span>
+<button onClick="{{ dec }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">–</button>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;min-width:46px;text-align:center">{{ filled }} / {{ target }}</span>
+<button onClick="{{ inc }}" style="width:28px;height:28px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;color:#181714;cursor:pointer;line-height:1">+</button>
+<span style="font-size:12.5px;color:rgba(24,23,20,.5)">drives all three cards below</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="1a" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#1a" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">1a</a>
+<span>Dial — the visit is a position on an instrument</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">Nala · since Mar 2025</span>
+</div>
+<div style="display:flex;align-items:center;gap:22px">
+<div style="flex:none;position:relative;width:168px;height:168px">
+<svg width="168" height="168" viewBox="0 0 200 200" fill="none" style="display:block">
+<path d="{{ trackPath }}" stroke="rgba(24,23,20,.14)" stroke-width="1"></path>
+<path d="{{ progPath }}" stroke="{{ progColor }}" stroke-width="1.5" stroke-linecap="round"></path>
+<sc-for list="{{ dial }}" as="d" hint-placeholder-count="10">
+<line x1="{{ d.x1 }}" y1="{{ d.y1 }}" x2="{{ d.x2 }}" y2="{{ d.y2 }}" stroke="{{ d.stroke }}" stroke-width="{{ d.w }}" stroke-linecap="round"></line>
+</sc-for>
+</svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:40px;letter-spacing:-.03em;line-height:1">{{ filled }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.45)">of {{ target }}</span>
+</div>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:23px;line-height:1.15;letter-spacing:-.012em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }};line-height:1.5">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">The tenth tick is the only terracotta on the card, so the finish line is visible from the first visit.</div>
+</div>
+</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px;display:flex;align-items:center;gap:20px">
+<span style="flex:none;width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;animation:ddglow 2.8s ease-out infinite">
+<svg width="78" height="78" viewBox="0 0 200 200" fill="none">
+<path d="{{ trackPath }}" stroke="rgba(24,23,20,.14)" stroke-width="1.6"></path>
+<path d="{{ fullPath }}" stroke="#181714" stroke-width="3" stroke-linecap="round"></path>
+<circle cx="100" cy="100" r="20" fill="#A85729"></circle>
+</svg>
+</span>
+<div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.55);margin-top:5px">Dial closed · applied at next booking</div>
+</div>
+</div>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#1b" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">1b</a>
+<span>Tape — the card is a strip of the diary itself</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:24px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">10 visit tape</span>
+</div>
+<div style="display:flex;height:12px;margin-bottom:5px">
+<sc-for list="{{ tape }}" as="t" hint-placeholder-count="10">
+<span style="flex:1;display:flex;align-items:flex-end;justify-content:center"><span style="width:1px;height:{{ t.tickH }};background:{{ t.tickColor }}"></span></span>
+</sc-for>
+</div>
+<div style="display:flex;border:1px solid rgba(24,23,20,.16);border-radius:6px;overflow:hidden;height:54px">
+<sc-for list="{{ tape }}" as="t" hint-placeholder-count="10">
+<span style="flex:1;background:{{ t.bg }};border-left:1px solid {{ t.sep }};display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:9px;color:{{ t.numColor }}">{{ t.n }}</span>
+</span>
+</sc-for>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:9px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;color:rgba(24,23,20,.4)">{{ firstDate }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;color:rgba(24,23,20,.4)">free groom</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:12px;margin-top:22px;padding-top:18px;border-top:1px solid rgba(24,23,20,.1)">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;letter-spacing:-.02em;line-height:1">{{ filled }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }}">{{ progressLine }}</span>
+</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">Reads as tape torn off the appointment book. Prints to a paper card that matches the screen exactly.</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px">
+<div style="display:flex;border:1px solid rgba(24,23,20,.16);border-radius:6px;overflow:hidden;height:38px;animation:ddglow 2.8s ease-out infinite">
+<sc-for list="{{ tapeDone }}" as="t" hint-placeholder-count="10">
+<span style="flex:1;background:{{ t.bg }};border-left:1px solid {{ t.sep }}"></span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:16px">
+<span style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#A85729">tape full</span>
+</div>
+</div>
+</div>
+
+<div id="1c" style="display:flex;flex-direction:column;gap:9px;width:372px">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<a href="#1c" style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px;background:rgba(24,23,20,.08);color:#181714;border-radius:6px">1c</a>
+<span>Seal — every customer's progress is its own glyph</span>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:26px 24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:20px">
+<span style="font-size:13.5px;font-weight:500">Full groom tier</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42)">seal {{ sealCode }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:24px">
+<svg width="150" height="150" viewBox="0 0 200 200" fill="none" style="flex:none">
+<sc-for list="{{ seal }}" as="r" hint-placeholder-count="10">
+<rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.s }}" height="{{ r.s }}" rx="3" stroke="{{ r.stroke }}" stroke-width="{{ r.w }}"></rect>
+</sc-for>
+<rect x="{{ coreXY }}" y="{{ coreXY }}" width="{{ coreS }}" height="{{ coreS }}" rx="2" fill="{{ coreFill }}"></rect>
+</svg>
+<div style="flex:1;min-width:0">
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:23px;line-height:1.15;letter-spacing:-.012em;margin-bottom:8px">{{ headline }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ lineColor }};line-height:1.5">{{ progressLine }}</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(24,23,20,.5);margin-top:12px">The seal closes inward one ring per visit and lights its core on the tenth. The same mark works at 16px in the SMS and at a metre on the window.</div>
+</div>
+</div>
+</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:22px 24px;display:flex;align-items:center;gap:20px">
+<span style="flex:none;border-radius:6px;animation:ddglow 2.8s ease-out infinite;line-height:0">
+<svg width="72" height="72" viewBox="0 0 200 200" fill="none">
+<sc-for list="{{ sealDone }}" as="r" hint-placeholder-count="10">
+<rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.s }}" height="{{ r.s }}" rx="3" stroke="{{ r.stroke }}" stroke-width="{{ r.w }}"></rect>
+</sc-for>
+<rect x="88" y="88" width="24" height="24" rx="2" fill="#A85729"></rect>
+</svg>
+</span>
+<div>
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.012em">Free session ready</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.55);margin-top:5px">Seal closed · core lit</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:rgba(24,23,20,.5)">Try next: "take <a href="#1c" style="font-family:'Geist Mono',ui-monospace,monospace">1c</a> through to the customer confirmation and settings panel" · "make <a href="#1a" style="font-family:'Geist Mono',ui-monospace,monospace">1a</a> animate the new tick on arrival" · "merge the <a href="#1b" style="font-family:'Geist Mono',ui-monospace,monospace">1b</a> tape with the <a href="#1c" style="font-family:'Geist Mono',ui-monospace,monospace">1c</a> seal"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { filled: 6 };
+
+  polar(r, deg) {
+    const a = (deg * Math.PI) / 180;
+    return [100 + r * Math.cos(a), 100 + r * Math.sin(a)];
+  }
+
+  arc(r, from, to) {
+    const [x1, y1] = this.polar(r, from);
+    const [x2, y2] = this.polar(r, to);
+    const large = Math.abs(to - from) > 180 ? 1 : 0;
+    return 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+  }
+
+  rings(filled, target) {
+    const out = [];
+    for (let i = 0; i < target; i++) {
+      const inset = 8 + i * 8.4;
+      const on = i < filled;
+      out.push({
+        x: inset.toFixed(1), y: inset.toFixed(1), s: (200 - inset * 2).toFixed(1),
+        stroke: on ? '#181714' : 'rgba(24,23,20,.16)',
+        w: on ? 2.4 : 1.2
+      });
+    }
+    return out;
+  }
+
+  renderVals() {
+    const target = 10;
+    const filled = Math.max(0, Math.min(target, this.state.filled));
+    const left = target - filled;
+    const done = left === 0;
+    const step = 270 / (target - 1);
+
+    const ease = 'cubic-bezier(.16,.84,.24,1)';
+    const seedRot = [-4.5, 3, -2, 5.5, -6, 2.5, -3.5, 6.5, -1.5, 4];
+    const seedInk = [1, .9, .96, .86, 1, .92, .88, 1, .94, 1];
+    const stampDates = ['12 Mar', '09 May', '04 Jul', '01 Sep', '20 Nov', '16 Jan', '03 Apr', '19 Jun', '22 Aug', '10 Sep'];
+
+    const mkStamps = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1, newest = i === f - 1;
+      return {
+        rot: 'rotate(' + seedRot[i] + 'deg)',
+        anim: newest ? 'ddpress .5s cubic-bezier(.2,1.5,.4,1) both' : 'none',
+        show: on ? '1' : '0',
+        ink: on ? String(seedInk[i]) : '1',
+        ringColor: last ? '#A85729' : '#181714',
+        date: stampDates[i],
+        dateColor: last ? '#A85729' : 'rgba(24,23,20,.78)',
+        n: String(i + 1).padStart(2, '0'),
+        emptyBorder: last ? '1px dashed rgba(168,87,41,.35)' : '1px dashed rgba(24,23,20,.16)'
+      };
+    });
+
+    const mkDies = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1, newest = i === f - 1;
+      return {
+        rot: 'rotate(' + seedRot[i] + 'deg)',
+        anim: newest ? 'ddpress .5s cubic-bezier(.2,1.5,.4,1) both' : 'none',
+        show: on ? '1' : '0',
+        ink: on ? String(seedInk[i]) : '1',
+        bg: last ? '#A85729' : '#181714',
+        n: String(i + 1).padStart(2, '0')
+      };
+    });
+
+    const mkBars = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1;
+      return {
+        h: on ? '100%' : '18%',
+        bg: on ? (last ? '#A85729' : '#181714') : 'rgba(24,23,20,.13)',
+        trans: 'height .62s ' + ease + ' ' + (i * 45) + 'ms, background-color .5s linear ' + (i * 45) + 'ms',
+        n: String(i + 1).padStart(2, '0'),
+        nColor: on ? 'rgba(24,23,20,.55)' : 'rgba(24,23,20,.25)'
+      };
+    });
+
+    const mkArcs = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1;
+      return {
+        d: this.arc(72, -90 + i * 36 + 3.5, -90 + (i + 1) * 36 - 3.5),
+        stroke: on ? (last ? '#A85729' : '#181714') : 'rgba(24,23,20,.15)',
+        w: on ? 7 : 2,
+        trans: 'stroke .45s linear ' + (i * 55) + 'ms, stroke-width .5s ' + ease + ' ' + (i * 55) + 'ms'
+      };
+    });
+
+    const mkStrata = f => Array.from({ length: target }, (u, i) => {
+      const idx = target - 1 - i;
+      const on = idx < f, last = idx === target - 1;
+      return {
+        w: on ? '100%' : '22%',
+        bg: on ? (last ? '#A85729' : '#181714') : 'rgba(24,23,20,.11)',
+        h: on ? '9px' : '5px',
+        trans: 'width .68s ' + ease + ' ' + (i * 40) + 'ms, height .4s ' + ease + ', background-color .45s linear ' + (i * 40) + 'ms',
+        n: String(idx + 1).padStart(2, '0'),
+        nColor: on ? 'rgba(24,23,20,.5)' : 'rgba(24,23,20,.22)'
+      };
+    });
+
+    const mkTally = f => [0, 1].map(gi => ({
+      strokes: [0, 1, 2, 3].map(si => {
+        const on = gi * 5 + si < f;
+        return { left: si * 13 + 'px', leftSmall: si * 9 + 'px', color: on ? '#181714' : 'rgba(24,23,20,.13)' };
+      }),
+      diagColor: gi * 5 + 4 < f ? (gi === 1 ? '#A85729' : '#181714') : 'rgba(24,23,20,.13)'
+    }));
+
+    const mkPunch = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1;
+      return {
+        n: i + 1,
+        bg: on ? (last ? '#A85729' : '#E6E1D9') : 'transparent',
+        border: (on ? '1px solid ' : '1px dashed ') + (last ? (on ? '#A85729' : 'rgba(168,87,41,.5)') : on ? 'rgba(24,23,20,.14)' : 'rgba(24,23,20,.22)'),
+        numColor: last && on ? 'rgba(252,251,249,.85)' : on ? 'rgba(24,23,20,.32)' : 'rgba(24,23,20,.26)'
+      };
+    });
+
+    const mkRoute = f => Array.from({ length: target }, (u, i) => {
+      const on = i < f, last = i === target - 1;
+      return {
+        left: (i / (target - 1)) * 100 + '%',
+        size: last ? '17px' : on ? '11px' : '9px',
+        bg: last ? (on ? '#A85729' : '#FCFBF9') : on ? '#181714' : '#FCFBF9',
+        border: last ? '2px solid #A85729' : on ? '1px solid #181714' : '1px solid rgba(24,23,20,.28)',
+        label: last ? 'free groom' : i === 0 ? 'first visit' : i === f - 1 ? 'latest' : '',
+        labelColor: last ? '#A85729' : 'rgba(24,23,20,.45)'
+      };
+    });
+
+    const dial = [];
+    for (let i = 0; i < target; i++) {
+      const deg = 135 + i * step;
+      const on = i < filled;
+      const last = i === target - 1;
+      const [x1, y1] = this.polar(77, deg);
+      const [x2, y2] = this.polar(on || last ? 92 : 87, deg);
+      dial.push({
+        x1: x1.toFixed(1), y1: y1.toFixed(1), x2: x2.toFixed(1), y2: y2.toFixed(1),
+        stroke: last ? (on ? '#A85729' : 'rgba(168,87,41,.55)') : on ? '#181714' : 'rgba(24,23,20,.18)',
+        w: last ? 2.4 : on ? 2.2 : 1.2
+      });
+    }
+
+    const tapeCell = (i, f) => {
+      const on = i < f;
+      const last = i === target - 1;
+      return {
+        n: i + 1,
+        bg: on ? (last ? '#A85729' : '#181714') : 'transparent',
+        sep: i === 0 ? 'transparent' : on ? 'rgba(252,251,249,.25)' : 'rgba(24,23,20,.12)',
+        numColor: on ? 'rgba(252,251,249,.7)' : 'rgba(24,23,20,.3)',
+        tickH: i === f - 1 ? '12px' : '0px',
+        tickColor: '#A85729'
+      };
+    };
+
+    return {
+      filled, target,
+      inc: () => this.setState(s => ({ filled: Math.min(target, s.filled + 1) })),
+      dec: () => this.setState(s => ({ filled: Math.max(0, s.filled - 1) })),
+      headline: done ? 'Free session ready' : filled === 0 ? 'Card opened' : left === 1 ? 'One visit from free' : 'Building up',
+      progressLine: done ? target + ' of ' + target + ' visits' : filled + ' of ' + target + ' visits — ' + left + ' to go',
+      lineColor: done ? '#A85729' : 'rgba(24,23,20,.65)',
+      trackPath: this.arc(66, 135, 405),
+      progPath: filled > 1 ? this.arc(66, 135, 135 + (filled - 1) * step) : this.arc(66, 135, 135.1),
+      progColor: done ? '#A85729' : '#181714',
+      fullPath: this.arc(66, 135, 405),
+      dial,
+      tape: Array.from({ length: target }, (unused, i) => tapeCell(i, filled)),
+      tapeDone: Array.from({ length: target }, (unused, i) => tapeCell(i, target)),
+      firstDate: '12 Mar 2025',
+      stamps: mkStamps(filled), stampsAll: mkStamps(target),
+      dies: mkDies(filled), diesAll: mkDies(target),
+      heroAnim: (filled % 2 ? 'ddpressa' : 'ddpressb') + ' .55s cubic-bezier(.2,1.5,.4,1) both',
+      heroN: filled === 0 ? '--' : String(filled).padStart(2, '0'),
+      heroDate: filled === 0 ? 'no visits yet' : '10 Sep 2026',
+      heroRing: done ? '#A85729' : '#181714',
+      heroInk: done ? '#A85729' : '#181714',
+      heroLabel: done ? 'Free groom' : 'Visit',
+      bars: mkBars(filled), barsDone: mkBars(target),
+      arcs: mkArcs(filled), arcsDone: mkArcs(target),
+      strata: mkStrata(filled), strataDone: mkStrata(target),
+      coreScale: done ? 'scale(1)' : 'scale(' + (0.5 + (filled / target) * 0.4).toFixed(2) + ')',
+      coreColor: done ? '#A85729' : '#181714',
+      scanShow: done ? 'none' : 'block',
+      tally: mkTally(filled), tallyDone: mkTally(target),
+      punch: mkPunch(filled), punchDone: mkPunch(target),
+      route: mkRoute(filled), routeDone: mkRoute(target),
+      routeProg: (filled <= 1 ? 0 : ((filled - 1) / (target - 1)) * 100) + '%',
+      hereLeft: (Math.max(0, filled - 1) / (target - 1)) * 100 + '%',
+      hereShow: filled > 0 ? 'block' : 'none',
+      stubBg: done ? '#A85729' : 'transparent',
+      stubFg: done ? '#FCFBF9' : 'rgba(24,23,20,.45)',
+      serial: 'DD·NALA·' + String(filled).padStart(2, '0'),
+      seal: this.rings(filled, target),
+      sealDone: this.rings(target, target),
+      sealCode: 'NALA-' + String(filled).padStart(2, '0') + '/10',
+      coreXY: 88, coreS: 24,
+      coreFill: done ? '#A85729' : filled >= 8 ? 'rgba(168,87,41,.35)' : 'rgba(24,23,20,.1)'
+    };
+  }
+}
+</script>
+</body>
+</html>

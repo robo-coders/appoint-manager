@@ -92,15 +92,6 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_MIN = 8;
 
-/**
- * The client-side half of `RegisterRequest`.
- *
- * The wording is copied from that file's `messages()` on purpose: the same
- * failure has to read the same way whether the browser noticed it or the server
- * did, or the form looks like two different forms disagreeing about what is
- * wrong. Where the two can differ they do — the server owns "already
- * registered" and the password policy, which no browser can know.
- */
 const check: Record<Field, () => string> = {
     business_name: () => {
         const value = form.business_name.trim();

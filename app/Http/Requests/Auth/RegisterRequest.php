@@ -14,39 +14,10 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 
-/**
- * The one form that creates a business.
- *
- * Every message here is written out rather than left to Laravel's defaults, and
- * that is the point of the file as much as the rules are. `Auth/Register.vue`
- * renders each error under the field it belongs to, so a message has to be a
- * sentence somebody can act on in that position — "The email has already been
- * taken" is a sentence about a database index, and the person reading it has an
- * account and needs the door.
- *
- * The rules are mirrored in the page's own client-side check, which runs first
- * so a typo costs no round trip. The mirroring is deliberate and the wording is
- * shared: two different sentences for the same failure, depending on whether
- * the browser or the server noticed, is a form that looks like it is guessing.
- */
+
 class RegisterRequest extends FormRequest
 {
-    /**
-     * Failed attempts allowed per email-and-IP before the form locks.
-     *
-     * Ten, where signing in allows five, because these two are counting
-     * different things. A failure here is a mistyped password confirmation, an
-     * address that is already registered, a trade left unchosen — an honest
-     * person filling in six fields for the first time, who may well spend three
-     * attempts on it. A failure on the login form is a wrong password, and five
-     * of those is somebody guessing.
-     *
-     * `throttle:register` on the route is set well above this (see the note on
-     * the limiters in `AppServiceProvider`): the middleware exists to stop a
-     * flood, this exists to answer a person, and the one that answers has to be
-     * the one that fires first — otherwise the friendly message is unreachable
-     * and what a new salon actually sees is the 429 page.
-     */
+
     private const MAX_ATTEMPTS = 10;
 
     public function authorize(): bool
@@ -54,16 +25,6 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
-    /**
-     * Lowercase the address, and refuse the form if it is locked.
-     *
-     * The `lowercase` rule below used to be the whole story, which meant
-     * "Maya@Example.com" — a perfectly ordinary way to type your own address,
-     * and what iOS offers as an autocapitalised suggestion — was rejected with
-     * "the email must be lowercase". The rule stays as the guarantee that
-     * nothing downstream ever sees a mixed-case address; this is what makes it
-     * something the person filling in the form can never fail.
-     */
     protected function prepareForValidation(): void
     {
         if ($this->has('email')) {

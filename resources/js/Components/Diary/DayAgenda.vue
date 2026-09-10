@@ -48,14 +48,6 @@ const emit = defineEmits<{
 
 const nameOf = (staffId: number) => props.staff.find((member) => member.id === staffId)?.name ?? '';
 
-/**
- * Appointments and gaps in one list, ordered by time.
- *
- * Gaps only appear when a single groomer is selected. Across four groomers at
- * once, everybody's idle time interleaved with everybody's appointments is
- * noise — at any given minute most of the team is free, so the list would be
- * mostly holes and the appointments would be the exception.
- */
 const rows = computed(() => {
     const visible = (staffId: number) => props.filterStaffId === null || props.filterStaffId === staffId;
 
