@@ -19,6 +19,16 @@ export const bookingStatusTone = (status: string): BookingBadgeTone => {
     return 'cancelled';
 };
 
+export const DEPOSIT_STATUS_LABELS: Record<string, string> = {
+    none: 'No deposit',
+    required: 'Deposit due',
+    paid: 'Deposit paid',
+    refund_pending: 'Refund pending',
+    refunded: 'Refunded',
+};
+
+export const depositStatusLabel = (status: string): string => DEPOSIT_STATUS_LABELS[status] ?? status;
+
 export const bookingStatusStruck = (status: string): boolean =>
     ['cancelled', 'declined', 'no_show'].includes(status);
 

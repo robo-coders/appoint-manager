@@ -294,6 +294,24 @@
         font-variant-numeric: tabular-nums;
         font-synthesis-weight: none;
     }
+
+    .safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .above-tabbar {
+        bottom: calc(var(--topbar) + env(safe-area-inset-bottom, 0px));
+    }
+
+    .under-tabbar {
+        padding-bottom: calc(var(--space-6) + var(--topbar) + env(safe-area-inset-bottom, 0px));
+    }
+
+    @media screen(md) {
+        .under-tabbar {
+            padding-bottom: var(--space-6);
+        }
+    }
 }
 
 @keyframes appear {

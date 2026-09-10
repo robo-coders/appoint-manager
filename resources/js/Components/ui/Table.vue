@@ -29,8 +29,20 @@ export type Column = {
     /** Hidden below md. Use for anything that is not the point of the row. */
     secondary?: boolean;
     /**
+     * The other way round: present in the narrow row only, never a table column.
+     *
+     * For a fact the phone layout states as its own line but the table already
+     * carries elsewhere — the bookings list says "Deposit paid" under the
+     * service, where the table has a status badge in its own column.
+     */
+    narrowOnly?: boolean;
+    /**
      * What this column becomes below md, where the table is a **list of rows**.
      *
+     *   'lead'  — a fixed 56px block hard left, ahead of the headline. Exactly
+     *             one column takes it. Rendered from a `narrow:<key>` slot when
+     *             the screen provides one, so a column whose table cell is a
+     *             full date can lead with the bare time.
      *   'title' — the row's headline. Exactly one column takes it.
      *   'line'  — joins the second line, in column order, separated by middots.
      *   'meta'  — the muted value hard right, beside the row's action menu.
@@ -41,7 +53,7 @@ export type Column = {
      * means adopting the narrow state is a per-screen decision, and a screen
      * nobody has designed a phone layout for is not silently given a bad one.
      */
-    narrow?: 'title' | 'line' | 'meta';
+    narrow?: 'lead' | 'title' | 'line' | 'meta';
 };
 
 const props = withDefaults(
@@ -227,8 +239,10 @@ const barWidth = (row: number, column: number) => skeletonFractions[(row + colum
  * answer to the same question.
  */
 const narrowColumns = computed(() => props.columns.filter((column) => column.narrow !== undefined));
+const wideColumns = computed(() => props.columns.filter((column) => column.narrowOnly !== true));
 const isNarrow = computed(() => narrowColumns.value.length > 0);
 
+const leadColumn = computed(() => props.columns.find((column) => column.narrow === 'lead') ?? null);
 const titleColumn = computed(() => props.columns.find((column) => column.narrow === 'title') ?? null);
 const lineColumns = computed(() => props.columns.filter((column) => column.narrow === 'line'));
 const metaColumns = computed(() => props.columns.filter((column) => column.narrow === 'meta'));
@@ -302,6 +316,20 @@ const onRowClick = (row: T, event: MouseEvent) => {
                     :class="[hrefFor(row) ? 'cursor-pointer' : '', rowClass ? rowClass(row) : '']"
                     @click="onRowClick(row, $event)"
                 >
+                    <div v-if="leadColumn" class="w-col-time shrink-0">
+                        <slot
+                            v-if="$slots[`narrow:${leadColumn.key}`]"
+                            :name="`narrow:${leadColumn.key}`"
+                            :row="row"
+                            :value="row[leadColumn.key]"
+                        />
+                        <span v-else class="numeral text-17 text-ink">
+                            <slot :name="`cell:${leadColumn.key}`" :row="row" :value="row[leadColumn.key]">
+                                {{ row[leadColumn.key] ?? '—' }}
+                            </slot>
+                        </span>
+                    </div>
+
                     <div class="min-w-0 flex-1">
                         <p v-if="titleColumn" class="text-14 text-ink">
                             <component
@@ -391,7 +419,7 @@ const onRowClick = (row: T, event: MouseEvent) => {
                          four sides. -->
                     <tr class="border-b" :class="bare ? 'border-b-rule-strong bg-paper' : 'border-b-rule bg-paper-sunk'">
                         <th
-                            v-for="column in columns"
+                            v-for="column in wideColumns"
                             :key="column.key"
                             scope="col"
                             class="h-row whitespace-nowrap font-normal"
@@ -439,7 +467,7 @@ const onRowClick = (row: T, event: MouseEvent) => {
                 -->
                 <tbody v-if="loading">
                     <tr v-for="line in loadingRows" :key="line" class="border-b border-b-rule last:border-b-0">
-                        <td v-for="(column, index) in columns" :key="column.key" class="h-row" :class="cellClasses(column)">
+                        <td v-for="(column, index) in wideColumns" :key="column.key" class="h-row" :class="cellClasses(column)">
                             <span class="flex" :class="column.align === 'right' ? 'justify-end' : 'justify-start'">
                                 <Skeleton shape="bar" :width="barWidth(line, index)" />
                             </span>
@@ -452,7 +480,7 @@ const onRowClick = (row: T, event: MouseEvent) => {
 
                 <tbody v-else-if="sorted.length === 0">
                     <tr>
-                        <td :colspan="columns.length + ($slots.actions ? 1 : 0)" class="px-pad-x py-8">
+                        <td :colspan="wideColumns.length + ($slots.actions ? 1 : 0)" class="px-pad-x py-8">
                             <slot name="empty">
                                 <EmptyState :title="emptyTitle" :description="emptyDescription">
                                     <slot name="empty-action" />
@@ -477,7 +505,7 @@ const onRowClick = (row: T, event: MouseEvent) => {
                         @click="onRowClick(row, $event)"
                     >
                         <td
-                            v-for="column in columns"
+                            v-for="column in wideColumns"
                             :key="column.key"
                             :class="[bare ? 'py-3' : 'h-row', cellClasses(column)]"
                         >

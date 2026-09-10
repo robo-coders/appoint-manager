@@ -3468,3 +3468,88 @@ rest of the decisions are:
 - **A reset keeps the loyalty package and deletes the enrolments.** The brief
   named both; a package is configured on a settings screen and a reset promises
   settings survive.
+
+# Phase 14 — the operator app on a phone
+
+`.design/mockups/mobile/mobile-views.dc.html` is the target. Five screens at
+390px in the mockup, drawn and asserted at 375 here because that is the width
+the rest of the suite already uses.
+
+**No new pages and no new routes.** The mockup is a breakpoint specification for
+screens that exist, not a request for five more of them. Everything below is a
+responsive treatment of a page that was already there.
+
+## The shell
+
+- **`ui/MobileTabBar`, not `Components/MobileTabBar`.** The brief named the
+  latter. `check:components` forbids a hand-rolled control outside
+  `Components/ui/`, and the bar is five controls — four links and a sheet
+  trigger — so outside the library it fails the gate. It also sits beside
+  `ui/NavRail`, which is the component it replaces and which lives there for the
+  same reason.
+- **The active tab is `border-t-2 border-t-accent`.** The mockup draws a 1.5px
+  terracotta rule; 1.5px is not on any scale here and 2px is what `NavRail`
+  already spends on "you are here". Same meaning, same weight, one accent per
+  screen.
+- **Inactive tabs are `ink-2`, not the mockup's `rgba(24,23,20,.42)`.** That
+  value is `ink-3`, which DESIGN.md forbids as text at 2.5:1. `ink-2` is the
+  caption colour and clears 4.5:1.
+- **The rail is hidden by a wrapper, not by changing `NavRail`.** `hidden
+  md:block` around it takes the rail out of the accessibility tree below the
+  breakpoint without touching a component that `navrail.test.ts` and
+  `/dev/components` both exercise in its drawer state. The drawer and the phone
+  "Menu" top bar are gone from `AppLayout`, which is what the mockup means by
+  "no hamburger".
+- **Both navs are `aria-label="Main"`.** Only ever one is in the tree, because
+  the other is `display:none`. `tests/e2e/mobile.spec.ts` selects the bar by
+  `.bottom-0` for that reason.
+
+## The breakpoint
+
+`config('ui.mobile_breakpoint')` is 768 and **mirrors Tailwind's `md`, which
+stays the source of truth.** A PHP config cannot generate a Tailwind variant, so
+the config exists for the two places that need the number rather than the
+class — `AppLayout`'s `matchMedia`, which hard-coded 768 and 1023, and the
+viewport Playwright drives. `tests/Unit/MobileBreakpointTest.php` reads
+`tailwind.config.js` and fails if the two disagree, so this cannot drift the way
+`w-sidebar` did. CSS reaches the same value through `screen(md)`.
+
+## Safe areas
+
+`app.blade.php` gained `viewport-fit=cover`, without which
+`env(safe-area-inset-bottom)` reports zero and the whole thing is decorative.
+Three classes in `base.css` rather than new tokens, because a token added to
+`:root` has to be restated in all seven mockup HTML files that `check:design`
+diffs against `tokens.css`:
+
+- `.safe-bottom` — the bar's own clearance for the home indicator.
+- `.under-tabbar` — content clearance. On `<main>`, whose `py-6` became `pt-6`
+  so a utility does not win over the class.
+- `.above-tabbar` — the booking record's pinned action bar, offset by the bar's
+  height plus the inset so the two never overlap.
+
+## `ui/Table` grew two column roles
+
+The narrow state already existed. It could not express the mockup's rows:
+
+- **`narrow: 'lead'`** — a 56px block hard left, for the bookings list's large
+  time numeral and the waitlist's queue position. Rendered from a
+  `narrow:<key>` slot when the screen provides one, so a column whose table cell
+  is a full date can lead with the bare time.
+- **`narrowOnly`** — the inverse of `secondary`: a line the phone states and the
+  table does not. The bookings list says "Deposit paid" under the service where
+  the table has a status badge in a column of its own. Without it, adding that
+  line to the narrow row added a column to the desktop table, which the brief
+  forbids.
+
+## Not built, deliberately
+
+- **The beta strip.** "Beta · SMS auto-fill is free until 1 Nov" does not exist
+  in the app, and the brief says to flag it rather than guess. It is a pricing
+  commitment with a date, not a layout decision, and `BetaSandbox/Banner`
+  already occupies that slot in `AppLayout`. See the audit report.
+- **A per-row Offer button on the waitlist.** The mockup draws one. The app
+  offers a *freed slot* to the queue — "Offer to 3 waiting", on the dashboard
+  and the diary — and there is no per-entry offer endpoint. The brief says the
+  offer-triggering logic is untouched, so a button that only looked like one was
+  not added. See the audit report.

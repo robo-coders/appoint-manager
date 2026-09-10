@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BetaSandboxBanner from '@/Components/BetaSandbox/Banner.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
-import Button from '@/Components/ui/Button.vue';
+import MobileTabBar from '@/Components/ui/MobileTabBar.vue';
 import NavRail from '@/Components/ui/NavRail.vue';
 import Toaster from '@/Components/ui/Toaster.vue';
 import { toast } from '@/lib/toast';
@@ -30,8 +30,9 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const page = usePage();
 
-/** `full` at desktop, `icons` at tablet, `drawer` on a phone. */
-const drawerOpen = ref(false);
+const DEFAULT_MOBILE_BREAKPOINT = 768;
+const DEFAULT_RAIL_CEILING = 1023;
+
 const collapsed = ref(false);
 const paletteOpen = ref(false);
 
@@ -225,15 +226,21 @@ watch(
 );
 
 /*
- * Three widths, one media query each way. The rail collapses to 56px between
- * 768 and 1023 — a tablet, where 148px of chrome is 15% of the viewport — and
- * becomes a drawer below 768.
+ * Two rail widths, one media query. The rail collapses to 56px across the
+ * tablet band — where 148px of chrome is 15% of the viewport — and is replaced
+ * altogether by `ui/MobileTabBar` below it. The band's bounds come from
+ * `config/ui.php` on the shared props, so the numbers here and Tailwind's `md`
+ * cannot drift apart.
  */
 let media: MediaQueryList | undefined;
 const onMediaChange = (event: MediaQueryListEvent | MediaQueryList) => (collapsed.value = event.matches);
 
 onMounted(() => {
-    media = window.matchMedia('(min-width: 768px) and (max-width: 1023px)');
+    const ui = page.props.ui as { mobile_breakpoint: number; rail_collapsed_ceiling: number } | undefined;
+    const from = ui?.mobile_breakpoint ?? DEFAULT_MOBILE_BREAKPOINT;
+    const to = ui?.rail_collapsed_ceiling ?? DEFAULT_RAIL_CEILING;
+
+    media = window.matchMedia(`(min-width: ${from}px) and (max-width: ${to}px)`);
     onMediaChange(media);
     media.addEventListener('change', onMediaChange);
     window.addEventListener('keydown', onKey);
@@ -247,39 +254,28 @@ onUnmounted(() => {
 
 <template>
     <div class="min-h-screen bg-paper text-ink">
-        <!-- Mobile drawer scrim. -->
-        <div v-if="drawerOpen" class="fixed inset-0 z-30 bg-overlay md:hidden" @click="drawerOpen = false" />
-
-        <NavRail
-            :links="links"
-            :is-current="isCurrent"
-            :home-href="page.props.tenant ? route('diary.index') : route('super-admin.index')"
-            :user-name="page.props.auth.user?.name ?? ''"
-            :profile-href="route('profile.edit')"
-            :billing-href="page.props.tenant ? route('settings.billing') : undefined"
-            :logout-href="logoutHref"
-            :collapsed="collapsed"
-            :drawer-open="drawerOpen"
-            :impersonating="page.props.impersonating"
-            :impersonated-tenant="(page.props.impersonatedTenant as string | null) ?? null"
-            :stop-impersonating-href="route('impersonation.stop')"
-            @navigate="drawerOpen = false"
-            @search="
-                paletteOpen = true;
-                drawerOpen = false;
-            "
-        />
+        <div class="hidden md:block">
+            <NavRail
+                :links="links"
+                :is-current="isCurrent"
+                :home-href="page.props.tenant ? route('diary.index') : route('super-admin.index')"
+                :user-name="page.props.auth.user?.name ?? ''"
+                :profile-href="route('profile.edit')"
+                :billing-href="page.props.tenant ? route('settings.billing') : undefined"
+                :logout-href="logoutHref"
+                :collapsed="collapsed"
+                :drawer-open="false"
+                :impersonating="page.props.impersonating"
+                :impersonated-tenant="(page.props.impersonatedTenant as string | null) ?? null"
+                :stop-impersonating-href="route('impersonation.stop')"
+                @search="paletteOpen = true"
+            />
+        </div>
 
         <div
             class="transition-[padding] duration ease-product"
             :class="collapsed ? 'md:pl-rail-collapsed' : 'md:pl-rail'"
         >
-            <!-- The only top bar left, and it exists only on a phone, where the
-                 rail is a drawer that has to be opened from somewhere. -->
-            <header class="flex h-topbar items-center border-b border-b-rule bg-white px-4 md:hidden">
-                <Button variant="ghost" @click="drawerOpen = true">Menu</Button>
-            </header>
-
             <!--
                 BetaSandbox — see BETA_SANDBOX.md. First in the notice stack: it
                 is the standing fact about this whole installation of the app,
@@ -345,10 +341,20 @@ onUnmounted(() => {
                 <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
             </div>
 
-            <main class="px-4 py-6 md:px-8">
+            <main class="under-tabbar px-4 pt-6 md:px-8">
                 <slot />
             </main>
         </div>
+
+        <MobileTabBar
+            v-if="page.props.tenant"
+            :links="links"
+            :user-name="page.props.auth.user?.name ?? ''"
+            :profile-href="route('profile.edit')"
+            :billing-href="route('settings.billing')"
+            :logout-href="logoutHref"
+            @search="paletteOpen = true"
+        />
 
         <CommandPalette :show="paletteOpen" @close="paletteOpen = false" @create="createBooking" />
         <Toaster />

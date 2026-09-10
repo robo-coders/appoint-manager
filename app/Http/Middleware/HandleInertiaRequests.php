@@ -118,6 +118,10 @@ class HandleInertiaRequests extends Middleware
              * client actually asks for it.
              */
             'navCounts' => fn () => $tenant ? $this->navCounts($tenant) : null,
+            'ui' => [
+                'mobile_breakpoint' => (int) config('ui.mobile_breakpoint'),
+                'rail_collapsed_ceiling' => (int) config('ui.rail_collapsed_ceiling'),
+            ],
             'impersonating' => (bool) $request->session()->get('impersonator_id'),
             'impersonatedTenant' => $request->session()->get('impersonator_id') ? $tenant?->name : null,
             'vertical' => fn () => Vertical::definitionFor($verticalKey),

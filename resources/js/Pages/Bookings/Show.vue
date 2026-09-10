@@ -171,7 +171,7 @@ const cancel = (offerWaitlist: boolean) => {
             sat 700px from the value on the other side of the page and the eye had
             to travel the whole width to read one row.
         -->
-        <div class="max-w-record">
+        <div class="max-w-record pb-16 md:pb-0">
         <QuietAction :href="route('bookings.index')">← Bookings</QuietAction>
 
         <!--
@@ -202,7 +202,7 @@ const cancel = (offerWaitlist: boolean) => {
                 </p>
             </div>
 
-            <div v-if="booking.status !== 'cancelled'" class="flex shrink-0 flex-wrap items-center gap-2">
+            <div v-if="booking.status !== 'cancelled'" class="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
                 <Button
                     variant="secondary"
                     @click="router.get(route('diary.index'), { date: booking.starts_at_local.slice(0, 10) })"
@@ -289,7 +289,7 @@ const cancel = (offerWaitlist: boolean) => {
             on every time it reaches the bottom, for the one action nobody is here
             to take.
         -->
-        <div v-if="booking.status !== 'cancelled'" class="flex flex-wrap items-center gap-4">
+        <div v-if="booking.status !== 'cancelled'" class="hidden flex-wrap items-center gap-4 md:flex">
             <QuietAction @click="confirm = 'notify'">Cancel booking</QuietAction>
         </div>
 
@@ -300,6 +300,24 @@ const cancel = (offerWaitlist: boolean) => {
             </Link>
         </p>
 
+        </div>
+
+        <div
+            v-if="booking.status !== 'cancelled'"
+            class="above-tabbar fixed inset-x-0 z-30 flex flex-wrap gap-2 border-t border-t-rule bg-paper px-4 py-3 md:hidden"
+        >
+            <span class="flex-1 basis-16">
+                <Button variant="secondary" block @click="confirm = 'notify'">Cancel</Button>
+            </span>
+            <span
+                v-if="completable"
+                class="flex-1 basis-16"
+            >
+                <Button variant="secondary" block :loading="markingNoShow" @click="markNoShow">No show</Button>
+            </span>
+            <span v-if="completable" class="flex-1 basis-16">
+                <Button block :loading="completing" @click="complete">Mark done</Button>
+            </span>
         </div>
 
         <ConfirmDialog

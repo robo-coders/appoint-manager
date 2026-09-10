@@ -146,7 +146,7 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                         down one list.
                     -->
                     <span
-                        class="numeral flex size-10 shrink-0 items-center justify-center rounded bg-pill-neutral text-14 text-ink-2"
+                        class="numeral hidden size-10 shrink-0 items-center justify-center rounded bg-pill-neutral text-14 text-ink-2 sm:flex"
                         aria-hidden="true"
                     >
                         {{ person.initial }}
@@ -175,7 +175,7 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                         <p class="mt-0.5 text-12 text-ink-2">{{ load(person.booked_this_week) }}</p>
                     </div>
 
-                    <div class="flex shrink-0 items-center gap-1">
+                    <div class="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
                         <Button variant="ghost" @click="openHours(person)">Hours</Button>
                         <Button variant="ghost" @click="openEdit(person)">Edit</Button>
                         <!--

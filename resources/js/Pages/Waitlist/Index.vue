@@ -75,7 +75,7 @@ const submit = () =>
  * list whose whole purpose is ringing somebody up.
  */
 const columns: Column[] = [
-    { key: 'rank', label: '#', width: 'time', numeric: true },
+    { key: 'rank', label: '#', width: 'time', numeric: true, narrow: 'lead' },
     { key: 'customer_name', label: 'Customer', sortable: true, narrow: 'title' },
     { key: 'service_name', label: 'Wants', sortable: true, narrow: 'line' },
     { key: 'preference', label: 'Flexible on', secondary: true, narrow: 'line' },
@@ -204,6 +204,16 @@ const longest = computed(() =>
             <template #cell:rank="{ row }">
                 <span v-if="row.rank" :class="row.rank === 1 ? 'font-medium text-accent-strong' : 'text-ink-2'">
                     #{{ row.rank }}
+                </span>
+            </template>
+
+            <template #narrow:rank="{ row }">
+                <span
+                    v-if="row.rank"
+                    class="numeral text-17"
+                    :class="row.rank === 1 ? 'font-medium text-accent-strong' : 'text-ink-2'"
+                >
+                    {{ row.rank }}
                 </span>
             </template>
 

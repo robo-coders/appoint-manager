@@ -71,7 +71,8 @@ describe('the icon set', () => {
 
     it('is small and fixed, because every entry is a deep import somebody wrote', () => {
         // A number that only moves when a person adds a line to `lib/navIcons`.
-        expect(Object.keys(NAV_ICONS)).toHaveLength(15);
+        // 15 -> 16: `more`, for the phone tab bar's fifth destination.
+        expect(Object.keys(NAV_ICONS)).toHaveLength(16);
     });
 });
 

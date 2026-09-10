@@ -13,6 +13,7 @@ import {
     bookingStatusStruck as struck,
     bookingStatusTone as toneFor,
     bookingWhenLabel as whenLabel,
+    depositStatusLabel,
 } from '@/lib/bookingStatus';
 import type { Money, Paginated } from '@/types/models';
 import { Head, router } from '@inertiajs/vue3';
@@ -46,6 +47,8 @@ type BookingRow = {
     starts_at_local: string;
     status: string;
     source: string;
+    deposit_status: string;
+    duration_minutes: number | null;
     price_at_booking: Money;
     [key: string]: unknown;
 };
@@ -123,9 +126,10 @@ const exportHref = computed(() =>
  * customer is already the headline.
  */
 const columns: Column[] = [
-    { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'line' },
+    { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'lead' },
     { key: 'customer', label: 'Customer', sortable: true, narrow: 'title' },
     { key: 'service', label: 'Service', secondary: true, narrow: 'line' },
+    { key: 'deposit', label: 'Deposit', narrowOnly: true, narrow: 'line' },
     // Not in the narrow row. Four parts on the second line wrapped to three,
     // and the groomer was the part that ended up alone on the last one. It is
     // already `secondary`, so a phone never showed it in the table either.
@@ -155,6 +159,7 @@ const rows = computed(() =>
         service: booking.service_name,
         staff: booking.staff_name,
         status: booking.status,
+        deposit: depositStatusLabel(booking.deposit_status),
         amount: booking.price_at_booking.amount,
     })),
 );
@@ -251,6 +256,15 @@ const cancel = () => {
         >
             <template #cell:when="{ row }">
                 <span class="numeral">{{ whenLabel(String(row.starts_at_local)) }}</span>
+            </template>
+
+            <template #narrow:when="{ row }">
+                <span class="numeral block text-17 font-medium text-ink">
+                    {{ String(row.starts_at_local).slice(11) }}
+                </span>
+                <span v-if="row.duration_minutes" class="numeral mt-px block text-12 text-ink-2">
+                    {{ row.duration_minutes }}m
+                </span>
             </template>
 
             <!-- Who it is, then whose pet. The name is the thing being scanned
