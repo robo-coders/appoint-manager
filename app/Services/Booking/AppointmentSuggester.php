@@ -3,6 +3,7 @@
 namespace App\Services\Booking;
 
 use App\Enums\BookingStatus;
+use App\Enums\SetupReason;
 use App\Enums\Weekday;
 use App\Models\AvailabilityRule;
 use App\Models\Booking;
@@ -132,6 +133,13 @@ final class AppointmentSuggester
         ?CarbonImmutable $now = null,
     ): Suggestion {
         $now = ($now ?? CarbonImmutable::now())->utc();
+
+        $reason = BookingReadiness::reasonFor($tenant);
+
+        if ($reason !== null) {
+            return new Suggestion(null, [], false, $customer, null, null, null, setupReason: $reason);
+        }
+
         $history = $customer === null ? collect() : $this->history($tenant, $customer, $now);
         $returning = $history->isNotEmpty();
 
@@ -144,6 +152,19 @@ final class AppointmentSuggester
         $subject = $returning ? $this->lastSubject($history) : null;
         $usualStaff = $staff ?? ($returning ? $this->lastOf($history, 'staff') : null);
         $intervalDays = $returning ? $this->typicalIntervalDays($history) : null;
+
+        if (! BookingReadiness::hasStaffForService($tenant, $service)) {
+            return new Suggestion(
+                null,
+                [],
+                $returning,
+                $customer,
+                $service,
+                $subject,
+                $intervalDays,
+                setupReason: SetupReason::NoStaffForService,
+            );
+        }
 
         $slots = $this->slots($tenant, $service, $now);
 

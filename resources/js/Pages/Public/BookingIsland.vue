@@ -91,6 +91,7 @@ const props = defineProps<{
         booking_mode: 'automated' | 'request';
         request_requires_deposit: boolean;
         request_sent_message: string;
+        phone?: string | null;
     };
     stripePublishableKey?: string | null;
     services: Array<{ id: number; name: string; duration_minutes: number; price: Money; deposit_amount: Money }>;
@@ -103,6 +104,10 @@ const props = defineProps<{
         interval_days: number | null;
         context: string | null;
         timezone: string;
+        state?: 'proposal' | 'fully_booked' | 'setup_incomplete';
+        setup_reason?: 'no_service' | 'no_staff' | 'no_staff_for_service' | null;
+        setup_heading?: string | null;
+        setup_note?: string | null;
     };
     vertical: { subject_singular: string; subject_fields: SubjectField[]; appointment_singular: string };
     today: string;
@@ -128,6 +133,12 @@ const error = ref('');
 const submitting = ref(false);
 const booked = ref(false);
 const requested = ref(false);
+
+const setupIncomplete = computed(() => props.suggestion.state === 'setup_incomplete');
+const setupHeading = computed(
+    () => props.suggestion.setup_heading || `${props.tenant.name} is not taking online bookings yet`,
+);
+const messageHref = computed(() => (props.tenant.phone ? `sms:${props.tenant.phone}` : null));
 
 const isRequestMode = computed(() => props.tenant.booking_mode === 'request');
 const requestAction = 'Request this time';
@@ -570,6 +581,24 @@ const joinWaitlist = async () => {
                 >
                     Manage this appointment
                 </a>
+            </p>
+        </section>
+
+        <!-- ============================================================
+             The business has not finished setting up online booking. Not the
+             same screen as a full diary, and deliberately not the waitlist.
+             ============================================================ -->
+        <section v-else-if="setupIncomplete" class="space-y-4">
+            <h1 class="text-24 font-medium">{{ setupHeading }}</h1>
+            <p class="text-15 text-ink-2">{{ suggestion.setup_note }}</p>
+            <p class="text-15 text-ink-2">
+                <template v-if="messageHref">
+                    <a :href="messageHref" class="min-h-tap underline decoration-rule underline-offset-4">
+                        Message {{ tenant.name }}
+                    </a>
+                    to book.
+                </template>
+                <template v-else>Get in touch with {{ tenant.name }} to book.</template>
             </p>
         </section>
 

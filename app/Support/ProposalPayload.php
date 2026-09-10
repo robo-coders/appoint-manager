@@ -43,7 +43,33 @@ final class ProposalPayload
              */
             'context' => $suggestion->primary === null ? null : self::context($suggestion, $tenant),
             'timezone' => $tz,
+            'state' => $suggestion->state(),
+            'setup_reason' => $suggestion->setupReason?->value,
+            'setup_heading' => $suggestion->setupReason === null ? null : self::setupHeading($suggestion, $tenant),
+            'setup_note' => $suggestion->setupReason === null ? null : self::setupNote($suggestion, $tenant),
         ];
+    }
+
+    private static function setupHeading(Suggestion $suggestion, Tenant $tenant): string
+    {
+        if ($suggestion->setupReason?->isPerService() && $suggestion->service !== null) {
+            return $suggestion->service->name.' is not bookable online yet';
+        }
+
+        return $tenant->name.' is not taking online bookings yet';
+    }
+
+    private static function setupNote(Suggestion $suggestion, Tenant $tenant): string
+    {
+        $noun = (string) ($tenant->vertical()['business_noun'] ?? 'business');
+
+        if ($suggestion->setupReason?->isPerService() && $suggestion->service !== null) {
+            return 'Nobody at this '.$noun.' is set up to take '
+                .mb_strtolower($suggestion->service->name)
+                .' online yet, so there are no times to show.';
+        }
+
+        return 'This '.$noun.' has not finished setting up online booking, so there are no times to show yet.';
     }
 
     /**

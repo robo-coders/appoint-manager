@@ -305,6 +305,117 @@ describe('BookingIsland — the proposal', () => {
         expect(wrapper.text()).toContain('fully booked');
         expect(wrapper.findAll('button').some((b) => b.text().includes('Text me when something opens'))).toBe(true);
     });
+
+    /*
+     * Three states, not two. A salon that has not finished setting up is not a
+     * salon with a full diary, and the waitlist copy — "leave your number, we
+     * will text you the moment something opens up" — describes a diary that
+     * does not exist yet. See phase 16 in DECISIONS.md.
+     */
+    it('says the business has not set online booking up yet, and does not offer the waitlist', () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                tenant: { ...bookingProps().tenant, phone: '020 7946 0000' },
+                services: [],
+                suggestion: {
+                    ...bookingProps().suggestion,
+                    primary: null,
+                    alternatives: [],
+                    context: null,
+                    state: 'setup_incomplete',
+                    setup_note: 'This salon has not finished setting up online booking, so there are no times to show yet.',
+                },
+            }),
+        });
+
+        expect(wrapper.text()).toContain('is not taking online bookings yet');
+        expect(wrapper.text()).toContain('has not finished setting up online booking');
+        expect(wrapper.text()).not.toContain('fully booked');
+        expect(wrapper.text()).not.toContain('nothing free in the diary');
+        expect(wrapper.findAll('button').some((b) => b.text().includes('Text me when something opens'))).toBe(false);
+
+        const link = wrapper.find('a[href^="sms:"]');
+        expect(link.exists()).toBe(true);
+        expect(link.text()).toContain('Willow Street Grooming');
+    });
+
+    it('falls back to "get in touch" when the business has no number on file', () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                services: [],
+                suggestion: {
+                    ...bookingProps().suggestion,
+                    primary: null,
+                    alternatives: [],
+                    context: null,
+                    state: 'setup_incomplete',
+                    setup_note: 'This salon has not finished setting up online booking, so there are no times to show yet.',
+                },
+            }),
+        });
+
+        expect(wrapper.find('a[href^="sms:"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Get in touch with Willow Street Grooming to book.');
+    });
+
+    /*
+     * The per-service state. A customer who picked a service nobody is set up
+     * to do is not looking at an unfinished business — the note names the
+     * service, and the heading comes from the server so the sentence is built
+     * where every other customer-facing string on this page is built.
+     */
+    it('names the service when nobody at the business can perform it', () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                suggestion: {
+                    ...bookingProps().suggestion,
+                    primary: null,
+                    alternatives: [],
+                    context: null,
+                    state: 'setup_incomplete',
+                    setup_reason: 'no_staff_for_service',
+                    setup_heading: 'Full groom is not bookable online yet',
+                    setup_note: 'Nobody at this salon is set up to take full groom online yet, so there are no times to show.',
+                },
+            }),
+        });
+
+        expect(wrapper.find('h1').text()).toBe('Full groom is not bookable online yet');
+        expect(wrapper.text()).toContain('is set up to take full groom online yet');
+        expect(wrapper.text()).not.toContain('is not taking online bookings yet');
+        expect(wrapper.text()).not.toContain('has not finished setting up online booking');
+        expect(wrapper.text()).not.toContain('fully booked');
+        expect(wrapper.findAll('button').some((b) => b.text().includes('Text me when something opens'))).toBe(false);
+    });
+
+    it('keeps the business-level heading when the server sends no heading of its own', () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                services: [],
+                suggestion: {
+                    ...bookingProps().suggestion,
+                    primary: null,
+                    alternatives: [],
+                    context: null,
+                    state: 'setup_incomplete',
+                    setup_note: 'This salon has not finished setting up online booking, so there are no times to show yet.',
+                },
+            }),
+        });
+
+        expect(wrapper.find('h1').text()).toBe('Willow Street Grooming is not taking online bookings yet');
+    });
+
+    it('still proposes an appointment when the state says there is one', () => {
+        const wrapper = mount(BookingIsland, {
+            props: bookingProps({
+                suggestion: { ...bookingProps().suggestion, state: 'proposal' },
+            }),
+        });
+
+        expect(wrapper.find('h1').text()).toContain('Tuesday 10 March');
+        expect(wrapper.text()).not.toContain('is not taking online bookings yet');
+    });
 });
 
 describe('ManageIsland — the same page, a different hat', () => {

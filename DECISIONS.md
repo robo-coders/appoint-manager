@@ -3629,3 +3629,110 @@ path.
   `tenants.city` and `tenants.postcode` and is omitted when there is no
   postcode. It is passed to `public-shell` as an optional `headerCode` so the
   booking page and the offer page are untouched.
+
+# Phase 16 — the public booking page's third state
+
+## Setup-incomplete is not fully-booked
+
+`AppointmentSuggester::suggest()` returned a `Suggestion` with a null `primary`
+for two situations that have nothing to do with each other: a salon whose diary
+is genuinely full inside the horizon, and a salon that has no active service or
+nobody with hours. `BookingIsland.vue` branched on `!proposal`, so both were
+answered with "{name} is fully booked · There is nothing free in the diary at
+the moment. Leave your number and we will text you the moment something opens
+up." A business that has never opened was telling its first customer it was
+busy, and inviting them to wait for a diary that does not exist.
+
+`BookingReadiness` is the explicit check, and it runs **before** the engine
+rather than inferring from an empty result: at least one active service, and at
+least one active bookable user with at least one `availability_rules` row. If
+either is missing, `suggest()` returns immediately with `setupIncomplete: true`
+and no slot computation happens at all — no `time_off` query, no bookings load,
+no grid. A Pest test asserts that absence by listening for a `time_off` query.
+
+`Suggestion::state()` names the three: `proposal`, `fully_booked`,
+`setup_incomplete`. The payload carries it as `suggestion.state`, and the island
+branches on it. The `fully_booked` branch — copy, waitlist form, behaviour — is
+untouched.
+
+## The tenant-level check, and the per-service one under it
+
+The tenant-level check asks two questions: is there an active service, and is
+there somebody with hours. It cannot catch a third state — an active service
+that nobody is attached to on `service_user` — because the tenant does have a
+service and does have somebody with hours, so `slotsFor()` returns empty and
+the page said `fully_booked`.
+
+**That is now a setup state too, at the per-service level.** The decision the
+fix report asked for was taken: a customer has no way to tell "nobody here does
+this" from "this business is busy", and being told a business is fully booked
+when the real answer is that their chosen service has no staff on it is the
+same confidently-wrong claim the rest of this page is built to avoid.
+
+`BookingReadiness::hasStaffForService()` mirrors
+`AvailabilityEngine::staffWhoCanPerform()`'s predicate exactly — active,
+bookable, joined to that service — so the check and the query it is protecting
+cannot drift apart and disagree. It runs in `suggest()` after the service is
+chosen and **before** `slots()`, so an unstaffed service costs one `EXISTS`
+rather than a 42-day slot computation. A Pest test asserts no `time_off` query
+is issued on that path, the same way the tenant-level one does.
+
+### One field, not two flags
+
+`Suggestion` used to carry `bool $setupIncomplete`. It now carries
+`?SetupReason $setupReason` instead, and `isSetupIncomplete()` is derived from
+it. A bool plus a reason would be two fields that have to agree, and the one
+thing this page cannot afford is a state that says "setup incomplete" with no
+reason attached, or a reason with the state switched off. `state()` still names
+the same three states; nothing downstream of it changed.
+
+### The copy differs, and it is built in one place
+
+`no_service` and `no_staff` keep the sentence they already had, byte for byte —
+that is what keeps the prior session's nine tests honest. `no_staff_for_service`
+gets its own heading and its own note, both naming the service:
+
+> **Full groom is not bookable online yet**
+> Nobody at this salon is set up to take full groom online yet, so there are no
+> times to show.
+
+Both are built in `ProposalPayload`, like every other string a customer reads on
+this page, and both take the business noun from `Vertical::definitionFor()`
+rather than saying "salon". The service name is lower-cased mid-sentence the
+same way `context()` already lower-cases it.
+
+The heading moved to the payload as `setup_heading` for this reason — a heading
+built in the island for one state and on the server for the other would be two
+places to change one sentence. The island keeps a fallback to the interpolated
+business-name heading when the prop is absent, which is what makes the payload
+key optional and the older vitest fixtures still valid.
+
+### Per-service means per-service
+
+A tenant with five services and one unassigned shows the new copy on that one
+service only. Every other service on the same tenant is untouched and follows
+the normal flow, because the check is asked of `$service` after the customer's
+`?service=` choice has been resolved. There is a test for exactly that shape:
+two services on one tenant, one staffed and one not, each asserted
+independently.
+
+## `business_noun`, not "salon"
+
+The one sentence the state adds is built in `ProposalPayload`, like every other
+string this page reads, and it takes the noun from `Vertical::definitionFor()`
+rather than saying "salon" — the same vocabulary the rest of the product uses
+for a dog groomer versus a physiotherapist. There is no `config/verticals.php`
+any more; that moved to the `verticals` table in phase 13.
+
+The heading and the contact line stay in the island because they interpolate
+`tenant.name` and reuse the `sms:`-or-plain-sentence pattern
+`ManageIsland.vue` already uses for the same job.
+
+## Comments
+
+`BookingReadiness`, `Suggestion::state()` and
+`tests/Feature/Booking/PublicBookingSetupStateTest.php` are written without
+comments, at the user's standing request, which is why the reasoning above is
+here at this length. The heavily-commented files they sit next to keep their
+comments; the block added to `tests/js/islands.test.ts` follows that file's own
+convention of one note per `describe` block.
