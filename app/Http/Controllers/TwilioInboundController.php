@@ -7,6 +7,7 @@ use App\Services\Sms\SmsGateway;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Inbound SMS, which in this product means exactly one thing: STOP.
@@ -75,7 +76,21 @@ class TwilioInboundController extends Controller
         // number, and a second confirmation is a segment spent telling somebody
         // who asked us to stop texting them that we have stopped texting them.
         if ($reply !== '' && $customer->phone) {
-            $sms->send($customer->phone, $reply);
+            /*
+             * The consent change is already saved. If the courtesy reply fails,
+             * an unhandled throw here returns a 500 and Twilio retries a webhook
+             * whose actual work is done — so the send is allowed to fail on its
+             * own, loudly in the log and silently to Twilio.
+             */
+            try {
+                $sms->send($customer->phone, $reply);
+            } catch (Throwable $exception) {
+                report($exception);
+                Log::warning('Consent reply could not be sent', [
+                    'tenant_id' => $tenant->id,
+                    'customer_id' => $customer->id,
+                ]);
+            }
         }
 
         return response('ok', 200);

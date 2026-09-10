@@ -16,7 +16,19 @@ import { CONSOLE, CONSOLE_STATE } from './support';
  */
 setup('authenticate as the super admin', async ({ page }) => {
     await page.goto('/admin/login');
-    await expect(page.getByRole('heading', { name: 'Console' })).toBeVisible();
+
+    /*
+     * The form, not the headline.
+     *
+     * This waited on a heading named "Console", which the console login has not
+     * had since it was redesigned — "Console" is the `<title>` now and the `<h1>`
+     * is a sentence. So this setup failed, and because all four console specs
+     * depend on it, the whole super-admin surface silently stopped being tested:
+     * "1 failed, 4 did not run". Waiting on the field this setup is about to
+     * fill is both the thing it actually needs and one that does not move when
+     * the copy does.
+     */
+    await expect(page.locator('input[type="email"]')).toBeVisible();
 
     await page.locator('input[type="email"]').fill(CONSOLE.email);
     await page.locator('input[type="password"]').fill(CONSOLE.password);

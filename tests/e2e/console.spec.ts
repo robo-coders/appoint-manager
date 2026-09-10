@@ -39,7 +39,12 @@ test('the console door at 375', async ({ page, context }) => {
     await page.clock.setFixedTime(new Date(FROZEN_NOW));
     await page.setViewportSize({ width: 375, height: 900 });
     await page.goto('/admin/login');
-    await expect(page.getByRole('heading', { name: 'Console' })).toBeVisible();
+    /*
+     * The form, not the headline — the same reason `console.setup.ts` gives.
+     * "Console" is the `<title>` since the door was redesigned, and the `<h1>`
+     * is a sentence that will change again.
+     */
+    await expect(page.locator('input[type="email"]')).toBeVisible();
     await settled(page);
 
     await expect(page).toHaveScreenshot('console-login-375.png', { fullPage: true });
