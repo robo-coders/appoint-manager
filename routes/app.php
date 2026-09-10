@@ -32,6 +32,8 @@ use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\Settings\BillingController as SettingsBillingController;
+use App\Http\Controllers\Settings\CalendarSyncController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffCalendarController;
 use App\Http\Controllers\StaffController;
@@ -73,13 +75,24 @@ Route::get('/calendar/{token}.ics', StaffCalendarController::class)
 
 Route::middleware(['auth', 'tenant'])->group(function (): void {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+
+    /*
+     * Advisory, and throttled because it is called as you type. It reads one
+     * indexed column and returns a boolean; the binding answer comes from the
+     * unique index when the step is saved.
+     */
+    Route::get('/onboarding/slug-available', [OnboardingController::class, 'checkSlug'])
+        ->middleware('throttle:60,1')
+        ->name('onboarding.slug');
+
+    Route::patch('/onboarding/basics', [OnboardingController::class, 'updateBasics'])->name('onboarding.basics');
     Route::patch('/onboarding/business', [OnboardingController::class, 'updateBusiness'])->name('onboarding.business');
     Route::patch('/onboarding/services', [OnboardingController::class, 'updateServices'])->name('onboarding.services');
     Route::patch('/onboarding/staff', [OnboardingController::class, 'updateStaff'])->name('onboarding.staff');
-    Route::patch('/onboarding/hours', [OnboardingController::class, 'updateHours'])->name('onboarding.hours');
+    Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
 });
 
-Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(function (): void {
+Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed', 'billing-access'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/diary', DiaryController::class)->name('diary.index');
     Route::get('/search', SearchController::class)->name('search');
@@ -110,6 +123,9 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+    Route::patch('/customers/{customer}/notes', [CustomerController::class, 'updateNotes'])->name('customers.notes.update');
+    Route::post('/customers/{customer}/require-full-payment', [CustomerController::class, 'requireFullPayment'])->name('customers.require-full-payment');
+    Route::post('/customers/{customer}/dismiss-rule', [CustomerController::class, 'dismissSuggestedRule'])->name('customers.dismiss-rule');
     Route::get('/customers/{customer}/export', [CustomerPrivacyController::class, 'export'])->name('customers.export');
     Route::delete('/customers/{customer}', [CustomerPrivacyController::class, 'destroy'])->name('customers.destroy');
 
@@ -148,12 +164,27 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed'])->group(functio
     Route::patch('/settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
     Route::get('/settings/calendar', [CalendarSettingsController::class, 'show'])->name('settings.calendar.show');
     Route::post('/settings/calendar/{staff}/regenerate', [CalendarSettingsController::class, 'regenerate'])->name('settings.calendar.regenerate');
+    Route::get('/settings/calendar-sync', [CalendarSyncController::class, 'index'])->name('settings.calendar-sync');
+    Route::post('/settings/calendar-sync/regenerate', [CalendarSyncController::class, 'regenerate'])->name('settings.calendar-sync.regenerate');
+    Route::post('/settings/calendar-sync/content-mode', [CalendarSyncController::class, 'updateContentMode'])->name('settings.calendar-sync.content-mode');
     Route::get('/settings/loyalty', [LoyaltyController::class, 'edit'])->name('settings.loyalty.edit');
     Route::patch('/settings/loyalty', [LoyaltyController::class, 'update'])->name('settings.loyalty.update');
     Route::get('/settings/payments', [PaymentSettingsController::class, 'show'])->name('settings.payments.show');
     Route::post('/settings/payments/connect', [PaymentSettingsController::class, 'connect'])->name('settings.payments.connect');
     Route::get('/settings/payments/refresh', [PaymentSettingsController::class, 'refresh'])->name('settings.payments.refresh');
     Route::get('/settings/payments/return', [PaymentSettingsController::class, 'returned'])->name('settings.payments.return');
+
+    Route::get('/settings/billing', [SettingsBillingController::class, 'show'])->name('settings.billing');
+    Route::post('/settings/billing/preview', [SettingsBillingController::class, 'preview'])->name('settings.billing.preview');
+    Route::post('/settings/billing/swap', [SettingsBillingController::class, 'swap'])->name('settings.billing.swap');
+    Route::post('/settings/billing/cancel', [SettingsBillingController::class, 'cancel'])->name('settings.billing.cancel');
+    Route::post('/settings/billing/resume', [SettingsBillingController::class, 'resume'])->name('settings.billing.resume');
+    Route::post('/settings/billing/refresh', [SettingsBillingController::class, 'refresh'])->name('settings.billing.refresh');
+    Route::post('/settings/billing/setup-intent', [SettingsBillingController::class, 'setupIntent'])->name('settings.billing.setup-intent');
+    Route::post('/settings/billing/payment-method', [SettingsBillingController::class, 'paymentMethod'])->name('settings.billing.payment-method');
+    Route::post('/settings/billing/checkout', [SettingsBillingController::class, 'checkout'])->name('settings.billing.checkout');
+    Route::get('/settings/billing/receipts/{billing_receipt}/download', [SettingsBillingController::class, 'download'])->name('settings.billing.receipts.download');
+    Route::get('/settings/billing/invoices.csv', [SettingsBillingController::class, 'export'])->name('settings.billing.export');
 
     Route::get('/waitlist', [WaitlistController::class, 'index'])->name('waitlist.index');
     Route::post('/waitlist', [WaitlistController::class, 'store'])->name('waitlist.store');

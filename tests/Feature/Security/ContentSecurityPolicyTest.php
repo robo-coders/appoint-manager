@@ -75,7 +75,7 @@ it('never puts a localhost or websocket origin in the production policy', functi
     $directives = collect(explode('; ', $policy))
         ->mapWithKeys(fn (string $directive) => [explode(' ', $directive)[0] => $directive]);
 
-    foreach (['script-src', 'style-src', 'connect-src'] as $directive) {
+    foreach (['script-src', 'style-src', 'font-src', 'img-src', 'connect-src'] as $directive) {
         expect($directives[$directive])->not->toMatch('/\b(?:localhost|127\.0\.0\.1|ws:|wss:)/');
     }
 })->with(Surface::cases());
@@ -112,7 +112,7 @@ it('does not add a dev origin in local when the dev server is not running', func
         ->not->toContain('ws://');
 });
 
-it('adds the dev origin to script-src, style-src and connect-src in local while the dev server runs', function (Surface $surface) {
+it('adds the dev origin to every directive that loads an asset in local while the dev server runs', function (Surface $surface) {
     app()->detectEnvironment(fn () => 'local');
     useHotFile('http://localhost:5173');
 
@@ -121,6 +121,14 @@ it('adds the dev origin to script-src, style-src and connect-src in local while 
 
     expect($directives['script-src'])->toContain('http://localhost:5173')
         ->and($directives['style-src'])->toContain('http://localhost:5173')
+        /*
+         * `img-src` is in this list because it was once not, and `https:`
+         * hid it: the directive looked open enough to be nobody's problem
+         * while it silently refused every SVG Vite was serving. The logo
+         * was a broken-image icon on the auth screens in development.
+         */
+        ->and($directives['img-src'])->toContain('http://localhost:5173')
+        ->and($directives['font-src'])->toContain('http://localhost:5173')
         ->and($directives['connect-src'])->toContain('http://localhost:5173')
         ->and($directives['connect-src'])->toContain('ws://localhost:5173');
 })->with(Surface::cases());
@@ -130,6 +138,7 @@ it('keeps the third-party allowances each surface already had', function () {
     useHotFile('http://localhost:5173');
 
     expect(cspFor(Surface::Book))->toContain('https://js.stripe.com')
+        ->and(cspFor(Surface::App))->toContain('https://js.stripe.com')
         ->and(cspFor(Surface::Marketing))->toContain('https://plausible.io');
 });
 

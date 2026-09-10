@@ -16,7 +16,7 @@ import { computed } from 'vue';
  * reader and then unload the page when one is chosen. These are links, so they
  * are links, and `aria-current` carries which one you are on.
  */
-defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' | 'beta-sandbox' }>();
+defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' | 'billing' | 'beta-sandbox' }>();
 
 /**
  * BetaSandbox — see BETA_SANDBOX.md. The sixth tab, for beta salons only.
@@ -57,8 +57,9 @@ const beta = computed(() => page.props.tenant?.is_beta === true);
                  * with no Save button — putting it inside a form that does have
                  * one invites people to press Save and wonder what it did.
                  */
-                { key: 'calendar', label: 'Calendar', href: route('settings.calendar.show') },
+                { key: 'calendar', label: 'Calendar', href: route('settings.calendar-sync') },
                 { key: 'payments', label: 'Payments', href: route('settings.payments.show') },
+                { key: 'billing', label: 'Billing', href: route('settings.billing') },
                 ...(beta ? [{ key: 'beta-sandbox', label: 'Beta sandbox', href: route('beta-sandbox.show') }] : []),
             ]"
             :key="tab.key"

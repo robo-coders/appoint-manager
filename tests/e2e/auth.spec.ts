@@ -192,27 +192,45 @@ test.describe('setting up a business at 375', () => {
         await settled(page);
         await expect(page).toHaveScreenshot('setup-1-account-375.png', { fullPage: true });
 
-        // The compact progress is the 375 shape of the rail, and it is the only
-        // thing telling this person how long this is going to take.
-        await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '5');
+        /*
+         * The compact progress is the 375 shape of the rail, and it is the only
+         * thing telling this person how long this is going to take.
+         *
+         * Six, not five: `SetupSteps::all()` counts registering as step one,
+         * which is the whole reason that class exists. This assertion said five
+         * from before that change and had been failing since.
+         *
+         * The five steps *after* this one are `Onboarding/Index.vue`, which
+         * draws its own meter as a segmented rule with `role="presentation"`
+         * rather than as a progressbar — so the `getByRole('progressbar')`
+         * assertions below this point, and the step headings they sit beside,
+         * are stale against the onboarding page as it now stands. They are left
+         * as they are rather than guessed at: this pass is `/register`, and the
+         * signed-out step of the flow is covered end to end in
+         * `register.spec.ts`.
+         */
+        await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '6');
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
 
-        await page.getByLabel('Business name').fill('Willow Street Grooming');
+        await page.getByLabel(/^Business name/).fill('Willow Street Grooming');
         /*
          * The trade, and it is required — `RegisterRequest` wants a key that
-         * exists in `verticals`, and the control carries `required` so the
-         * browser will not even post without it. This walk-through predates the
-         * field: it filled every other input, clicked Create the account, and
-         * the form silently refused to submit, so the spec sat on step one
-         * waiting for step two's heading until it timed out. A missing select
-         * fails as a timeout somewhere else, which is the worst shape a test
-         * failure can take.
+         * exists in `verticals`. This walk-through predates the field: it
+         * filled every other input, clicked Create the account, and the form
+         * silently refused to submit, so the spec sat on step one waiting for
+         * step two's heading until it timed out. A missing answer fails as a
+         * timeout somewhere else, which is the worst shape a test failure can
+         * take — the form now says so in place instead.
+         *
+         * A radio rather than a select: it is `ui/RadioGroup` now, the same
+         * control `Onboarding/Index.vue` confirms the answer with. The labels
+         * carry the vertical's note as a second line, hence the regex.
          */
-        await page.getByLabel('What kind of business?').selectOption('groomer');
-        await page.getByLabel('Your name').fill('Maya Chen');
-        await page.getByLabel('Email').fill(SIGNUP_EMAIL);
-        await page.getByLabel('Password', { exact: false }).first().fill('correct-horse-battery');
-        await page.getByLabel('Confirm password').fill('correct-horse-battery');
+        await page.getByRole('radio', { name: /Dog grooming/ }).check();
+        await page.getByLabel(/^Your name/).fill('Maya Chen');
+        await page.getByLabel(/^Email/).fill(SIGNUP_EMAIL);
+        await page.getByLabel(/^Password/).fill('correct-horse-battery');
+        await page.getByLabel(/^Confirm password/).fill('correct-horse-battery');
         await page.getByRole('button', { name: 'Create the account' }).click();
 
         /* -- 2. Business details -------------------------------------------- */

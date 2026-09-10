@@ -30,7 +30,13 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./tests/js/setup.ts'],
-        include: ['tests/js/**/*.test.ts'],
+        /*
+         * Two homes, on purpose. `tests/js/` holds the suites that cover a
+         * whole screen or a library control; a `__tests__` folder beside a
+         * page holds the spec for a component only that page owns, so the
+         * two travel together when the screen is rewritten.
+         */
+        include: ['tests/js/**/*.test.ts', 'resources/js/**/__tests__/**/*.spec.ts'],
         // The default reporter prints a line per file; `verbose` prints a line
         // per test, which is what makes a failure readable in a terminal that
         // has just run four other gates.

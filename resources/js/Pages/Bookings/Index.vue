@@ -8,6 +8,12 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import Tabs from '@/Components/ui/Tabs.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
+import {
+    BOOKING_STATUS_LABELS as STATUS_LABELS,
+    bookingStatusStruck as struck,
+    bookingStatusTone as toneFor,
+    bookingWhenLabel as whenLabel,
+} from '@/lib/bookingStatus';
 import type { Money, Paginated } from '@/types/models';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
@@ -63,15 +69,6 @@ const onSort = (next: { key: string; direction: 'asc' | 'desc' }) => {
     filters.sort = next.key;
     filters.direction = next.direction;
     visit({ sort: next.key, direction: next.direction, page: 1 });
-};
-
-const STATUS_LABELS: Record<string, string> = {
-    pending: 'Awaiting deposit',
-    confirmed: 'Confirmed',
-    cancelled: 'Cancelled',
-    declined: 'Declined',
-    completed: 'Completed',
-    no_show: 'No show',
 };
 
 /*
@@ -161,43 +158,6 @@ const rows = computed(() =>
         amount: booking.price_at_booking.amount,
     })),
 );
-
-/*
- * The filled pill, and the one place this screen spends its accent: awaiting a
- * deposit is the only state on the list that is waiting on somebody. Cancelled
- * and no-show recede rather than shout — a row that is already struck through
- * and dimmed does not also need a red box on it.
- */
-const toneFor = (status: string) => {
-    if (status === 'pending') return 'accent';
-    if (status === 'confirmed') return 'confirmed';
-    if (status === 'completed') return 'neutral';
-
-    return 'cancelled';
-};
-
-const struck = (status: string) => ['cancelled', 'declined', 'no_show'].includes(status);
-
-/*
- * "10 Mar 09:00" from "2026-03-10 09:00" — day before month, which is what the
- * redesign draws ("26 Sept 16:30") and what a product priced in £ and running on
- * Europe/London reads as a date. It was `toLocaleDateString(undefined, …)`, so
- * the order came from the *browser's* locale and a laptop set to en-US rendered
- * "Sep 16 15:30": the same nine characters in the order that means the 9th of
- * something in the other half of the column. A list sorted by date whose dates
- * are ambiguous is a list you cannot read down.
- *
- * `en-GB` is named rather than left to the browser for that reason. The clock is
- * already the tenant's, from the server; this is the same fact about the same
- * product and it should not change with who is looking at it.
- */
-const whenLabel = (value: string) => {
-    const date = new Date(`${value.replace(' ', 'T')}:00`);
-
-    return Number.isNaN(date.getTime())
-        ? value
-        : `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${value.slice(11)}`;
-};
 
 const rowLabel = (row: Record<string, unknown>) =>
     `Actions for ${row.customer_name}, ${whenLabel(String(row.starts_at_local))}`;

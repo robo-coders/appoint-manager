@@ -60,6 +60,46 @@ class UnconfiguredBillingGateway implements BillingGateway
         throw $this->missing();
     }
 
+    public function previewSwap(Tenant $tenant, string $interval): array
+    {
+        throw $this->missing();
+    }
+
+    public function swap(Tenant $tenant, string $interval): void
+    {
+        throw $this->missing();
+    }
+
+    public function cancelAtPeriodEnd(Tenant $tenant): void
+    {
+        throw $this->missing();
+    }
+
+    public function resumeCancellation(Tenant $tenant): void
+    {
+        throw $this->missing();
+    }
+
+    public function createSetupIntent(Tenant $tenant): string
+    {
+        throw $this->missing();
+    }
+
+    public function confirmPaymentMethod(Tenant $tenant, string $paymentMethodId): void
+    {
+        throw $this->missing();
+    }
+
+    public function refresh(Tenant $tenant): void
+    {
+        throw $this->missing();
+    }
+
+    public function paymentFailureCode(string $id): ?string
+    {
+        return null;
+    }
+
     private function missing(): PaymentsNotConfiguredException
     {
         return PaymentsNotConfiguredException::missing(

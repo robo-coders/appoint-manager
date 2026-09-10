@@ -8,6 +8,8 @@ const props = withDefaults(
     defineProps<{
         id?: string;
         label: string;
+        /** Visually hidden, still announced. See `ui/Field`. */
+        labelHidden?: boolean;
         rows?: number;
         error?: string;
         hint?: string;
@@ -15,7 +17,7 @@ const props = withDefaults(
         disabled?: boolean;
         required?: boolean;
     }>(),
-    { rows: 4, disabled: false, required: false },
+    { labelHidden: false, rows: 4, disabled: false, required: false },
 );
 
 const uid = useId();
@@ -23,7 +25,7 @@ const inputId = computed(() => props.id ?? uid);
 </script>
 
 <template>
-    <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
+    <Field :input-id="inputId" :label="label" :label-hidden="labelHidden" :error="error" :hint="hint" :required="required">
         <textarea
             :id="inputId"
             v-model="model"
@@ -33,7 +35,7 @@ const inputId = computed(() => props.id ?? uid);
             :required="required"
             :aria-invalid="error ? 'true' : undefined"
             :aria-describedby="error ? `${inputId}-error` : undefined"
-            class="block w-full rounded border bg-white px-pad-x py-2 text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
+            class="block max-h-96 w-full resize-y overflow-auto rounded border bg-white px-pad-x py-2 text-field text-ink transition duration-fast ease-product disabled:cursor-not-allowed disabled:text-ink-2"
             :class="error ? 'border-danger' : 'border-rule hover:border-rule-strong'"
         />
     </Field>

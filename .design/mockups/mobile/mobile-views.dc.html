@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"><style>*{box-sizing:border-box}body{margin:0;background:#F4F2EE;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#A85729;text-decoration:none}a:hover{color:#8C4720}button{font-family:inherit}</style><meta name="design_doc_mode" content="canvas"></helmet>
+<div style="padding:44px 48px 90px">
+
+<div style="display:flex;flex-direction:column;gap:8px;padding-bottom:22px;border-bottom:1px solid rgba(24,23,20,.12);margin-bottom:34px;max-width:640px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">Screen 05 · 390 px</div>
+<h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:32px;line-height:1.1;letter-spacing:-.015em">Operator app on mobile</h1>
+<p style="margin:6px 0 0;font-size:14px;line-height:1.6;color:rgba(24,23,20,.6)">Sidebar becomes a bottom tab bar. Tables become stacked cards with the time leading. Booking detail is full-screen with a sticky action bar.</p>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Bookings index</div>
+<div style="width:390px;height:780px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:16px 18px 12px;border-bottom:1px solid rgba(24,23,20,.09)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.015em">Bookings</h2>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5)">Tue 8 Sep</span>
+</div>
+<div style="display:flex;gap:16px;margin-top:14px">
+<span style="font-size:13px;font-weight:500;padding-bottom:7px;border-bottom:1.5px solid #A85729">Today</span>
+<span style="font-size:13px;color:rgba(24,23,20,.5);padding-bottom:7px">Week</span>
+<span style="font-size:13px;color:rgba(24,23,20,.5);padding-bottom:7px">Unconfirmed</span>
+</div>
+</div>
+<div style="flex:1;overflow:hidden;padding:6px 14px">
+<sc-for list="{{ bookings }}" as="b" hint-placeholder-count="6">
+<div style="padding:14px 4px;border-bottom:1px solid rgba(24,23,20,.08);display:flex;gap:14px;align-items:flex-start">
+<div style="width:56px;flex:none">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:17px;font-weight:500;letter-spacing:-.01em;color:{{ b.timeColor }}">{{ b.time }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.42);margin-top:2px">{{ b.dur }}</div>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.who }}</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.service }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:{{ b.stateColor }};margin-top:6px">{{ b.state }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;border-top:1px solid rgba(24,23,20,.12);padding:0 6px 22px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 0 0;border-top:1.5px solid {{ t.rule }};margin-top:-1px">
+<span style="color:{{ t.color }}">{{ t.icon }}</span>
+<span style="font-size:10px;color:{{ t.color }}">{{ t.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Waitlist index</div>
+<div style="width:390px;height:780px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:16px 18px 14px;border-bottom:1px solid rgba(24,23,20,.09)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.015em">Waitlist</h2>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5)">7 waiting</span>
+</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:8px">Texted in this order when a slot frees up</div>
+</div>
+<div style="flex:1;padding:6px 14px">
+<sc-for list="{{ waitlist }}" as="w" hint-placeholder-count="6">
+<div style="padding:14px 4px;border-bottom:1px solid rgba(24,23,20,.08);display:flex;gap:14px;align-items:flex-start">
+<div style="width:26px;flex:none;font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;color:rgba(24,23,20,.4)">{{ w.pos }}</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14px;font-weight:500">{{ w.who }}</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:3px">{{ w.wants }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:{{ w.color }};margin-top:6px">{{ w.note }}</div>
+</div>
+<button style="flex:none;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:11.5px;color:rgba(24,23,20,.65);padding:6px 10px;cursor:pointer">Offer</button>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;border-top:1px solid rgba(24,23,20,.12);padding:0 6px 22px">
+<sc-for list="{{ tabsWait }}" as="t" hint-placeholder-count="5">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 0 0;border-top:1.5px solid {{ t.rule }};margin-top:-1px">
+<span style="color:{{ t.color }}">{{ t.icon }}</span>
+<span style="font-size:10px;color:{{ t.color }}">{{ t.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Overview + beta strip</div>
+<div style="width:390px;height:780px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid rgba(24,23,20,.12)">
+<span style="width:5px;height:5px;border-radius:50%;background:#A85729;flex:none"></span>
+<span style="flex:1;font-size:11.5px;color:rgba(24,23,20,.6)">Beta · SMS auto-fill is free until 1 Nov</span>
+<button style="flex:none;border:none;background:transparent;padding:0;cursor:pointer;color:rgba(24,23,20,.4);font-size:14px;line-height:1">×</button>
+</div>
+<div style="padding:16px 18px 12px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.015em">Tuesday</h2>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5);margin-top:4px">8 Sep · Erin and 1 other in</div>
+</div>
+<div style="flex:1;padding:0 14px;display:flex;flex-direction:column;gap:10px">
+<div style="border:1px solid rgba(24,23,20,.12);border-radius:6px;padding:16px">
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-bottom:8px">Booked today</div>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;letter-spacing:-.02em">7</span><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.5)">of 9 slots</span></div>
+</div>
+<div style="border:1px solid rgba(24,23,20,.12);border-radius:6px;padding:16px">
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-bottom:8px">Deposits taken this week</div>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;letter-spacing:-.02em">£180.00</span></div>
+</div>
+<div style="border:1px solid rgba(24,23,20,.12);border-radius:6px;padding:16px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px">
+<span style="font-size:12.5px;color:rgba(24,23,20,.55)">No-shows · 14 days</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:rgba(24,23,20,.5)">+1 vs prior</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;letter-spacing:-.02em">3</span><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.5)">this week</span></div>
+<svg width="100%" height="56" viewBox="0 0 300 56" preserveAspectRatio="none" fill="none"><polyline points="8,48 29.8,34.7 51.7,48 73.5,48 95.4,21.3 117.2,48 139.1,34.7 160.9,48 182.8,48 204.6,8 226.5,48 248.3,34.7 270.2,48 292,34.7" stroke="#181714" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline><circle cx="292" cy="34.7" r="3" fill="#A85729"></circle></svg>
+</div>
+<div style="border:1px solid rgba(24,23,20,.12);border-radius:6px;padding:16px">
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-bottom:8px">Waitlist auto-fills</div>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;letter-spacing:-.02em">4</span><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.5)">of 5 offered</span></div>
+</div>
+</div>
+<div style="display:flex;border-top:1px solid rgba(24,23,20,.12);padding:0 6px 22px">
+<sc-for list="{{ tabsOverview }}" as="t" hint-placeholder-count="5">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 0 0;border-top:1.5px solid {{ t.rule }};margin-top:-1px">
+<span style="color:{{ t.color }}">{{ t.icon }}</span>
+<span style="font-size:10px;color:{{ t.color }}">{{ t.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Booking detail</div>
+<div style="width:390px;height:780px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(24,23,20,.09)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#181714" stroke-width="1.5"><path d="M9.5 3 4.5 8l5 5"></path></svg>
+<span style="font-size:13.5px;color:rgba(24,23,20,.6)">Tue 8 Sep</span>
+</div>
+<div style="flex:1;padding:22px 18px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:34px;letter-spacing:-.02em;line-height:1">11:15</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.55);margin-top:6px">90 min · ends 12:45</div>
+<h2 style="margin:22px 0 4px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:23px;letter-spacing:-.012em">Claire Donnelly</h2>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.6)">07700 900114</div>
+<div style="margin-top:26px;border-top:1px solid rgba(24,23,20,.1)">
+<sc-for list="{{ detailRows }}" as="r" hint-placeholder-count="6">
+<div style="display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid rgba(24,23,20,.08)">
+<span style="font-size:13px;color:rgba(24,23,20,.55)">{{ r.k }}</span>
+<span style="font-size:13px;font-weight:500;font-family:{{ r.font }};text-align:right">{{ r.v }}</span>
+</div>
+</sc-for>
+</div>
+<div style="margin-top:22px;font-size:12.5px;line-height:1.6;color:rgba(24,23,20,.6)">Notes · Nala is nervous with the dryer. Muzzle not needed, works better with the room quiet.</div>
+</div>
+<div style="border-top:1px solid rgba(24,23,20,.12);padding:12px 14px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:#FCFBF9">
+<button style="border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:12.5px;color:#181714;padding:12px 4px;cursor:pointer">Cancel</button>
+<button style="border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:12.5px;color:#181714;padding:12px 4px;cursor:pointer">Reschedule</button>
+<button style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500;padding:12px 4px;cursor:pointer">Mark no-show</button>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Staff index</div>
+<div style="width:390px;height:780px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:16px 18px 14px;border-bottom:1px solid rgba(24,23,20,.09);display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:24px;letter-spacing:-.015em">Staff</h2>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5)">2 of 3 seats</span>
+</div>
+<div style="flex:1;padding:6px 14px">
+<sc-for list="{{ staff }}" as="s" hint-placeholder-count="3">
+<div style="padding:16px 4px;border-bottom:1px solid rgba(24,23,20,.08)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<span style="font-size:15px;font-weight:500">{{ s.name }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5)">{{ s.today }}</span>
+</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:4px">{{ s.role }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:rgba(24,23,20,.45);margin-top:7px">{{ s.hours }}</div>
+</div>
+</sc-for>
+<button style="width:100%;margin-top:16px;border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:13px;color:#181714;padding:12px;cursor:pointer">Invite a staff member</button>
+</div>
+<div style="display:flex;border-top:1px solid rgba(24,23,20,.12);padding:0 6px 22px">
+<sc-for list="{{ tabsStaff }}" as="t" hint-placeholder-count="5">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 0 0;border-top:1.5px solid {{ t.rule }};margin-top:-1px">
+<span style="color:{{ t.color }}">{{ t.icon }}</span>
+<span style="font-size:10px;color:{{ t.color }}">{{ t.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;width:390px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5)">Tab bar · states</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;padding:18px 16px;display:flex;flex-direction:column;gap:22px">
+<sc-for list="{{ tabBars }}" as="tb" hint-placeholder-count="3">
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.45);margin-bottom:8px">{{ tb.label }}</div>
+<div style="display:flex;border-top:1px solid rgba(24,23,20,.12)">
+<sc-for list="{{ tb.items }}" as="t" hint-placeholder-count="5">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 0 8px;border-top:1.5px solid {{ t.rule }};margin-top:-1px">
+<span style="color:{{ t.color }}">{{ t.icon }}</span>
+<span style="font-size:10px;color:{{ t.color }}">{{ t.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="font-size:12.5px;line-height:1.6;color:rgba(24,23,20,.6);border-top:1px solid rgba(24,23,20,.1);padding-top:16px">Five destinations, no hamburger. The active tab is marked by a 1.5px terracotta rule on the bar's top edge; everything else in the bar stays monochrome.</div>
+</div>
+
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.5);margin-top:12px">Beta strip · dismiss</div>
+<div style="background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid rgba(24,23,20,.12)">
+<span style="width:5px;height:5px;border-radius:50%;background:#A85729;flex:none"></span>
+<span style="flex:1;font-size:11.5px;color:rgba(24,23,20,.6)">Beta · SMS auto-fill is free until 1 Nov</span>
+<button style="flex:none;border:none;background:transparent;padding:0;cursor:pointer;color:rgba(24,23,20,.4);font-size:14px;line-height:1">×</button>
+</div>
+<div style="padding:16px 14px 22px">
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:22px;letter-spacing:-.012em">Tuesday</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:6px">32 px tall, one line, never wraps — the first metric card still starts above the fold.</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  icon(name, color) {
+    const p = { fill: 'none', stroke: color, strokeWidth: 1.5, strokeLinecap: 'round' };
+    const paths = {
+      diary: [React.createElement('rect', { key: 'r', x: '1.75', y: '3.75', width: '16.5', height: '14.5', rx: '3' }), React.createElement('path', { key: 'p', d: 'M1.75 8.25h16.5M6.5 3.75V1.5M13.5 3.75V1.5' })],
+      wait: [React.createElement('path', { key: 'p', d: 'M2 5h11M2 10h11M2 15h7' }), React.createElement('path', { key: 'a', d: 'M15.5 15h3M16.5 12.5 19 15l-2.5 2.5' })],
+      chart: [React.createElement('path', { key: 'p', d: 'M2 15l4-5 4 3 5-8' }), React.createElement('path', { key: 'b', d: 'M2 18h16' })],
+      staff: [React.createElement('rect', { key: 'a', x: '2', y: '6', width: '6', height: '12', rx: '2' }), React.createElement('rect', { key: 'b', x: '11', y: '10', width: '6', height: '8', rx: '2' })],
+      more: [React.createElement('path', { key: 'p', d: 'M3 6h14M3 10h14M3 14h9' })]
+    };
+    return React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 20 20', ...p }, paths[name]);
+  }
+
+  bar(active) {
+    const defs = [['diary', 'Bookings'], ['wait', 'Waitlist'], ['chart', 'Overview'], ['staff', 'Staff'], ['more', 'More']];
+    return defs.map(([key, label]) => {
+      const on = key === active;
+      const color = on ? '#181714' : 'rgba(24,23,20,.42)';
+      return { label, color, rule: on ? '#A85729' : 'transparent', icon: this.icon(key, color) };
+    });
+  }
+
+  renderVals() {
+    const mono = "'Geist Mono',ui-monospace,monospace";
+    return {
+      tabs: this.bar('diary'), tabsWait: this.bar('wait'), tabsOverview: this.bar('chart'), tabsStaff: this.bar('staff'),
+      tabBars: [
+        { label: 'Bookings active', items: this.bar('diary') },
+        { label: 'Waitlist active', items: this.bar('wait') },
+        { label: 'Overview active', items: this.bar('chart') }
+      ],
+      bookings: [
+        ['09:30', '90m', 'Claire Donnelly', 'Full groom — medium coat', 'Deposit paid', 'rgba(24,23,20,.5)'],
+        ['11:15', '90m', 'Ross Kinnear', 'Full groom — double coat', 'Deposit paid', 'rgba(24,23,20,.5)'],
+        ['13:00', '45m', 'Amrit Sandhu', 'Bath and tidy', 'Auto-filled from waitlist', '#A85729'],
+        ['14:45', '90m', 'Hazel Muir', 'Full groom — medium coat', 'Awaiting deposit · holds 20 min', '#A85729'],
+        ['16:30', '30m', 'Steven Boyle', 'Nail clip', 'Deposit paid', 'rgba(24,23,20,.5)'],
+        ['17:15', '45m', 'Nicola Frame', 'Bath and tidy', 'Paid in full', 'rgba(24,23,20,.5)']
+      ].map(([time, dur, who, service, state, stateColor]) => ({ time, dur, who, service, state, stateColor, timeColor: '#181714' })),
+      waitlist: [
+        ['1', 'Fiona Weir', 'Full groom · any weekday', 'Waiting 3 days · replies fast', 'rgba(24,23,20,.5)'],
+        ['2', 'Danny Ogilvie', 'Bath and tidy · Sat only', 'Texted 11:04 · no reply yet', '#A85729'],
+        ['3', 'Priya Menon', 'Full groom · mornings', 'Waiting 5 days', 'rgba(24,23,20,.5)'],
+        ['4', 'Gordon Rae', 'Nail clip · any time', 'Waiting 6 days', 'rgba(24,23,20,.5)'],
+        ['5', 'Lesley Aitken', 'Full groom · Thu or Fri', 'Waiting 8 days', 'rgba(24,23,20,.5)'],
+        ['6', 'Cameron Pugh', 'Bath and tidy · afternoons', 'Waiting 9 days', 'rgba(24,23,20,.5)']
+      ].map(([pos, who, wants, note, color]) => ({ pos, who, wants, note, color })),
+      detailRows: [
+        ['Service', 'Full groom — double coat', 'Geist'],
+        ['With', 'Erin MacKay', 'Geist'],
+        ['Subject', 'Bruce · collie cross', 'Geist'],
+        ['Deposit', '£10.00 paid 27 Aug', mono],
+        ['Balance due', '£38.00', mono],
+        ['Visits to date', '6', mono]
+      ].map(([k, v, font]) => ({ k, v, font })),
+      staff: [
+        ['Erin MacKay', 'Owner · full access', 'Tue 09:00 – 19:00', '5 today'],
+        ['Sam Doherty', 'Groomer · own diary only', 'Tue 10:00 – 16:00', '2 today'],
+        ['Seat 3', 'Not invited yet', '—', 'free']
+      ].map(([name, role, hours, today]) => ({ name, role, hours, today }))
+    };
+  }
+}
+</script>
+</body>
+</html>

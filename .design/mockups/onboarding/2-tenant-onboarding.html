@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"><style>*{box-sizing:border-box}body{margin:0;background:#FCFBF9;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#A85729;text-decoration:none}a:hover{color:#8C4720}input,select,textarea,button{font-family:inherit}</style></helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+
+<div style="display:flex;gap:4px;padding:0">
+<div style="height:3px;flex:1;background:{{ seg1 }}"></div>
+<div style="height:3px;flex:1;background:{{ seg2 }}"></div>
+<div style="height:3px;flex:1;background:{{ seg3 }}"></div>
+<div style="height:3px;flex:1;background:{{ seg4 }}"></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 40px 0">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">DiaryDesk setup · {{ stepLabel }}</div>
+<a href="#" onClick="{{ skip }}" style="font-size:13px;color:rgba(24,23,20,.5);border-bottom:1px solid rgba(24,23,20,.18);visibility:{{ skipVis }}" style-hover="color:#181714">Skip for now</a>
+</div>
+
+<div style="flex:1;padding:52px 40px 88px;max-width:760px;width:100%;margin:0 auto">
+
+<sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ true }}">
+<div>
+<h1 style="margin:0 0 10px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:38px;line-height:1.08;letter-spacing:-.02em">Tell us about the business</h1>
+<p style="margin:0 0 42px;font-size:14.5px;line-height:1.6;color:rgba(24,23,20,.62);max-width:52ch">This sets your booking page name and the default working week. You can change both later in Settings.</p>
+
+<label style="display:block;font-size:12.5px;font-weight:500;letter-spacing:.01em;color:rgba(24,23,20,.7);margin-bottom:8px">Business name</label>
+<input value="Paws &amp; Whiskers Grooming" style="width:100%;max-width:420px;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-size:14.5px;color:#181714;outline:none;margin-bottom:14px" style-focus="border-color:#A85729">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.5);margin-bottom:40px">book.diarydesk.com/paws-and-whiskers</div>
+
+<div style="font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:12px">What kind of appointments do you take?</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:44px">
+<sc-for list="{{ verticals }}" as="v" hint-placeholder-count="6">
+<button onClick="{{ v.pick }}" style="text-align:left;border:1px solid {{ v.border }};border-radius:6px;background:{{ v.bg }};padding:14px 15px;cursor:pointer;display:flex;flex-direction:column;gap:5px">
+<span style="font-size:14px;font-weight:500;color:#181714">{{ v.name }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.5)">{{ v.note }}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:4px">Opening hours</div>
+<div style="border-top:1px solid rgba(24,23,20,.1)">
+<sc-for list="{{ hours }}" as="h" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:16px;padding:11px 2px;border-bottom:1px solid rgba(24,23,20,.08)">
+<span style="font-size:13.5px;color:{{ h.dayColor }}">{{ h.day }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:{{ h.timeColor }}">{{ h.time }}</span>
+<button onClick="{{ h.toggle }}" style="border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;font-size:12px;color:rgba(24,23,20,.6);padding:5px 10px;cursor:pointer" style-hover="border-color:rgba(24,23,20,.4);color:#181714">{{ h.action }}</button>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ false }}">
+<div>
+<h1 style="margin:0 0 10px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:38px;line-height:1.08;letter-spacing:-.02em">Add your first service</h1>
+<p style="margin:0 0 42px;font-size:14.5px;line-height:1.6;color:rgba(24,23,20,.62);max-width:52ch">The deposit is taken when the customer books and comes off the balance on the day.</p>
+
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:56px;align-items:start">
+<div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Service name</label>
+<input value="Full groom — medium coat" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-size:14.5px;color:#181714;outline:none;margin-bottom:26px" style-focus="border-color:#A85729">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:26px">
+<div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Duration</label>
+<input value="90 min" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;color:#181714;outline:none" style-focus="border-color:#A85729">
+</div>
+<div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Price</label>
+<input value="£42.00" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;color:#181714;outline:none" style-focus="border-color:#A85729">
+</div>
+</div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Deposit taken at booking</label>
+<input value="£10.00" style="width:140px;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;color:#181714;outline:none;margin-bottom:10px" style-focus="border-color:#A85729">
+<div style="font-size:12.5px;line-height:1.6;color:rgba(24,23,20,.55);max-width:44ch">Deposits are the single biggest lever on no-shows. £10 is a common starting point for a 90 minute slot.</div>
+</div>
+
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:12px">What the customer sees</div>
+<div style="border:1px solid rgba(24,23,20,.14);border-radius:6px;padding:18px">
+<div style="font-family:'Inter Tight',sans-serif;font-weight:300;font-size:20px;line-height:1.2;margin-bottom:8px">Full groom — medium coat</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.6);margin-bottom:18px">90 min</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;padding-top:14px;border-top:1px solid rgba(24,23,20,.1)">
+<span style="font-size:13px;color:rgba(24,23,20,.6)">Total</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:19px">£42.00</span>
+</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:8px">
+<span style="font-size:13px;color:rgba(24,23,20,.6)">Pay now to hold the slot</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:#A85729">£10.00</span>
+</div>
+<div style="margin-top:18px;border-radius:6px;background:rgba(24,23,20,.05);text-align:center;font-size:13px;font-weight:500;padding:10px">Choose a time</div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep3 }}" hint-placeholder-val="{{ false }}">
+<div>
+<h1 style="margin:0 0 10px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:38px;line-height:1.08;letter-spacing:-.02em">Anyone else taking appointments?</h1>
+<p style="margin:0 0 42px;font-size:14.5px;line-height:1.6;color:rgba(24,23,20,.62);max-width:52ch">Each person gets their own hours and their own column in Bookings. Skip this if you work alone — you can add people any time.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:520px;margin-bottom:26px">
+<div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Full name</label>
+<input placeholder="e.g. Erin MacKay" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-size:14.5px;color:#181714;outline:none" style-focus="border-color:#A85729">
+</div>
+<div>
+<label style="display:block;font-size:12.5px;font-weight:500;color:rgba(24,23,20,.7);margin-bottom:8px">Work email for the invite</label>
+<input placeholder="erin@" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 13px;font-size:14.5px;color:#181714;outline:none" style-focus="border-color:#A85729">
+</div>
+</div>
+<div style="border-top:1px solid rgba(24,23,20,.1);max-width:520px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 2px;border-bottom:1px solid rgba(24,23,20,.08)">
+<div>
+<div style="font-size:14px;font-weight:500">Can see every customer's contact details</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:3px">Off means they only see subjects booked to them</div>
+</div>
+<button onClick="{{ togglePerm }}" style="flex:none;width:40px;height:22px;border-radius:6px;border:1px solid {{ permBorder }};background:{{ permBg }};cursor:pointer;position:relative">
+<span style="position:absolute;top:3px;left:{{ permLeft }};width:14px;height:14px;border-radius:4px;background:{{ permKnob }}"></span>
+</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep4 }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#A85729;margin-bottom:14px">Live now</div>
+<h1 style="margin:0 0 10px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:38px;line-height:1.08;letter-spacing:-.02em">Share your booking link</h1>
+<p style="margin:0 0 38px;font-size:14.5px;line-height:1.6;color:rgba(24,23,20,.62);max-width:52ch">Put this in your Instagram bio and reply to enquiries with it. Every booking made through it takes the deposit and appears in your diary straight away.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start;margin-bottom:44px">
+<div style="min-width:320px;flex:1">
+<div style="display:flex;align-items:center;gap:10px;border:1px solid rgba(24,23,20,.16);border-radius:6px;padding:12px 14px">
+<span style="flex:1;font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">book.diarydesk.com/paws-and-whiskers</span>
+<button onClick="{{ copy }}" style="flex:none;border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500;padding:7px 13px;cursor:pointer" style-hover="background:#8C4720">{{ copyLabel }}</button>
+</div>
+<div style="font-size:13px;line-height:1.6;color:rgba(24,23,20,.55);margin-top:14px;max-width:46ch">Next: your first customer books, you get a text, and the slot is held. Nothing else to switch on.</div>
+</div>
+<div>
+<div style="border:1px solid rgba(24,23,20,.14);border-radius:6px;padding:14px">
+<svg width="132" height="132" viewBox="0 0 33 33" shape-rendering="crispEdges"><rect width="33" height="33" fill="#FCFBF9"></rect><g fill="#181714"><rect x="1" y="1" width="7" height="7"></rect><rect x="25" y="1" width="7" height="7"></rect><rect x="1" y="25" width="7" height="7"></rect></g><g fill="#FCFBF9"><rect x="2" y="2" width="5" height="5"></rect><rect x="26" y="2" width="5" height="5"></rect><rect x="2" y="26" width="5" height="5"></rect></g><g fill="#181714"><rect x="3" y="3" width="3" height="3"></rect><rect x="27" y="3" width="3" height="3"></rect><rect x="3" y="27" width="3" height="3"></rect><rect x="10" y="1" width="1" height="1"></rect><rect x="12" y="1" width="2" height="1"></rect><rect x="16" y="1" width="1" height="1"></rect><rect x="19" y="2" width="1" height="2"></rect><rect x="10" y="3" width="2" height="1"></rect><rect x="14" y="3" width="1" height="2"></rect><rect x="17" y="4" width="2" height="1"></rect><rect x="11" y="5" width="1" height="2"></rect><rect x="13" y="6" width="2" height="1"></rect><rect x="16" y="5" width="1" height="3"></rect><rect x="20" y="6" width="1" height="1"></rect><rect x="1" y="10" width="1" height="1"></rect><rect x="3" y="10" width="2" height="1"></rect><rect x="6" y="11" width="1" height="2"></rect><rect x="2" y="12" width="1" height="1"></rect><rect x="4" y="13" width="2" height="1"></rect><rect x="1" y="15" width="1" height="2"></rect><rect x="5" y="16" width="1" height="1"></rect><rect x="3" y="17" width="1" height="2"></rect><rect x="9" y="9" width="2" height="2"></rect><rect x="13" y="9" width="1" height="1"></rect><rect x="15" y="10" width="2" height="1"></rect><rect x="18" y="9" width="1" height="2"></rect><rect x="21" y="10" width="1" height="1"></rect><rect x="24" y="9" width="1" height="1"></rect><rect x="27" y="10" width="2" height="1"></rect><rect x="30" y="9" width="1" height="2"></rect><rect x="11" y="12" width="1" height="2"></rect><rect x="14" y="13" width="2" height="1"></rect><rect x="17" y="12" width="1" height="1"></rect><rect x="20" y="13" width="1" height="2"></rect><rect x="23" y="12" width="2" height="1"></rect><rect x="26" y="13" width="1" height="1"></rect><rect x="29" y="12" width="1" height="2"></rect><rect x="9" y="15" width="1" height="1"></rect><rect x="12" y="16" width="2" height="1"></rect><rect x="15" y="15" width="1" height="2"></rect><rect x="18" y="16" width="1" height="1"></rect><rect x="21" y="15" width="2" height="1"></rect><rect x="25" y="16" width="1" height="2"></rect><rect x="28" y="15" width="1" height="1"></rect><rect x="31" y="16" width="1" height="1"></rect><rect x="10" y="18" width="2" height="1"></rect><rect x="13" y="19" width="1" height="1"></rect><rect x="16" y="18" width="1" height="2"></rect><rect x="19" y="19" width="2" height="1"></rect><rect x="22" y="18" width="1" height="1"></rect><rect x="24" y="19" width="1" height="2"></rect><rect x="27" y="18" width="2" height="1"></rect><rect x="30" y="19" width="1" height="1"></rect><rect x="9" y="21" width="1" height="2"></rect><rect x="12" y="22" width="1" height="1"></rect><rect x="14" y="21" width="2" height="1"></rect><rect x="17" y="22" width="1" height="2"></rect><rect x="20" y="21" width="1" height="1"></rect><rect x="23" y="22" width="2" height="1"></rect><rect x="26" y="21" width="1" height="2"></rect><rect x="29" y="22" width="1" height="1"></rect><rect x="10" y="25" width="1" height="1"></rect><rect x="13" y="25" width="2" height="1"></rect><rect x="16" y="26" width="1" height="1"></rect><rect x="19" y="25" width="1" height="2"></rect><rect x="22" y="26" width="2" height="1"></rect><rect x="25" y="25" width="1" height="1"></rect><rect x="28" y="26" width="1" height="2"></rect><rect x="31" y="25" width="1" height="1"></rect><rect x="11" y="28" width="2" height="1"></rect><rect x="14" y="29" width="1" height="2"></rect><rect x="17" y="28" width="1" height="1"></rect><rect x="20" y="29" width="2" height="1"></rect><rect x="23" y="28" width="1" height="2"></rect><rect x="26" y="29" width="1" height="1"></rect><rect x="29" y="28" width="2" height="1"></rect><rect x="10" y="31" width="1" height="1"></rect><rect x="13" y="31" width="1" height="1"></rect><rect x="16" y="31" width="2" height="1"></rect><rect x="21" y="31" width="1" height="1"></rect><rect x="24" y="31" width="2" height="1"></rect><rect x="28" y="31" width="1" height="1"></rect><rect x="31" y="31" width="1" height="1"></rect></g></svg>
+</div>
+<div style="font-size:12px;color:rgba(24,23,20,.5);margin-top:10px;text-align:center">Print for the shop window</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<div style="border-top:1px solid rgba(24,23,20,.1);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;gap:20px;position:sticky;bottom:0;background:#FCFBF9">
+<button onClick="{{ back }}" style="border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;font-size:13.5px;color:rgba(24,23,20,.65);padding:10px 16px;cursor:pointer;visibility:{{ backVis }}" style-hover="border-color:rgba(24,23,20,.4);color:#181714">Back</button>
+<div style="display:flex;align-items:center;gap:20px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:rgba(24,23,20,.45)">{{ stepCount }}</span>
+<button onClick="{{ next }}" style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:13.5px;font-weight:500;padding:11px 20px;cursor:pointer" style-hover="background:#8C4720">{{ nextLabel }}</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  state = { step: 1, vertical: 'Dog Grooming', copied: false, perm: true, closed: { Sun: true } };
+
+  renderVals() {
+    const s = this.state.step;
+    const fill = n => (n <= s ? '#A85729' : 'rgba(24,23,20,.12)');
+    const verts = [
+      ['Dog Grooming', 'subjects · per-visit'],
+      ['Barber', 'no subjects'],
+      ['Dentist', 'patient records'],
+      ['Tattoo Artist', 'multi-session'],
+      ['Driving Instructor', 'travel time'],
+      ['Other', 'configure later']
+    ];
+    const days = [['Mon', '09:00 – 17:00'], ['Tue', '09:00 – 17:00'], ['Wed', '09:00 – 17:00'], ['Thu', '09:00 – 19:00'], ['Fri', '09:00 – 17:00'], ['Sat', '10:00 – 15:00'], ['Sun', '11:00 – 15:00']];
+    const labels = { 1: 'Business basics', 2: 'First service', 3: 'Staff', 4: 'Booking link' };
+    const nexts = { 1: 'Continue to services', 2: 'Continue to staff', 3: 'Continue to your link', 4: 'Go to my diary' };
+    return {
+      seg1: fill(1), seg2: fill(2), seg3: fill(3), seg4: fill(4),
+      isStep1: s === 1, isStep2: s === 2, isStep3: s === 3, isStep4: s === 4,
+      stepLabel: labels[s], stepCount: 'Step ' + s + ' of 4', nextLabel: nexts[s],
+      backVis: s === 1 ? 'hidden' : 'visible',
+      skipVis: s === 3 ? 'visible' : 'hidden',
+      next: () => this.setState({ step: Math.min(4, s + 1) }),
+      back: () => this.setState({ step: Math.max(1, s - 1) }),
+      skip: e => { e.preventDefault(); this.setState({ step: Math.min(4, s + 1) }); },
+      copyLabel: this.state.copied ? 'Copied' : 'Copy',
+      copy: () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600); },
+      togglePerm: () => this.setState({ perm: !this.state.perm }),
+      permBg: this.state.perm ? '#A85729' : 'transparent',
+      permBorder: this.state.perm ? '#A85729' : 'rgba(24,23,20,.22)',
+      permKnob: this.state.perm ? '#FCFBF9' : 'rgba(24,23,20,.35)',
+      permLeft: this.state.perm ? '20px' : '3px',
+      verticals: verts.map(([name, note]) => {
+        const on = this.state.vertical === name;
+        return { name, note, border: on ? '#A85729' : 'rgba(24,23,20,.14)', bg: on ? 'rgba(168,87,41,.06)' : 'transparent', pick: () => this.setState({ vertical: name }) };
+      }),
+      hours: days.map(([day, time]) => {
+        const shut = !!this.state.closed[day];
+        return {
+          day, time: shut ? 'Closed' : time,
+          dayColor: shut ? 'rgba(24,23,20,.4)' : '#181714',
+          timeColor: shut ? 'rgba(24,23,20,.4)' : 'rgba(24,23,20,.75)',
+          action: shut ? 'Open' : 'Close',
+          toggle: () => this.setState(st => ({ closed: Object.assign({}, st.closed, { [day]: !shut }) }))
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

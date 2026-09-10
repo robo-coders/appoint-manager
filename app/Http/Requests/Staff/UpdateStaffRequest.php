@@ -33,6 +33,7 @@ class UpdateStaffRequest extends FormRequest
             ],
             'colour' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'is_bookable' => ['sometimes', 'boolean'],
+            'can_see_customer_contacts' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

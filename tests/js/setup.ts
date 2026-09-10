@@ -1,5 +1,6 @@
 import { config } from '@vue/test-utils';
 import { vi } from 'vitest';
+import { reactive } from 'vue';
 
 /**
  * The three globals a page component expects to exist, and nothing else.
@@ -47,6 +48,18 @@ const routeStub = (name: string, params?: unknown): string => {
 
 (globalThis as unknown as { route: typeof routeStub }).route = routeStub;
 
+/*
+ * And on the component instance, which is where a *template* looks.
+ *
+ * `route()` in a `<script>` block resolves to the global above; the same call
+ * in a template compiles to `_ctx.route` and finds nothing, so a page with
+ * `:href="route('login')"` in it died on mount with "route is not a function"
+ * and no test could reach it. `resources/js/app.ts` registers both — a global
+ * property and an injection — so this registers both too.
+ */
+config.global.mocks = { route: routeStub };
+config.global.provide = { route: routeStub };
+
 // ---------------------------------------------------------------------------
 // Inertia
 // ---------------------------------------------------------------------------
@@ -66,7 +79,70 @@ export const router = {
     put: vi.fn(),
     delete: vi.fn(),
     visit: vi.fn(),
+    on: vi.fn(() => () => {}),
 };
+
+/**
+ * Every form `useForm` has handed out this test, in creation order.
+ *
+ * A page's form is internal to it — `<script setup>` exposes nothing — so
+ * without this a test can fill in fields and click things but can never say
+ * "and now the server rejects it", which is the half of a form that has the
+ * bugs in it. `forms[0].setError(...)` is a test standing in for a 422.
+ */
+export const forms: FormStub[] = [];
+
+type FormStub = Record<string, unknown> & {
+    errors: Record<string, string>;
+    processing: boolean;
+    hasErrors: boolean;
+    setError: (field: string, message: string) => void;
+    clearErrors: (...fields: string[]) => void;
+    post: ReturnType<typeof vi.fn>;
+    patch: ReturnType<typeof vi.fn>;
+    put: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+};
+
+/*
+ * Reactive, and with `setError`/`clearErrors` that actually do something.
+ *
+ * The stub used to be a plain object literal, which meant two things silently:
+ * a component that set an error re-rendered nothing, and `setError` was not
+ * defined at all — so a page doing its own client-side validation could not be
+ * tested, and the failure looked like "is not a function" rather than like a
+ * missing stub.
+ */
+const makeForm = (initial: Record<string, unknown>): FormStub => {
+    const form = reactive({
+        ...initial,
+        errors: {} as Record<string, string>,
+        processing: false,
+        isDirty: false,
+        recentlySuccessful: false,
+        hasErrors: false,
+        post: vi.fn(),
+        patch: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        reset: vi.fn(),
+        setError: (field: string, message: string) => {
+            form.errors[field] = message;
+            form.hasErrors = true;
+        },
+        clearErrors: (...fields: string[]) => {
+            const keys = fields.length ? fields : Object.keys(form.errors);
+            keys.forEach((key) => delete form.errors[key]);
+            form.hasErrors = Object.keys(form.errors).length > 0;
+        },
+    }) as FormStub;
+
+    forms.push(form);
+
+    return form;
+};
+
+export const resetForms = () => forms.splice(0, forms.length);
 
 vi.mock('@inertiajs/vue3', () => ({
     usePage: () => ({ props: pageProps, url: (pageProps.__url as string) ?? '/' }),
@@ -77,19 +153,7 @@ vi.mock('@inertiajs/vue3', () => ({
         props: { href: { type: String, default: '#' }, method: String, as: String },
         template: '<a :href="href"><slot /></a>',
     },
-    useForm: (initial: Record<string, unknown>) => ({
-        ...initial,
-        errors: {} as Record<string, string>,
-        processing: false,
-        isDirty: false,
-        recentlySuccessful: false,
-        post: vi.fn(),
-        patch: vi.fn(),
-        put: vi.fn(),
-        delete: vi.fn(),
-        reset: vi.fn(),
-        clearErrors: vi.fn(),
-    }),
+    useForm: (initial: Record<string, unknown>) => makeForm(initial),
 }));
 
 // ---------------------------------------------------------------------------

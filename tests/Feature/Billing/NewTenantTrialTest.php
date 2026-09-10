@@ -53,6 +53,18 @@ it('registers, onboards, reaches the dashboard and can write', function () {
     $owner = User::withoutGlobalScopes()->where('email', 'maya@willowstreet.example')->firstOrFail();
     $this->assertAuthenticatedAs($owner);
 
+    $this->patch(route('onboarding.basics'), [
+        'name' => 'Willow Street Grooming',
+        'slug' => $tenant->slug,
+        'type' => 'groomer',
+        'hours' => collect(range(1, 7))->map(fn (int $day) => [
+            'weekday' => $day,
+            'open' => $day === 2,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ])->all(),
+    ])->assertRedirect(route('onboarding.show', ['step' => 'business']));
+
     $this->patch(route('onboarding.business'), [
         'timezone' => 'Europe/London',
         'phone' => '020 7946 0123',
@@ -62,19 +74,18 @@ it('registers, onboards, reaches the dashboard and can write', function () {
     ])->assertRedirect(route('onboarding.show', ['step' => 'services']));
 
     $this->patch(route('onboarding.services'), [
-        'services' => [
-            ['name' => 'Full groom', 'duration_minutes' => 90, 'price' => 3500, 'deposit_amount' => 1000],
-        ],
+        'name' => 'Full groom',
+        'duration_minutes' => 90,
+        'price' => 3500,
+        'deposit_amount' => 1000,
     ])->assertRedirect(route('onboarding.show', ['step' => 'staff']));
 
     $this->patch(route('onboarding.staff'), [
-        'staff' => [['name' => 'Jordan Blake', 'email' => 'jordan@willowstreet.example']],
-    ])->assertRedirect(route('onboarding.show', ['step' => 'hours']));
+        'staff' => ['name' => 'Jordan Blake', 'email' => 'jordan@willowstreet.example'],
+    ])->assertRedirect(route('onboarding.show', ['step' => 'link']));
 
-    $this->patch(route('onboarding.hours'), [
-        'rules' => [
-            ['user_id' => $owner->id, 'weekday' => 2, 'start_time' => '09:00', 'end_time' => '17:00'],
-        ],
+    $this->post(route('onboarding.complete'), [
+        'slug' => $tenant->slug,
     ])->assertRedirect(route('diary.index'));
 
     $this->get(route('dashboard'))->assertOk();

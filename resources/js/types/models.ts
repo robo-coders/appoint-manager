@@ -41,6 +41,11 @@ export interface StaffRecord {
     role: UserRole;
     is_bookable: boolean;
     is_active: boolean;
+    /**
+     * Whether this person may read customers' phone numbers and email
+     * addresses. Always true for an owner. See `App\Support\ContactVisibility`.
+     */
+    can_see_customer_contacts: boolean;
     colour: string | null;
 }
 

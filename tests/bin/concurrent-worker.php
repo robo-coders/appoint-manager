@@ -5,6 +5,7 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Billing\InvoiceNumber;
 use App\Services\Booking\BookingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Console\Kernel;
@@ -57,6 +58,7 @@ try {
     $result = match ($job['type'] ?? '') {
         'book' => workerBook($job),
         'http' => workerHttp($app, $job),
+        'invoice_number' => workerInvoiceNumber($job),
         default => throw new RuntimeException('unknown job type'),
     };
 
@@ -74,6 +76,15 @@ try {
  * @param  array<string, mixed>  $job
  * @return array<string, mixed>
  */
+function workerInvoiceNumber(array $job): array
+{
+    $number = app(InvoiceNumber::class)->next(
+        isset($job['year']) ? (int) $job['year'] : null,
+    );
+
+    return ['ok' => true, 'number' => $number];
+}
+
 function workerBook(array $job): array
 {
     $tenant = Tenant::query()->findOrFail($job['tenant_id']);

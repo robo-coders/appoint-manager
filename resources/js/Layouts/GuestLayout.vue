@@ -64,15 +64,34 @@ defineProps<{
     /** Hides the right column on a screen that is a dead end rather than a door. */
     quiet?: boolean;
     /**
-     * Setting up a business is one flow across five screens, and the first of
-     * them is on this surface. When a screen is part of it, the quiet column
-     * carries the progress instead of the product sentence, and a compact form
-     * of the same list appears in the working column at 375 — where the rail is
-     * not there to carry it. See `OnboardingLayout`, which is the same page.
+     * Setting up a business is one flow across six screens, and the first of
+     * them — the registration form — is on this surface. When a screen is part
+     * of it, the quiet column carries the progress instead of the product
+     * sentence, and a compact form of the same list appears in the working
+     * column at 375, where the rail is not there to carry it.
+     *
+     * The five signed-in steps do not use this layout. `Onboarding/Index.vue`
+     * is a full-bleed page of its own — a segmented meter across the top and a
+     * sticky Back/Continue bar at the bottom — because a step you advance with
+     * a button in a fixed place is a different shape from a form you submit,
+     * and the rail had nothing to say that the meter does not say in 4px.
      */
     steps?: Step[];
     currentStep?: string;
     completedSteps?: string[];
+    /**
+     * Sets the h1 in Inter Tight 300 rather than Geist 400.
+     *
+     * Off by default, and that is the decision rather than an oversight. Five
+     * of the six screens on this layout — verify email, forgot password, reset
+     * password, confirm password, the welcome page — are interruptions in the
+     * middle of something, read by somebody who already uses the product; a
+     * display headline on a password-reset form is a magazine cover on a
+     * receipt. `/register` is the one screen here that is a first impression,
+     * and it is the same argument `Settings/Billing` makes for the only other
+     * display headline in the operator app. `resources/css/display.css`.
+     */
+    displayTitle?: boolean;
 }>();
 
 const page = usePage();
@@ -104,7 +123,7 @@ const page = usePage();
                     :current="currentStep"
                     :completed="completedSteps ?? []"
                 />
-                <h1 class="text-24 tracking-24">{{ title }}</h1>
+                <h1 class="text-24 tracking-24" :class="displayTitle ? 'display-light' : ''">{{ title }}</h1>
                 <p v-if="lede" class="mt-2 text-14 text-ink-2">{{ lede }}</p>
 
                 <div class="mt-8">
@@ -141,6 +160,13 @@ const page = usePage();
             </template>
             <template v-else>
                 <!--
+                    The product sentence is the default and stays the default:
+                    every auth screen but one renders exactly this. `#aside` is
+                    an *addition* below it rather than a replacement, so a screen
+                    that wants to show something concrete — Sign in shows a
+                    diary — does not have to restate the sentence to keep it.
+                -->
+                <!--
                     17px, not 20. At 20 the panel headline sat two lines wide
                     opposite a 24px h1 and carried more visual mass than the
                     thing the page is for — a quiet column that outranks the
@@ -153,6 +179,9 @@ const page = usePage();
                 <p class="mt-3 max-w-auth-form text-14 leading-body text-ink-2">
                     {{ page.props.auth_panel.body }}
                 </p>
+                <div v-if="$slots.aside" class="mt-8 w-full max-w-auth-form">
+                    <slot name="aside" />
+                </div>
             </template>
         </aside>
     </div>

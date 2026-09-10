@@ -256,7 +256,7 @@ onUnmounted(() => {
             :home-href="page.props.tenant ? route('diary.index') : route('super-admin.index')"
             :user-name="page.props.auth.user?.name ?? ''"
             :profile-href="route('profile.edit')"
-            :billing-href="page.props.tenant ? route('billing.index') : undefined"
+            :billing-href="page.props.tenant ? route('settings.billing') : undefined"
             :logout-href="logoutHref"
             :collapsed="collapsed"
             :drawer-open="drawerOpen"
@@ -308,12 +308,12 @@ onUnmounted(() => {
                 class="border-b border-b-rule px-4 py-2 text-13 md:px-8"
             >
                 Trial ends in {{ page.props.tenant.trial_days_remaining }} days.
-                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Add a card</Link>
+                <Link :href="route('settings.billing')" class="underline decoration-rule underline-offset-4">Add a card</Link>
             </div>
 
             <div v-if="page.props.tenant?.read_only" class="border-b border-b-rule px-4 py-2 text-13 md:px-8">
                 Admin is read-only until billing is up to date. Clients can still book online.
-                <Link :href="route('billing.index')" class="underline decoration-rule underline-offset-4">Billing</Link>
+                <Link :href="route('settings.billing')" class="underline decoration-rule underline-offset-4">Billing</Link>
             </div>
 
             <div

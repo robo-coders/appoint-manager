@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500&family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap">
+<style>
+body{margin:0;background:#FAF8F5;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#181714;text-decoration:none}
+a:hover{color:#A85729}
+input{font-family:Geist,ui-sans-serif,system-ui,sans-serif}
+input::placeholder{color:rgba(24,23,20,.4)}
+.ml-in:focus{outline:none;border-color:#181714;background:#fff}
+.ml-in:hover{border-color:rgba(24,23,20,.4)}
+button:focus-visible{outline:2px solid #A85729;outline-offset:2px}
+::selection{background:rgba(168,87,41,.18)}
+</style>
+</helmet>
+
+<div style="width:1440px;min-width:1440px;min-height:900px;box-sizing:border-box;position:relative;background:#FAF8F5;overflow:hidden">
+  <div style="position:absolute;top:-140px;left:50%;transform:translateX(-50%);width:1200px;height:760px;background:radial-gradient(closest-side,rgba(214,166,133,.28),rgba(214,166,133,0) 72%)"></div>
+
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:26px 64px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:28px;height:28px;border:1px solid #181714;border-radius:6px;padding:5px;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box">
+        <div style="height:4px;border-radius:1.5px;background:#181714;opacity:.35"></div>
+        <div style="height:4px;border-radius:1.5px;background:#A85729"></div>
+      </div>
+      <span style="font-family:'Inter Tight',sans-serif;font-weight:500;font-size:19px;letter-spacing:-.02em">DiaryDesk</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:34px;font-size:14.5px;color:rgba(24,23,20,.72)">
+      <a href="#">How it works</a>
+      <a href="#">Pricing</a>
+      <a href="#" style="padding:11px 24px;border:1px solid rgba(24,23,20,.18);border-radius:999px;color:#181714">Start free trial</a>
+    </div>
+  </div>
+
+  <div style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) 468px;gap:96px;align-items:center;padding:56px 64px 72px;max-width:1312px;margin:0 auto;box-sizing:border-box">
+
+    <div>
+      <div style="font-family:'Geist Mono',monospace;font-size:12.5px;letter-spacing:.16em;color:#A85729">WELCOME BACK</div>
+      <h1 style="margin:20px 0 0;font-family:'Inter Tight',sans-serif;font-weight:400;font-size:60px;line-height:1.04;letter-spacing:-.035em;text-wrap:balance">Your diary kept working while you were out.</h1>
+      <p style="margin:22px 0 0;max-width:440px;font-size:16.5px;line-height:1.6;color:rgba(24,23,20,.7)">Two cancellations went to the waitlist and came back filled. Deposits are held, reminders are out.</p>
+
+      <div style="margin-top:38px;max-width:520px;border:1px solid rgba(24,23,20,.1);border-radius:14px;background:#FCFBF9;overflow:hidden">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(24,23,20,.08)">
+          <span style="font-size:14.5px;font-weight:500">Thursday, 4 September</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:12.5px;color:#A85729">2 slots reclaimed today</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid rgba(24,23,20,.06)">
+          <span style="width:52px;font-family:'Geist Mono',monospace;font-size:12.5px;color:rgba(24,23,20,.72)">09:00</span>
+          <span style="flex:1;padding:10px 14px;border-radius:8px;background:rgba(24,23,20,.045);font-size:14px">Amy Fraser <span style="color:rgba(24,23,20,.6)">· 60 min</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid rgba(24,23,20,.06)">
+          <span style="width:52px;font-family:'Geist Mono',monospace;font-size:12.5px;color:rgba(24,23,20,.72)">12:00</span>
+          <span style="flex:1;padding:10px 14px;border-radius:8px;background:rgba(168,87,41,.05);border:1px solid rgba(168,87,41,.3);font-family:'Geist Mono',monospace;font-size:13px;color:#8F461F">12:00 · reclaimed</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px">
+          <span style="width:52px;font-family:'Geist Mono',monospace;font-size:12.5px;color:rgba(24,23,20,.72)">14:15</span>
+          <span style="flex:1;padding:10px 14px;border-radius:8px;background:rgba(24,23,20,.045);font-size:14px">Marie Okafor <span style="color:rgba(24,23,20,.6)">· deposit paid</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="border:1px solid rgba(24,23,20,.1);border-radius:16px;background:#FCFBF9;padding:40px">
+      <h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:400;font-size:27px;letter-spacing:-.025em">Log in</h2>
+      <p style="margin:9px 0 0;font-size:14px;color:rgba(24,23,20,.68)">Use the email your diary is set up with.</p>
+
+      <div style="margin-top:26px;display:flex;flex-direction:column;gap:16px">
+        <label style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;font-weight:500;color:rgba(24,23,20,.78)">Email</span>
+          <input class="ml-in" type="email" placeholder="you@yourshop.co.uk" style="height:46px;padding:0 15px;font-size:14.5px;color:#181714;background:#FAF8F5;border:1px solid rgba(24,23,20,.16);border-radius:10px;transition:border-color .14s,background .14s">
+        </label>
+
+        <label style="display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:500;color:rgba(24,23,20,.78)">
+            <span>Password</span>
+            <a href="#" style="font-weight:400;font-size:12.5px;color:rgba(24,23,20,.68)">Forgot password?</a>
+          </span>
+          <span style="position:relative;display:flex">
+            <input class="ml-in" type="{{ pwType }}" placeholder="••••••••••" style="flex:1;height:46px;padding:0 76px 0 15px;font-size:14.5px;color:#181714;background:#FAF8F5;border:1px solid rgba(24,23,20,.16);border-radius:10px;transition:border-color .14s,background .14s">
+            <button type="button" onClick="{{ togglePw }}" style="position:absolute;right:7px;top:7px;height:32px;padding:0 12px;border:none;border-radius:999px;background:transparent;font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:rgba(24,23,20,.65);cursor:pointer;transition:color .14s,background .14s" style-hover="color:#A85729;background:rgba(168,87,41,.08)">{{ pwLabel }}</button>
+          </span>
+        </label>
+
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:rgba(24,23,20,.72)">
+          <input type="checkbox" checked="{{ true }}" style="appearance:none;width:16px;height:16px;border:1px solid rgba(24,23,20,.3);border-radius:5px;background:#181714;box-shadow:inset 0 0 0 3px #FCFBF9;cursor:pointer;flex:none">
+          Stay signed in on this computer
+        </label>
+
+        <button type="button" style="margin-top:6px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid #181714;background:#181714;color:#FAF8F5;font-size:15px;font-weight:500;cursor:pointer;transition:background .14s" style-hover="background:#2a2724" style-active="background:#0e0d0b">Log in</button>
+      </div>
+
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(24,23,20,.1);display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:rgba(24,23,20,.68)">
+        <span>No account yet? <a href="#" style="color:#181714;border-bottom:1px solid rgba(24,23,20,.28);padding-bottom:1px">Start free trial</a></span>
+        <span style="font-family:'Geist Mono',monospace;font-size:11.5px;color:rgba(24,23,20,.72)">£29/mo</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:relative;max-width:1312px;margin:0 auto;padding:0 64px 44px;box-sizing:border-box">
+    <div style="height:1px;background:rgba(24,23,20,.1)"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:22px;font-size:13px;color:rgba(24,23,20,.72)">
+      <span>© 2026 DiaryDesk</span>
+      <div style="display:flex;gap:28px">
+        <a href="#">Status</a>
+        <a href="#">Help centre</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="width:1440px;min-width:1440px;box-sizing:border-box;background:#F2EFEA;border-top:1px solid rgba(24,23,20,.12);padding:44px 64px 56px">
+  <div style="display:flex;align-items:baseline;gap:12px">
+    <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.15em;color:#8F461F">ERROR STATES</span>
+    <span style="font-family:'Inter Tight',sans-serif;font-weight:400;font-size:22px;letter-spacing:-.025em">How failures appear on this page</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:30px">
+
+    <div style="border:1px solid rgba(24,23,20,.1);border-radius:16px;background:#FCFBF9;padding:28px">
+      <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:rgba(24,23,20,.72)">01 · WRONG PASSWORD</div>
+      <div style="display:flex;gap:11px;margin-top:18px;padding:13px 15px;border:1px solid rgba(168,87,41,.32);border-left:2px solid #A85729;border-radius:10px;background:rgba(168,87,41,.05)">
+        <span style="margin-top:6px;width:5px;height:5px;border-radius:50%;background:#A85729;flex:none"></span>
+        <span style="font-size:13px;line-height:1.55">That password doesn't match this email. Two tries left before the account locks for 15 minutes.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:18px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;font-weight:500;color:rgba(24,23,20,.78)">Email</span>
+          <span style="display:flex;align-items:center;height:46px;padding:0 15px;font-size:14.5px;background:#FAF8F5;border:1px solid rgba(24,23,20,.16);border-radius:10px">marie@okaforgrooming.co.uk</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;color:rgba(24,23,20,.78)"><span>Password</span><a href="#" style="font-weight:400;font-size:12.5px;color:#8F461F">Reset it</a></span>
+          <span style="display:flex;align-items:center;height:46px;padding:0 15px;font-size:14.5px;background:rgba(168,87,41,.04);border:1px solid #A85729;border-radius:10px">••••••••</span>
+        </div>
+      </div>
+      <p style="margin:16px 0 0;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:rgba(24,23,20,.72)">FIELD BORDER TERRACOTTA · 4% TINT · NO SHADOW</p>
+    </div>
+
+    <div style="border:1px solid rgba(24,23,20,.1);border-radius:16px;background:#FCFBF9;padding:28px">
+      <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:rgba(24,23,20,.72)">02 · FIELD-LEVEL VALIDATION</div>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;font-weight:500;color:rgba(24,23,20,.78)">Email</span>
+          <span style="display:flex;align-items:center;height:46px;padding:0 15px;font-size:14.5px;background:rgba(168,87,41,.04);border:1px solid #A85729;border-radius:10px">marie@okaforgrooming</span>
+          <span style="font-size:12.5px;color:#8F461F">This doesn't look like a full email address.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;font-weight:500;color:rgba(24,23,20,.78)">Password</span>
+          <span style="display:flex;align-items:center;height:46px;padding:0 15px;font-size:14.5px;background:rgba(168,87,41,.04);border:1px solid #A85729;border-radius:10px"></span>
+          <span style="font-size:12.5px;color:#8F461F">Enter your password.</span>
+        </div>
+        <span style="display:flex;align-items:center;justify-content:center;height:50px;border-radius:999px;background:rgba(24,23,20,.12);color:rgba(24,23,20,.5);font-size:15px;font-weight:500">Log in</span>
+        <p style="margin:0;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:rgba(24,23,20,.72)">MESSAGE UNDER THE FIELD · BUTTON DISABLED AT 12% INK</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <div style="border:1px solid rgba(24,23,20,.1);border-radius:16px;background:#FCFBF9;padding:28px">
+        <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:rgba(24,23,20,.72)">03 · ACCOUNT LOCKED</div>
+        <div style="display:flex;gap:11px;margin-top:18px;padding:13px 15px;border:1px solid rgba(24,23,20,.22);border-left:2px solid #181714;border-radius:10px;background:rgba(24,23,20,.04)">
+          <span style="margin-top:6px;width:5px;height:5px;border-radius:50%;background:#181714;flex:none"></span>
+          <span style="font-size:13px;line-height:1.55">Too many attempts. This account is locked until <span style="font-family:'Geist Mono',monospace">14:52</span>. We've emailed a reset link to the owner.</span>
+        </div>
+        <p style="margin:14px 0 0;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:rgba(24,23,20,.72)">HARD STOP USES INK, NOT TERRACOTTA</p>
+      </div>
+
+      <div style="border:1px solid rgba(24,23,20,.1);border-radius:16px;background:#FCFBF9;padding:28px">
+        <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:rgba(24,23,20,.72)">04 · CONNECTION LOST</div>
+        <div style="display:flex;gap:11px;margin-top:18px;padding:13px 15px;border:1px solid rgba(24,23,20,.16);border-radius:10px;background:rgba(24,23,20,.03)">
+          <span style="margin-top:6px;width:5px;height:5px;border-radius:50%;background:rgba(24,23,20,.5);flex:none"></span>
+          <span style="font-size:13px;line-height:1.55">Couldn't reach DiaryDesk. Your details are still here — <a href="#" style="color:#181714;border-bottom:1px solid rgba(24,23,20,.28)">try again</a>.</span>
+        </div>
+        <p style="margin:14px 0 0;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:rgba(24,23,20,.72)">NEUTRAL TONE · NOTHING THE OPERATOR DID WRONG</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { show: false };
+  renderVals() {
+    return {
+      pwType: this.state.show ? "text" : "password",
+      pwLabel: this.state.show ? "HIDE" : "SHOW",
+      togglePw: () => this.setState(s => ({ show: !s.show })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Services\Booking\BookingService;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\BookingPayload;
+use App\Support\MaskedContact;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -295,6 +296,13 @@ class BookingController extends Controller
     private function detailGroups(Booking $booking, string $timezone): array
     {
         $customer = $booking->customer;
+
+        /*
+         * Whether the two contact rows carry a value or a mask. Resolved here
+         * and not in the Vue: a `v-if` would still have put the number in the
+         * Inertia payload, which is a page of JSON anybody can read in devtools.
+         */
+        $showContact = request()->user()?->can('viewContact', $booking) ?? false;
         $starts = $booking->starts_at?->timezone($timezone);
         $ends = $booking->ends_at?->timezone($timezone);
 
@@ -322,8 +330,12 @@ class BookingController extends Controller
                 'rows' => array_values(array_filter([
                     $row('Name', $customer?->name),
                     $booking->subject_id === null ? null : $row('Pet', $booking->subject?->name),
-                    $row('Email', $customer?->email, true),
-                    $row('Phone', $customer?->phone, true),
+                    $showContact
+                        ? $row('Email', $customer?->email, true)
+                        : $row('Email', MaskedContact::hasEmail($customer?->email) ? MaskedContact::NOTICE : null),
+                    $showContact
+                        ? $row('Phone', $customer?->phone, true)
+                        : $row('Phone', MaskedContact::phone($customer?->phone), true),
                     $history === null ? null : $row(
                         'History',
                         (int) $history->total === 1

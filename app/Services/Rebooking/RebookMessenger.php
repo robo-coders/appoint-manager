@@ -60,6 +60,10 @@ final class RebookMessenger
             $entry = [
                 'subject_id' => $row['subject_id'],
                 'subject_name' => $row['subject_name'],
+                // Carried so the screen can decide whether this row's number is
+                // one the person reading it is allowed to see. See
+                // `OverdueController::maskRows`.
+                'customer_id' => $row['customer_id'] ?? null,
                 'customer_name' => $row['customer_name'],
                 'phone' => $row['phone'],
                 'due_label' => $row['due_label'],

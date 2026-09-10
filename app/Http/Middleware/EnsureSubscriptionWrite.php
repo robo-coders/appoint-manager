@@ -43,7 +43,7 @@ class EnsureSubscriptionWrite
             return $next($request);
         }
 
-        if ($request->routeIs('billing.*', 'logout', 'impersonation.stop')) {
+        if ($request->routeIs('billing.*', 'settings.billing*', 'logout', 'impersonation.stop')) {
             return $next($request);
         }
 

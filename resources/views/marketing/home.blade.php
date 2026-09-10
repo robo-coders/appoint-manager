@@ -105,7 +105,7 @@
                     <span class="wk">Week of 1 September</span>
                     <span class="grid-meta">
                         <span>38 booked</span>
-                        <span>£1,340 deposits held</span>
+                        <span>deposits held</span>
                         <span class="won">3 reclaimed</span>
                     </span>
                 </div>
@@ -114,7 +114,7 @@
                     <div class="day-col">
                         <div class="day-name">Mon</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">11:30</span><span class="v">£28</span></div>
+                        <div class="chip"><span class="t">11:30</span><span class="v">£25</span></div>
                         <div class="chip"><span class="t">14:15</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">16:00</span><span class="v">£35</span></div>
                     </div>
@@ -135,23 +135,23 @@
                     <div class="day-col">
                         <div class="day-name">Thu</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">10:15</span><span class="v">£60</span></div>
+                        <div class="chip"><span class="t">10:15</span><span class="v">£35</span></div>
                         <div class="chip won"><span class="t">13:00</span><span class="v">reclaimed</span></div>
-                        <div class="chip"><span class="t">15:30</span><span class="v">£28</span></div>
+                        <div class="chip"><span class="t">15:30</span><span class="v">£25</span></div>
                     </div>
                     <div class="day-col">
                         <div class="day-name">Fri</div>
                         <div class="chip"><span class="t">08:45</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">10:30</span><span class="v">£45</span></div>
                         <div class="chip"><span class="t">12:15</span><span class="v">£35</span></div>
-                        <div class="chip"><span class="t">14:00</span><span class="v">£60</span></div>
+                        <div class="chip"><span class="t">14:00</span><span class="v">£35</span></div>
                     </div>
                     <div class="day-col">
                         <div class="day-name">Sat</div>
                         <div class="chip"><span class="t">09:00</span><span class="v">£45</span></div>
                         <div class="chip won"><span class="t">11:00</span><span class="v">reclaimed</span></div>
                         <div class="chip"><span class="t">13:30</span><span class="v">£45</span></div>
-                        <div class="chip"><span class="t">15:15</span><span class="v">£28</span></div>
+                        <div class="chip"><span class="t">15:15</span><span class="v">£25</span></div>
                     </div>
                 </div>
             </div>

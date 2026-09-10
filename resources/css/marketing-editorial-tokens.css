@@ -6,9 +6,36 @@
  * warm ink, one clay accent, light display type. `tokens.css` is not edited.
  * This file is the exemption `check:design` allows, the same way `tokens.css`
  * is — raw values live here, and `marketing-editorial.css` only reads vars.
+ *
+ * ── Why this is not on `:root` ────────────────────────────────────────────
+ *
+ * It was, and it could afford to be while marketing was the only surface that
+ * loaded it: the Blade shell at `views/marketing/layout.blade.php` is its own
+ * document, and nothing else on that page defines `--ink` or `--accent`.
+ *
+ * The two auth doors changed that. They are Inertia pages, so their CSS is a
+ * chunk in the operator app's own document — and `tokens.css` declares
+ * `--ink`, `--accent`, `--rule`, `--measure`, `--focus-ring` and the whole
+ * space scale on `:root` too. Two `:root` blocks in one document is not two
+ * systems, it is one system decided by link order, and the loser is whichever
+ * stylesheet the browser read first. Worse, an Inertia visit never removes a
+ * chunk it has loaded, so signing in on `/login` would have repainted the
+ * diary, the rail and every screen behind them in editorial values.
+ *
+ * So the block is addressed to a surface instead. Marketing gets it by the
+ * `data-surface` attribute its shell already sets — the same hook
+ * `tokens.css` gates on — and any other page opts in by putting
+ * `.editorial-surface` on the element it wants the surface to begin at.
+ * Values did not move, the selector did: this is still the one place these
+ * numbers exist.
+ *
+ * Nothing on the marketing side reads a token above `<body>`, which is what
+ * makes the attribute a safe place to land: `marketing-editorial.css` styles
+ * `body` and everything inside it and has no `html` rule at all.
  */
 
-:root {
+[data-surface='marketing'],
+.editorial-surface {
     --canvas: #fbf9f5;
     --canvas-sunk: #f3f0ea;
     --ink: #211e19;
@@ -113,7 +140,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    :root {
+    [data-surface='marketing'],
+    .editorial-surface {
         --duration-fast: 0ms;
         --duration: 0ms;
         --reveal-duration: 0ms;

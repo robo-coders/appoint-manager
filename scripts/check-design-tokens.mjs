@@ -251,12 +251,31 @@ for (const mirror of MIRRORS) {
  * means the next export is exempt where it lands rather than after somebody
  * adds a directory to this list.
  */
+/*
+ * `<x-dc>` is the marker, and it replaces half of what `*.dc.html` was doing.
+ *
+ * The extension test only held while an export kept the name it was exported
+ * under. `.design/mockups/frontend/` holds two that did not: they are the same
+ * Claude Design bundles as the operator redesign — `<x-dc>`, `support.js`, a
+ * `renderVals()` block — saved under the names the page they seed will have.
+ * Gating those asserts that an exporter which has never written a `:root`
+ * block wrote one, which is the same "fact about the exporter" the extension
+ * test was added to stop reporting.
+ *
+ * Matching the root element rather than the filename means an export is exempt
+ * because of what it *is*, and a hand-written mockup that lands in the same
+ * folder is still checked — which the extension test, and a folder test, both
+ * get wrong in opposite directions.
+ */
+const isDesignExport = (f) => /<x-dc[\s>]/.test(readFileSync(f, 'utf8'));
+
 const MOCKUPS = globSync('.design/mockups/**/*.html').filter((f) => {
     const skip = f.includes('/directions/')
         || f.includes('/Market-site/')
         || /\.dc\.html$/.test(f)
         || /direction-a-/.test(f)
-        || /archived-/.test(f);
+        || /archived-/.test(f)
+        || isDesignExport(f);
 
     return !skip;
 });

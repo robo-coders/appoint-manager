@@ -73,6 +73,12 @@ class Booking extends Model
          * `Loyalty::stamp()` returns immediately unless the tenant has the
          * feature on, so for everybody else this hook is one enum comparison.
          */
+        static::updating(function (Booking $booking): void {
+            if ($booking->isDirty(['starts_at', 'ends_at'])) {
+                $booking->calendar_sequence = (int) $booking->calendar_sequence + 1;
+            }
+        });
+
         static::updated(function (Booking $booking): void {
             if ($booking->status !== BookingStatus::Completed || ! $booking->wasChanged('status')) {
                 return;
@@ -95,6 +101,7 @@ class Booking extends Model
             'deposit_status' => DepositStatus::class,
             'source' => BookingSource::class,
             'rebook_interval_days' => 'integer',
+            'calendar_sequence' => 'integer',
             'price_at_booking' => MoneyCast::class,
             'deposit_at_booking' => MoneyCast::class,
             'is_loyalty_reward' => 'boolean',

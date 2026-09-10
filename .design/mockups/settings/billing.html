@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"><style>*{box-sizing:border-box}body{margin:0;background:#FCFBF9;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#A85729;text-decoration:none}a:hover{color:#8C4720}button{font-family:inherit}</style></helmet>
+<div style="min-height:100vh;padding:44px 48px 90px;max-width:960px">
+
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:34px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">Screen 03 · settings</div>
+<h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:34px;line-height:1.1;letter-spacing:-.018em">Billing</h1>
+</div>
+<button onClick="{{ toggleFail }}" style="border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;font-size:12px;color:rgba(24,23,20,.55);padding:7px 12px;cursor:pointer" style-hover="border-color:rgba(24,23,20,.4);color:#181714">{{ failToggleLabel }}</button>
+</div>
+
+<sc-if value="{{ failed }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:18px;border:1px solid rgba(168,87,41,.4);border-radius:6px;padding:13px 16px;margin-bottom:20px">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#A85729" stroke-width="1.5" style="flex:none"><path d="M8 1.5 15 14H1L8 1.5Z"></path><path d="M8 6v3.5"></path><path d="M8 11.4v.6"></path></svg>
+<div style="flex:1;font-size:13.5px;line-height:1.55">Your card was declined on 1 Sep — the bank reported insufficient funds. We will retry on 8 Sep; bookings and SMS auto-fill keep running until then.</div>
+<button style="flex:none;border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500;padding:8px 14px;cursor:pointer" style-hover="background:#8C4720">Update payment method</button>
+</div>
+</sc-if>
+
+<section style="border:1px solid rgba(24,23,20,.12);border-radius:6px;padding:26px 28px;margin-bottom:44px">
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;justify-content:space-between">
+<div style="min-width:260px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:10px">Current plan</div>
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:29px;letter-spacing:-.015em">Studio</h2>
+<sc-if value="{{ yearly }}" hint-placeholder-val="{{ false }}">
+<span style="border:1px solid rgba(168,87,41,.45);border-radius:6px;color:#A85729;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;padding:3px 7px">Saving £58 / yr</span>
+</sc-if>
+</div>
+<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:20px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:22px;letter-spacing:-.01em">{{ price }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:rgba(24,23,20,.5)">{{ period }}</span>
+</div>
+<div style="font-size:13px;line-height:1.6;color:rgba(24,23,20,.6)">3 staff seats · 500 auto-fill texts a month<br>Renews {{ renewal }}</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:22px;min-width:230px">
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:10px">Billing period</div>
+<div style="display:inline-flex;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden">
+<button onClick="{{ setMonthly }}" style="border:none;background:{{ monthlyBg }};color:{{ monthlyFg }};font-size:12.5px;font-weight:500;padding:8px 15px;cursor:pointer">Monthly</button>
+<button onClick="{{ setYearly }}" style="border:none;border-left:1px solid rgba(24,23,20,.14);background:{{ yearlyBg }};color:{{ yearlyFg }};font-size:12.5px;font-weight:500;padding:8px 15px;cursor:pointer">Yearly</button>
+</div>
+</div>
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:10px">Payment method</div>
+<div style="display:flex;align-items:center;gap:11px">
+<svg width="30" height="20" viewBox="0 0 30 20" fill="none" stroke="rgba(24,23,20,.5)" stroke-width="1.5"><rect x=".75" y=".75" width="28.5" height="18.5" rx="3"></rect><path d="M.75 6.5h28.5"></path><path d="M4 14h6"></path></svg>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13.5px">•••• 4241</span>
+<span style="font-size:12.5px;color:rgba(24,23,20,.5)">exp 04/28</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+<button onClick="{{ openModal }}" style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:13.5px;font-weight:500;padding:11px 18px;cursor:pointer" style-hover="background:#8C4720">Change plan</button>
+<a href="#" style="font-size:13px;color:rgba(24,23,20,.55);border-bottom:1px solid rgba(24,23,20,.2)" style-hover="color:#181714">Cancel subscription</a>
+</div>
+</div>
+</section>
+
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:20px;margin-bottom:14px">
+<h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:21px;letter-spacing:-.01em">Invoice history</h3>
+<a href="#" style="font-size:13px;color:rgba(24,23,20,.55);border-bottom:1px solid rgba(24,23,20,.2)" style-hover="color:#181714">Download all as CSV</a>
+</div>
+<div style="border-top:1px solid rgba(24,23,20,.14)">
+<div style="display:grid;grid-template-columns:150px 130px 1fr 110px;gap:16px;padding:9px 2px;border-bottom:1px solid rgba(24,23,20,.1);font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">
+<span>Date</span><span>Amount</span><span>Status</span><span style="text-align:right">Invoice</span>
+</div>
+<sc-for list="{{ invoices }}" as="inv" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:150px 130px 1fr 110px;gap:16px;align-items:center;padding:14px 2px;border-bottom:1px solid rgba(24,23,20,.08)">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px">{{ inv.date }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px">{{ inv.amount }}</span>
+<span><span style="display:inline-block;border:1px solid {{ inv.pillBorder }};border-radius:6px;font-size:11.5px;color:{{ inv.pillFg }};padding:3px 9px">{{ inv.status }}</span></span>
+<a href="#" style="text-align:right;font-size:13px;color:rgba(24,23,20,.55);border-bottom:1px solid rgba(24,23,20,.18);justify-self:end" style-hover="color:#181714">PDF</a>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ modal }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(24,23,20,.28);display:flex;align-items:center;justify-content:center;padding:24px;z-index:20">
+<div style="width:100%;max-width:420px;background:#FCFBF9;border:1px solid rgba(24,23,20,.14);border-radius:6px;padding:28px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:12px">Change plan</div>
+<h2 style="margin:0 0 22px;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:26px;line-height:1.15;letter-spacing:-.015em">Studio → Studio yearly</h2>
+<div style="display:flex;align-items:baseline;gap:14px;padding-bottom:20px;border-bottom:1px solid rgba(24,23,20,.1);margin-bottom:20px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:15px;color:rgba(24,23,20,.4);text-decoration:line-through">£29.00 / mo</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:24px;letter-spacing:-.01em">£290.00 / yr</span>
+</div>
+<p style="margin:0 0 26px;font-size:13.5px;line-height:1.6;color:rgba(24,23,20,.65)">You have 22 days left on the monthly period, so £21.27 is credited and £268.73 is charged to •••• 4241 today.</p>
+<div style="display:flex;align-items:center;gap:18px">
+<button onClick="{{ closeModal }}" style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:13.5px;font-weight:500;padding:11px 18px;cursor:pointer" style-hover="background:#8C4720">Confirm and pay £268.73</button>
+<button onClick="{{ closeModal }}" style="border:none;background:transparent;font-size:13.5px;color:rgba(24,23,20,.55);padding:0;cursor:pointer;border-bottom:1px solid rgba(24,23,20,.2)" style-hover="color:#181714">Keep monthly</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;paymentFailed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+class Component extends DCLogic {
+  state = { yearly: false, modal: false, failed: null };
+
+  renderVals() {
+    const yearly = this.state.yearly;
+    const failed = this.state.failed === null ? !!this.props.paymentFailed : this.state.failed;
+    const rows = [
+      ['1 Sep 2026', '£29.00', failed ? 'Payment declined' : 'Paid'],
+      ['1 Aug 2026', '£29.00', 'Paid'],
+      ['1 Jul 2026', '£29.00', 'Paid'],
+      ['1 Jun 2026', '£29.00', 'Paid'],
+      ['1 May 2026', '£14.50', 'Paid — half month'],
+      ['16 Apr 2026', '£0.00', 'Free trial']
+    ];
+    return {
+      yearly, failed, modal: this.state.modal,
+      price: yearly ? '£290.00' : '£29.00',
+      period: yearly ? '/ year' : '/ month',
+      renewal: yearly ? '16 Apr 2027' : '1 Oct 2026',
+      monthlyBg: yearly ? 'transparent' : 'rgba(24,23,20,.06)',
+      monthlyFg: yearly ? 'rgba(24,23,20,.55)' : '#181714',
+      yearlyBg: yearly ? 'rgba(24,23,20,.06)' : 'transparent',
+      yearlyFg: yearly ? '#181714' : 'rgba(24,23,20,.55)',
+      setMonthly: () => this.setState({ yearly: false }),
+      setYearly: () => this.setState({ yearly: true }),
+      openModal: () => this.setState({ modal: true }),
+      closeModal: () => this.setState({ modal: false }),
+      toggleFail: () => this.setState({ failed: !failed }),
+      failToggleLabel: failed ? 'Show healthy state' : 'Show payment-failed state',
+      invoices: rows.map(([date, amount, status]) => ({
+        date, amount, status,
+        pillBorder: status === 'Payment declined' ? 'rgba(168,87,41,.45)' : 'rgba(24,23,20,.18)',
+        pillFg: status === 'Payment declined' ? '#A85729' : 'rgba(24,23,20,.7)'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

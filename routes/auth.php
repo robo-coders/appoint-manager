@@ -15,7 +15,16 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    /*
+     * `throttle:register` is the flood stop, not the lockout. The lockout is
+     * `RegisterRequest::ensureIsNotRateLimited()`, which answers with a
+     * sentence under the form; this ceiling is set well above it so that
+     * reaching it means something the form has no answer for. Same division of
+     * labour as the login route, and the same reason — see the note on the
+     * limiters in `AppServiceProvider`.
+     */
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('throttle:register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

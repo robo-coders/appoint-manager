@@ -14,6 +14,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,11 +24,22 @@ class RegisteredUserController extends Controller
     public function create(): Response
     {
         return Inertia::render('Auth/Register', [
-            'terms' => sprintf(
-                'No card. %d days free, then %s a month, and you can stop at any point.',
-                (int) config('billing.trial_days'),
-                self::pounds((int) config('billing.monthly_price_pence')),
-            ),
+            /*
+             * The small print, in three pieces rather than one sentence.
+             *
+             * The copy stays in PHP — this product builds customer-facing
+             * wording here and reads the trial length and the price from
+             * `config('billing')` rather than from a literal in a template.
+             * What the page needs on top of that is the *price* on its own, so
+             * it can set it in Geist Mono: every figure in this product is mono
+             * and tabular, and "£29 a month" inside a run of Geist body text
+             * was the one price in the app set in the body face.
+             */
+            'terms' => [
+                'lead' => sprintf('No card. %d days free, then', (int) config('billing.trial_days')),
+                'price' => sprintf('%s a month', self::pounds((int) config('billing.monthly_price_pence'))),
+                'tail' => ', and you can stop at any point.',
+            ],
             'steps' => SetupSteps::all(),
             'businessTypes' => Vertical::query()
                 ->orderBy('label')
@@ -35,6 +47,12 @@ class RegisteredUserController extends Controller
                 ->map(fn (Vertical $vertical) => [
                     'value' => $vertical->key,
                     'label' => $vertical->label,
+                    /*
+                     * The same note `/onboarding` shows beside the same option,
+                     * from the same method, because step two confirms the
+                     * answer step one takes. See `Vertical::note()`.
+                     */
+                    'note' => $vertical->note(),
                 ])
                 ->values()
                 ->all(),
@@ -76,10 +94,27 @@ class RegisteredUserController extends Controller
             return $owner;
         });
 
+        /*
+         * The account exists, so the failed attempts that led to it are spent
+         * budget rather than a debt. Without this, somebody who mistyped the
+         * password confirmation three times and then succeeded would come back
+         * tomorrow — to add a second business, or on a shared office IP — with
+         * seven attempts left of ten.
+         */
+        RateLimiter::clear($request->throttleKey());
+
         event(new Registered($user));
 
         Auth::login($user);
 
+        /*
+         * Straight to the first onboarding step, which is `basics` — and it
+         * opens already holding the business name and the trade, because both
+         * are columns on the tenant this method just created and
+         * `OnboardingController::show()` reads them from there. That is what
+         * stops step one asking the two questions this form has just asked;
+         * nothing is passed through the session to do it.
+         */
         return redirect()->route('onboarding.show');
     }
 }

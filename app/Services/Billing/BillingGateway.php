@@ -35,4 +35,23 @@ interface BillingGateway
      * One-off Checkout for an SMS top-up. Applied on `checkout.session.completed`.
      */
     public function topUpCheckoutUrl(Tenant $tenant): string;
+
+    /**
+     * @return array{old_price: string, new_price: string, statement: string, charge: string, charge_pence: int}
+     */
+    public function previewSwap(Tenant $tenant, string $interval): array;
+
+    public function swap(Tenant $tenant, string $interval): void;
+
+    public function cancelAtPeriodEnd(Tenant $tenant): void;
+
+    public function resumeCancellation(Tenant $tenant): void;
+
+    public function createSetupIntent(Tenant $tenant): string;
+
+    public function confirmPaymentMethod(Tenant $tenant, string $paymentMethodId): void;
+
+    public function refresh(Tenant $tenant): void;
+
+    public function paymentFailureCode(string $id): ?string;
 }

@@ -6,6 +6,7 @@ use App\Exceptions\SlotUnavailableException;
 use App\Http\Controllers\MarketingController;
 use App\Http\Middleware\ConfigureSurfaceSession;
 use App\Http\Middleware\EnsureAdminIpAllowed;
+use App\Http\Middleware\EnsureBillingAccess;
 use App\Http\Middleware\EnsureOnboardingComplete;
 use App\Http\Middleware\EnsureSubscriptionWrite;
 use App\Http\Middleware\EnsureSuperAdmin;
@@ -97,6 +98,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'onboarding' => EnsureOnboardingComplete::class,
             'public-tenant' => ResolvePublicTenant::class,
             'subscribed' => EnsureSubscriptionWrite::class,
+            'billing-access' => EnsureBillingAccess::class,
             'super-admin' => EnsureSuperAdmin::class,
             'admin-ip' => EnsureAdminIpAllowed::class,
         ]);
@@ -117,10 +119,37 @@ return Application::configure(basePath: dirname(__DIR__))
             ? Surface::Admin->path('login')
             : Surface::App->path('login'));
 
-        // Where an already-authenticated request is sent away from a guest page.
-        $middleware->redirectUsersTo(fn (Request $request) => Surface::current($request->getHost(), $request->path()) === Surface::Admin
-            ? Surface::Admin->path()
-            : home_route());
+        /*
+         * Where an already-authenticated request is sent away from a guest page.
+         *
+         * The middle branch is the one worth explaining. A salon owner who
+         * registered, closed the tab halfway through setting up and then opened
+         * their bookmark — which is `/register`, because that is the page they
+         * were last sent the link to — is signed in, so this closure answers.
+         * It used to answer `home_route()`, the diary, where
+         * `EnsureOnboardingComplete` immediately bounced them to `/onboarding`:
+         * the right destination by way of a page they are not allowed to see,
+         * two redirects, and a Back button that lands on the diary and bounces
+         * again. Sending them to the flow they are in the middle of is one
+         * redirect to the same place. `OnboardingController::show()` then picks
+         * the step, which is always the first one they have not finished.
+         *
+         * `$user->tenant` rather than `current_tenant()`: the guest routes do
+         * not run `ResolveTenant`, so there is no context here to read.
+         */
+        $middleware->redirectUsersTo(function (Request $request) {
+            if (Surface::current($request->getHost(), $request->path()) === Surface::Admin) {
+                return Surface::Admin->path();
+            }
+
+            $user = $request->user();
+
+            if ($user !== null && ! $user->is_super_admin && $user->tenant !== null && ! $user->tenant->hasCompletedOnboarding()) {
+                return Surface::App->path('onboarding');
+            }
+
+            return home_route();
+        });
 
         $middleware->validateCsrfTokens(except: [
             'stripe/webhook',

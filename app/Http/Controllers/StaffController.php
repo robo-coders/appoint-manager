@@ -50,6 +50,13 @@ class StaffController extends Controller
                 'role' => $user->role,
                 'is_bookable' => $user->is_bookable,
                 'is_active' => $user->is_active,
+                /*
+                 * The owner's own row always reads true and the control is not
+                 * offered for it — an owner cannot be locked out of their own
+                 * customer list, and a switch that silently does nothing is
+                 * worse than no switch.
+                 */
+                'can_see_customer_contacts' => $user->isOwner() || $user->can_see_customer_contacts,
                 'colour' => $user->colour,
                 /*
                  * The row, rather than four more columns.
@@ -203,6 +210,9 @@ class StaffController extends Controller
             'role' => UserRole::Staff,
             'is_bookable' => $request->boolean('is_bookable', true),
             'is_active' => true,
+            // Same default as the onboarding step and the migration: a new
+            // colleague can reach their customers unless somebody says not.
+            'can_see_customer_contacts' => $request->boolean('can_see_customer_contacts', true),
             'colour' => $request->input('colour', '#71717A'),
         ]);
 

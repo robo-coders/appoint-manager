@@ -10,6 +10,8 @@ use App\Models\Tenant;
 use App\Models\WaitlistEntry;
 use App\Services\Booking\FreedSlots;
 use App\Services\Waitlist\WaitlistOfferer;
+use App\Support\ContactVisibility;
+use App\Support\MaskedContact;
 use App\Support\PhoneNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +27,8 @@ class WaitlistController extends Controller
         $tenant = current_tenant();
         abort_unless($tenant, 403);
 
+        $contacts = ContactVisibility::for($request->user());
+
         $entries = WaitlistEntry::query()
             ->with(['customer', 'service', 'subject'])
             ->orderBy('created_at')
@@ -33,7 +37,15 @@ class WaitlistController extends Controller
                 'id' => $entry->id,
                 'customer_id' => $entry->customer_id,
                 'customer_name' => $entry->customer?->name,
-                'phone' => $entry->customer?->phone,
+                /*
+                 * The number is the point of this screen — it exists so
+                 * somebody can ring down the list — so a staff member who
+                 * cannot read it is told that, rather than shown a blank.
+                 */
+                'phone' => $contacts->customer($entry->customer_id)
+                    ? $entry->customer?->phone
+                    : MaskedContact::phone($entry->customer?->phone),
+                'contact_hidden' => ! $contacts->customer($entry->customer_id),
                 'subject_name' => $entry->subject?->name,
                 'service_name' => $entry->service?->name,
                 'preferred_days' => $entry->preferred_days ?? [],

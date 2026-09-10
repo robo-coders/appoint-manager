@@ -1,0 +1,35 @@
+/*
+ * Inter Tight, and the one class that sets it.
+ *
+ * This file was `settings-billing.css` and the class was `.billing-display`,
+ * because Billing was the first operator screen given a display headline. It is
+ * not the only one any more: `/register` is the first screen of a six-step
+ * setup flow, read once by somebody who has never seen the product, and its
+ * headline is set in the same face for the same reason Billing's is. A face
+ * used by two surfaces and named after one of them is a file the third caller
+ * copies instead of importing.
+ *
+ * The face is self-hosted, like Geist — `font-src` in
+ * `App\Http\Middleware\SecurityHeaders` names no third party. The same woff2
+ * backs `auth-editorial.css` and the marketing site; the declaration is
+ * repeated there rather than shared because those surfaces scope their tokens
+ * to `.editorial-surface` and this one is global to the operator app.
+ */
+@font-face {
+    font-family: 'Inter Tight';
+    src: url('../fonts/InterTight-Variable.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/*
+ * A headline, not a label. 300 because the sizes it lands on are 20/24/34,
+ * where Geist 400 reads as a heavier version of the body text rather than as a
+ * different register.
+ */
+.display-light {
+    font-family: 'Inter Tight', var(--font-sans);
+    font-weight: 300;
+    letter-spacing: -0.018em;
+}

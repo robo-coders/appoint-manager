@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import HiddenContact from '@/Components/ui/HiddenContact.vue';
 import PhoneLink from '@/Components/ui/PhoneLink.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
@@ -38,8 +39,12 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 type CustomerRow = {
     id: number;
     name: string;
+    /** Null when withheld as well as when absent — `contact_hidden` separates them. */
     email: string | null;
+    /** The number, or the masked stand-in when `contact_hidden`. */
     phone: string | null;
+    has_email: boolean;
+    contact_hidden: boolean;
     subjects_count: number;
     bookings_count: number;
 };
@@ -164,14 +169,24 @@ const rowHref = (row: Record<string, unknown>) => route('customers.show', Number
                 and "one tap".
             -->
             <template #cell:phone="{ row }">
-                <PhoneLink :phone="row.phone as string | null" />
+                <HiddenContact v-if="row.contact_hidden && row.phone" :masked="row.phone as string" />
+                <PhoneLink v-else :phone="row.phone as string | null" />
+            </template>
+
+            <!--
+                A withheld address is not an absent one, and the two must not
+                look alike on the screen somebody uses to decide whether to get
+                in touch. See `ui/HiddenContact`.
+            -->
+            <template #cell:email="{ row }">
+                <HiddenContact v-if="row.contact_hidden && row.has_email" />
+                <span v-else-if="row.email">{{ row.email }}</span>
+                <span v-else class="text-ink-2">—</span>
             </template>
 
             <!-- Secondary only. The row is "Open" — see `rowHref`. -->
             <template #actions="{ row }">
-                <MenuItem @click="router.get(route('bookings.index'), { customer: Number(row.id) })">
-                    Their bookings
-                </MenuItem>
+                <MenuItem @click="router.get(rowHref(row))">Their bookings</MenuItem>
             </template>
 
             <template #footer>

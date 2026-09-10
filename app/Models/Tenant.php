@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BookingMode;
 use App\Support\BrandPalette;
+use App\Support\SetupSteps;
 use App\Support\Surface;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,13 @@ class Tenant extends Model
         'stripe_subscription_id',
         'subscription_status',
         'plan',
+        'card_brand',
+        'card_last4',
+        'card_exp_month',
+        'card_exp_year',
+        'current_period_end',
+        'subscription_ends_at',
+        'cancel_at_period_end',
         'dunning_started_at',
         'dunning_emails_sent',
         'paused_at',
@@ -125,6 +133,11 @@ class Tenant extends Model
             'dunning_started_at' => 'datetime',
             'paused_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'current_period_end' => 'datetime',
+            'subscription_ends_at' => 'datetime',
+            'cancel_at_period_end' => 'boolean',
+            'card_exp_month' => 'integer',
+            'card_exp_year' => 'integer',
             'last_activity_at' => 'datetime',
             'is_comped' => 'boolean',
             // BetaSandbox — see BETA_SANDBOX.md.
@@ -187,7 +200,7 @@ class Tenant extends Model
         $settings['onboarding']['completed_steps'] = array_values($completed);
         $this->settings = $settings;
 
-        if ($step === 'hours') {
+        if ($step === SetupSteps::FINAL) {
             $this->onboarding_completed_at = now();
         }
 
@@ -319,12 +332,24 @@ class Tenant extends Model
             return true;
         }
 
-        if (in_array($this->subscription_status, ['active', 'paused'], true)) {
+        if ($this->cancel_at_period_end && $this->subscription_ends_at?->isFuture()) {
+            return true;
+        }
+
+        if ($this->cancel_at_period_end && $this->subscription_ends_at?->isPast()) {
+            return false;
+        }
+
+        if (in_array($this->subscription_status, ['active', 'paused', 'incomplete'], true)) {
             return true;
         }
 
         if ($this->subscription_status === 'past_due' && $this->dunning_started_at) {
             return $this->dunning_started_at->copy()->addDays((int) config('billing.dunning_days'))->isFuture();
+        }
+
+        if ($this->subscription_status === 'cancelled' && $this->subscription_ends_at?->isFuture()) {
+            return true;
         }
 
         return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
@@ -333,5 +358,55 @@ class Tenant extends Model
     public function isReadOnly(): bool
     {
         return ! $this->hasAdminWriteAccess();
+    }
+
+    public function hasCardOnFile(): bool
+    {
+        return filled($this->card_last4);
+    }
+
+    public function isBillingGated(): bool
+    {
+        if ($this->is_comped) {
+            return false;
+        }
+
+        if ($this->cancel_at_period_end && $this->subscription_ends_at?->isFuture()) {
+            return false;
+        }
+
+        if ($this->cancel_at_period_end && $this->subscription_ends_at?->isPast()) {
+            return true;
+        }
+
+        if (in_array($this->subscription_status, ['unpaid', 'incomplete_expired'], true)) {
+            return true;
+        }
+
+        if (in_array($this->subscription_status, ['active', 'paused', 'past_due', 'incomplete'], true)) {
+            return false;
+        }
+
+        if ($this->subscription_status === 'cancelled' && $this->subscription_ends_at?->isFuture()) {
+            return false;
+        }
+
+        return $this->trial_ends_at === null || $this->trial_ends_at->isPast();
+    }
+
+    /**
+     * @return 'trial_ended'|'unpaid'|'cancelled_ended'
+     */
+    public function billingGateVariant(): string
+    {
+        if ($this->cancel_at_period_end && $this->subscription_ends_at?->isPast()) {
+            return 'cancelled_ended';
+        }
+
+        return match ($this->subscription_status) {
+            'unpaid', 'incomplete_expired' => 'unpaid',
+            'cancelled' => 'cancelled_ended',
+            default => 'trial_ended',
+        };
     }
 }

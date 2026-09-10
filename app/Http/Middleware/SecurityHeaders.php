@@ -73,9 +73,9 @@ class SecurityHeaders
     }
 
     /**
-     * Only the booking surface may frame or talk to Stripe: it is the only one
-     * that takes a card. `form-action` is pinned to each surface's own origin
-     * so a form on one can never post to another.
+     * Booking and the operator app may frame Stripe: booking takes deposits,
+     * billing settings update the salon card. `form-action` is pinned to each
+     * surface's own origin so a form on one can never post to another.
      */
     private function policyFor(Surface $surface): string
     {
@@ -92,7 +92,18 @@ class SecurityHeaders
             "object-src 'none'",
             "frame-ancestors 'none'",
             "form-action 'self' {$self}",
-            "img-src 'self' data: https:",
+            /*
+             * `{$dev}` for the same reason it is on `font-src`, and it was
+             * missed here because `https:` makes this directive look permissive
+             * enough already. It is not: the Vite dev server is plain `http`,
+             * so while `npm run dev` runs, every image imported through Vite —
+             * `AppLogo`'s four SVGs, and nothing else today — is served from
+             * `http://localhost:5173` and blocked outright. The logo rendered
+             * as a broken-image icon on every auth screen, the rail and
+             * onboarding in development only, which reads as a missing file
+             * and is a refused request.
+             */
+            "img-src 'self' data: https:{$dev}",
             "style-src 'self' 'unsafe-inline'{$dev}",
             /*
              * No font host. Geist and Geist Mono are self-hosted woff2 —
@@ -110,7 +121,7 @@ class SecurityHeaders
             "font-src 'self'{$dev}",
         ];
 
-        if ($surface === Surface::Book) {
+        if ($surface === Surface::Book || $surface === Surface::App) {
             $directives[] = "script-src 'self' 'unsafe-inline' https://js.stripe.com{$dev}";
             $directives[] = "connect-src 'self' https://api.stripe.com{$devSocket}";
             $directives[] = 'frame-src https://js.stripe.com https://hooks.stripe.com';

@@ -111,9 +111,9 @@ it('leaves the way out of an impersonated session open', function () {
         ->assertHeader('X-Inertia-Location');
 });
 
-it('does not gate a read', function () {
+it('does not gate a read on the billing settings screen', function () {
     $tenant = aLockedTenant();
     $owner = User::factory()->create(['tenant_id' => $tenant->id, 'is_super_admin' => false]);
 
-    $this->actingAs($owner)->get(route('settings.edit'))->assertOk();
+    $this->actingAs($owner)->get(route('settings.billing'))->assertOk();
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue';
+import { computed, ref, useId } from 'vue';
 import FieldError from './FieldError.vue';
 
 /**
@@ -40,7 +40,14 @@ const model = defineModel<string>({ required: true });
 const props = defineProps<{
     /** The question. Rendered as the group's `<legend>`. */
     legend: string;
-    options: Array<{ value: string; label: string; hint?: string }>;
+    /**
+     * `sample` is an example of what the option produces, set in mono under
+     * the hint — an event line for a calendar feed, a rendered message for a
+     * reminder. It exists because some of these choices are only legible as
+     * their output: "customer names and service details" and "Busy blocks"
+     * are a paragraph each to describe and one line each to show.
+     */
+    options: Array<{ value: string; label: string; hint?: string; sample?: string }>;
     /**
      * The radios' shared `name`. Defaults to a generated one, which is correct
      * for an Inertia form; pass it only when a real HTML form post needs the
@@ -49,15 +56,54 @@ const props = defineProps<{
     name?: string;
     error?: string;
     disabled?: boolean;
+    /**
+     * Hides the legend *visually* and nowhere else, the way `ui/Field`'s
+     * `labelHidden` does. For a group that already sits under a section
+     * heading saying the same words: two of them is the heading twice, and
+     * dropping the `<legend>` instead would leave the fieldset unnamed.
+     */
+    legendHidden?: boolean;
+    /**
+     * Marks the group required, the way `ui/Label` marks a field.
+     *
+     * The marker is ink and `aria-hidden`, identical to `ui/Label`'s, because
+     * the alternative on `/register` was a form of six required answers where
+     * five carried a marker and the sixth — the one people skip — did not.
+     */
+    required?: boolean;
 }>();
 
 const uid = useId();
 const groupName = computed(() => props.name ?? `radio-${uid}`);
+
+/*
+ * `focus()`, so a page validating on submit can send the caret to this group
+ * the way it can to any `ui/TextInput`. The chosen radio if there is one, the
+ * first otherwise — which is what a browser does when it moves into a radio
+ * group by keyboard, and what makes "you have not answered this" land on the
+ * thing that has not been answered rather than nowhere.
+ */
+const el = ref<HTMLFieldSetElement | null>(null);
+
+defineExpose({
+    focus: () => {
+        const group = el.value;
+
+        if (!group) return;
+
+        const target =
+            group.querySelector<HTMLInputElement>('input[type="radio"]:checked') ??
+            group.querySelector<HTMLInputElement>('input[type="radio"]');
+
+        target?.focus();
+    },
+});
 </script>
 
 <template>
-    <fieldset class="space-y-3" :aria-describedby="error ? `${uid}-error` : undefined">
-        <legend class="caption">{{ legend }}</legend>
+    <fieldset ref="el" class="space-y-3" :aria-describedby="error ? `${uid}-error` : undefined">
+        <!-- prettier-ignore -->
+        <legend class="caption" :class="legendHidden ? 'sr-only' : ''">{{ legend }}<span v-if="required" class="text-ink" aria-hidden="true">*</span></legend>
 
         <!--
             The row is the label, so the whole hairline strip is the tap target
@@ -83,6 +129,7 @@ const groupName = computed(() => props.name ?? `radio-${uid}`);
             <span class="min-w-0">
                 <span class="block text-13" :class="disabled ? 'text-ink-2' : 'text-ink'">{{ option.label }}</span>
                 <span v-if="option.hint" class="mt-0.5 block text-12 text-ink-2">{{ option.hint }}</span>
+                <span v-if="option.sample" class="mt-2 block font-mono text-12 text-ink-2">{{ option.sample }}</span>
             </span>
         </label>
 

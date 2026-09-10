@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
@@ -56,6 +57,9 @@ class Customer extends Model
     {
         return [
             'sms_opted_out_at' => 'datetime',
+            'requires_full_payment_override' => 'boolean',
+            'suggested_rule_dismissed_at' => 'datetime',
+            'notes_updated_at' => 'datetime',
         ];
     }
 
@@ -68,6 +72,14 @@ class Customer extends Model
     public function smsOptedOut(): bool
     {
         return $this->sms_opted_out_at !== null;
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function notesEditor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'notes_updated_by');
     }
 
     /**

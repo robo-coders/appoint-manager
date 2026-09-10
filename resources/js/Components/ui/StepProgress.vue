@@ -70,10 +70,18 @@ const stateOf = (key: string, at: number) => {
         </p>
         <!--
             A meter, drawn as hairlines rather than as a bar. One segment per
-            step, ink where it is behind you: the same vocabulary as every other
-            division in this product. A filled track with a radius would be the
-            one pill in a system that has no pills, and a percentage would be a
-            computed number pretending to be information on a five-step form.
+            step, filled where it is behind you: the same vocabulary as every
+            other division in this product. A filled track with a radius would
+            be the one pill in a system that has no pills, and a percentage
+            would be a computed number pretending to be information on a
+            five-step form.
+
+            Accent, not ink, and that is a match rather than a preference.
+            Steps two to six of this flow are `Onboarding/Index.vue`, whose
+            meter across the top of the page is `bg-accent` behind you and
+            `bg-rule` ahead. This meter was ink and that one was clay, so the
+            single thing carried across all six screens changed colour between
+            screen one and screen two — which reads as two different flows.
         -->
         <div
             class="mt-2 flex gap-1"
@@ -87,12 +95,19 @@ const stateOf = (key: string, at: number) => {
                 v-for="(step, at) in steps"
                 :key="step.key"
                 class="flex-1 border-t"
-                :class="at <= index ? 'border-t-ink' : 'border-t-rule-strong'"
+                :class="at <= index ? 'border-t-accent' : 'border-t-rule-strong'"
             />
         </div>
     </div>
 
-    <!-- The quiet column's shape. The whole list, named. -->
+    <!--
+        The quiet column's shape. The whole list, named.
+
+        The row you are on is washed in `accent-tint` — the meter's colour at
+        8% — so the rail and the meter say "here" the same way. The type on it
+        stays ink: `accent-tint` is specified as a fill behind ink and clay on
+        clay-wash measures 4.5:1, which is a coin toss (see tokens.css).
+    -->
     <ol v-else class="space-y-1">
         <li v-for="(step, at) in steps" :key="step.key">
             <component
@@ -100,7 +115,7 @@ const stateOf = (key: string, at: number) => {
                 :href="linkFor(step.key)"
                 class="flex min-h-row items-center gap-3 rounded px-2 text-13"
                 :class="[
-                    step.key === current ? 'bg-ink-tint text-ink' : 'text-ink-2',
+                    step.key === current ? 'bg-accent-tint text-ink' : 'text-ink-2',
                     linkFor(step.key) && step.key !== current
                         ? 'transition duration-fast ease-product hover:text-ink'
                         : '',

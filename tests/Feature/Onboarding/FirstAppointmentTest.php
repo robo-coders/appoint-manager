@@ -50,15 +50,48 @@ function aMondayMorning(): CarbonImmutable
     return CarbonImmutable::parse('2026-09-07 09:00:00', 'Europe/London');
 }
 
-/** @param  array<string, mixed>|null  $first */
+/**
+ * Step one, then the last step — which is where the first appointment now lives.
+ *
+ * Opening hours moved to `basics` when the flow was re-cut, so finishing setup
+ * is two requests rather than one: the week is written first, and the booking
+ * is written against it on the final screen. The ordering is the same
+ * constraint it always was, just spread over two steps instead of one.
+ *
+ * @param  array<string, mixed>|null  $first
+ */
 function finishSetup(array $salon, ?array $first)
 {
-    return actingAsTenant($salon['owner'])->patch(route('onboarding.hours'), [
-        'rules' => [
-            ['user_id' => $salon['owner']->id, 'weekday' => 1, 'start_time' => '09:00', 'end_time' => '17:00'],
-        ],
+    $tenant = $salon['tenant'];
+
+    actingAsTenant($salon['owner'])->patch(route('onboarding.basics'), [
+        'name' => $tenant->name,
+        'slug' => $tenant->slug,
+        'type' => $tenant->type,
+        'hours' => aWeekOpenOn(1),
+    ])->assertSessionHasNoErrors();
+
+    return actingAsTenant($salon['owner'])->post(route('onboarding.complete'), [
+        'slug' => $tenant->slug,
         'first_booking' => $first,
     ]);
+}
+
+/**
+ * Seven days, open 09:00-17:00 on the ones named and shut on the rest.
+ *
+ * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
+ */
+function aWeekOpenOn(int ...$weekdays): array
+{
+    return collect(range(1, 7))
+        ->map(fn (int $day) => [
+            'weekday' => $day,
+            'open' => in_array($day, $weekdays, true),
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ])
+        ->all();
 }
 
 beforeEach(fn () => test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'Europe/London')));
@@ -101,11 +134,12 @@ it('finishes setup either way', function () {
 
 /*
  * The ordering that matters. `BookingService` checks the slot against the
- * availability rules, and at this exact moment the rules being checked are the
- * ones in the same request. Written the other way round, the first appointment
- * is refused for every salon that has just told us when it opens.
+ * availability rules, so the week has to be on the tenant before the booking is
+ * attempted. Step one writes it and the final step reads it; written the other
+ * way round, the first appointment is refused for every salon that has just
+ * told us when it opens.
  */
-it('accepts an appointment inside the hours posted in the same request', function () {
+it('accepts an appointment inside the hours set on step one', function () {
     $salon = aSalonSettingUp();
 
     finishSetup($salon, [
@@ -122,7 +156,7 @@ it('accepts an appointment inside the hours posted in the same request', functio
 it('says so when the time is outside the hours just set, rather than failing silently', function () {
     $salon = aSalonSettingUp();
 
-    // 21:00 on the Monday. The rules posted alongside say 09:00-17:00.
+    // 21:00 on the Monday. The week saved on step one says 09:00-17:00.
     $response = finishSetup($salon, [
         'customer_name' => 'Naomi Ellery',
         'customer_email' => 'naomi@example.com',
@@ -191,7 +225,7 @@ it('offers tomorrow at nine, in the salon’s timezone, as the default', functio
     $salon['tenant']->forceFill(['timezone' => 'Pacific/Auckland'])->save();
 
     actingAsTenant($salon['owner'])
-        ->get(route('onboarding.show', ['step' => 'hours']))
+        ->get(route('onboarding.show'))
         ->assertInertia(fn ($page) => $page->where(
             'firstBookingDefault',
             CarbonImmutable::now('Pacific/Auckland')->addDay()->setTime(9, 0)->format('Y-m-d\TH:i'),

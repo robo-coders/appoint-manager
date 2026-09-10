@@ -95,7 +95,7 @@ final class BookingService
         return $this;
     }
 
-    public function needsDeposit(Tenant $tenant, Service $service, BookingSource $source): bool
+    public function needsDeposit(Tenant $tenant, Service $service, BookingSource $source, ?Customer $customer = null): bool
     {
         if ($source === BookingSource::Manual) {
             return false;
@@ -105,7 +105,14 @@ final class BookingService
             return false;
         }
 
-        return $tenant->takesDeposits() && $service->deposit_amount->amount > 0;
+        return $tenant->takesDeposits() && $this->upfrontAmount($service, $customer) > 0;
+    }
+
+    public function upfrontAmount(Service $service, ?Customer $customer = null): int
+    {
+        return $customer?->requires_full_payment_override
+            ? $service->price->amount
+            : $service->deposit_amount->amount;
     }
 
     public function create(
@@ -137,7 +144,7 @@ final class BookingService
          */
         $this->loyalty->enrol($tenant, $customer);
         $isReward = $this->loyalty->rewardDue($tenant, $customer);
-        $needsDeposit = ! $isReward && $this->needsDeposit($tenant, $service, $source);
+        $needsDeposit = ! $isReward && $this->needsDeposit($tenant, $service, $source, $customer);
         $isRequest = $tenant->isRequestMode() && $source !== BookingSource::Manual;
 
         $booking = $this->inStaffLockedWrite(function () use ($tenant, $service, $staff, $customer, $startsAt, $endsAt, $source, $subject, $status, $depositStatus, $needsDeposit, $isRequest, $isReward, $waitlistEntryId, $rebookIntervalDays) {
@@ -167,7 +174,7 @@ final class BookingService
                 // applied later, so every screen, export and refund path that
                 // reads `price_at_booking` sees the price that was charged.
                 'price_at_booking' => $isReward ? 0 : $service->price->amount,
-                'deposit_at_booking' => $needsDeposit ? $service->deposit_amount->amount : 0,
+                'deposit_at_booking' => $needsDeposit ? $this->upfrontAmount($service, $customer) : 0,
                 'is_loyalty_reward' => $isReward,
                 'source' => $source,
                 'rebook_interval_days' => $rebookIntervalDays,

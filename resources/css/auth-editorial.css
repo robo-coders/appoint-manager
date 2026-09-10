@@ -1,0 +1,1017 @@
+@import './marketing-editorial-tokens.css';
+
+/*
+ * The two auth doors, on the editorial surface.
+ *
+ * `/login` and `/admin/login` are drawn from `.design/mockups/login/`
+ * (`operator-login.png`, `admin-login.png`) and their Claude Design sources in
+ * `.design/mockups/frontend/`. Those artboards are the binding target.
+ *
+ * ── Why these two screens left the operator design system ────────────────
+ *
+ * Because they are not operator screens. Everything behind them is a tool
+ * somebody uses forty times a week and the app tokens are tuned for that —
+ * 6px radii, a 12/13/14/15/17/20/24/34 type scale, one flat paper. A door is
+ * read once, by somebody deciding whether to trust what is behind it, and the
+ * artboards answer that with a display line, a warm canvas and a worked
+ * example of the product doing its job. Rebuilt on `ui/TextInput` and
+ * `ui/Button` they lost the kicker, the display headline, the preview card,
+ * the footer navigation and the type scale — which is to say they lost the
+ * page and kept the form.
+ *
+ * The values here are `marketing-editorial-tokens.css`, unchanged and not
+ * copied. That file is a sanctioned second system, already exempt from
+ * `check:design`, and it already carries Inter Tight, `--accent`,
+ * `--radius-pill` and `--radius-card`. Where an artboard and a token disagree
+ * — the artboard's #FAF8F5 canvas against `--canvas` #fbf9f5, its 10px field
+ * radius against `--radius-slot` 8px, its #FCFBF9 card against `--white` —
+ * the token wins, so these pages stay in step with the marketing site rather
+ * than with a screenshot.
+ *
+ * ── Scope ────────────────────────────────────────────────────────────────
+ *
+ * Every selector below is under `.editorial-surface`, and so is the token
+ * block it reads (see the note at the top of the tokens file). An Inertia
+ * visit never unloads a stylesheet chunk, so anything global here would
+ * follow the operator into the diary and stay there.
+ */
+
+/*
+ * Inter Tight, self-hosted, because there is no font host.
+ *
+ * `--font-display` has named 'Inter Tight' since the editorial direction
+ * landed and no file has ever backed it: `resources/fonts/` held Geist, Geist
+ * Medium and Geist Mono, and `font-src` in `App\Http\Middleware\SecurityHeaders`
+ * names no third party at all. So the display face silently resolved to Geist
+ * — on this surface and on the marketing site with it — and the artboards'
+ * headline was never once drawn in the typeface they were drawn in.
+ *
+ * One file: Google serves the same latin woff2 for 400 and 500 because Inter
+ * Tight ships as a variable font, so the range is declared rather than two
+ * static faces cut from it.
+ *
+ * Deliberately not added to `marketing-editorial.css`. That would change how
+ * every marketing page renders, which is a separate decision from these two
+ * doors and is not this pass's to make.
+ */
+@font-face {
+    font-family: 'Inter Tight';
+    src: url('../fonts/InterTight-Variable.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---- The page ------------------------------------------------------- */
+
+.editorial-surface {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+}
+
+.editorial-surface *,
+.editorial-surface *::before,
+.editorial-surface *::after {
+    box-sizing: border-box;
+}
+
+/*
+ * One focus rule for the whole door, written the way the marketing surface
+ * writes it and for the same reason: the e2e suite tabs through every
+ * focusable element and reads `box-shadow` back, so a ring drawn as an
+ * outline is a ring nothing can prove is there. No radius here — the ring
+ * follows whatever the control already has, which is how the pills stay
+ * pills.
+ */
+.editorial-surface a:focus-visible,
+.editorial-surface button:focus-visible,
+.editorial-surface input:focus-visible,
+.editorial-surface [tabindex]:not([tabindex='-1']):focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+/*
+ * And the plugin's ring, off.
+ *
+ * `@tailwindcss/forms` gives every text input a `:focus` rule of its own — a
+ * blue border and a blue `--tw-ring-shadow`, in a product with no blue in it.
+ * `base.css` has neutralised that for the whole app since the day it was
+ * found; this surface used to be covered by the same rule and, since the app's
+ * controls now stop at its edge (see the note beside that rule), is not. Same
+ * two lines, drawn where the door can reach them. `:focus` rather than
+ * `:focus-visible`, because the plugin's is `:focus` and this has to meet it.
+ */
+.editorial-surface input:focus,
+.editorial-surface select:focus,
+.editorial-surface textarea:focus {
+    outline: none;
+    --tw-ring-color: transparent;
+    --tw-ring-shadow: 0 0 0 0 transparent;
+}
+
+/*
+ * The clay glow behind the masthead. A gradient rather than a blurred circle:
+ * the artboard draws it as one, and `filter: blur(60px)` over a 1200×760 box
+ * is a compositing cost on the first screen a person sees.
+ */
+.ed-glow {
+    position: absolute;
+    top: -140px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1200px;
+    height: 760px;
+    max-width: none;
+    pointer-events: none;
+    background: radial-gradient(closest-side, var(--orb-b), transparent 72%);
+}
+
+.ed-sheet {
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---- Masthead -------------------------------------------------------- */
+
+/*
+ * 64px from the viewport edge, where the columns below start at 128px — the
+ * artboard runs the masthead to the full 1440 and centres the content in
+ * 1312. That is not a rounding error in the export; it is the masthead
+ * sitting outside the measure, which is what stops a two-item nav from
+ * reading as a third column.
+ */
+.ed-nav {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: 26px var(--space-8);
+}
+
+.ed-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+/*
+ * The mark, drawn rather than loaded. `resources/js/assets/*.svg` is the
+ * operator lockup and is coloured in `tokens.css` values, which are not the
+ * values on this surface; an `<img>` cannot read a custom property, so the
+ * one on the artboard — two bars in a rounded square, the lower one clay — is
+ * built out of elements that can.
+ */
+.ed-mark {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.ed-mark span {
+    display: block;
+    height: 4px;
+    border-radius: 1.5px;
+    background: var(--ink);
+    opacity: 0.35;
+}
+
+.ed-mark span + span {
+    background: var(--accent);
+    opacity: 1;
+}
+
+.ed-wordmark {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+}
+
+/* The console's "INTERNAL" chip. Set in capitals as content, never as a
+   transform — sentence case is the rule and this is a label, not prose. */
+.ed-tag {
+    margin-left: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--rule-loud);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink-2);
+}
+
+.ed-navlinks {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+}
+
+.ed-navlinks a {
+    color: inherit;
+    text-decoration: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ed-navlinks a:hover {
+    color: var(--accent);
+}
+
+.ed-nav-pill {
+    padding: 11px var(--space-3);
+    border: 1px solid var(--rule-loud);
+    border-radius: var(--radius-pill);
+    color: var(--ink);
+}
+
+.ed-nav-pill:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+}
+
+/* ---- The two columns ------------------------------------------------- */
+
+/*
+ * Three areas, not two columns, and that is what makes the narrow layout
+ * work. The left of the artboard is one block — kicker, headline, subhead,
+ * then the preview card — but stacked on a phone those two halves want the
+ * form in between them: the display line is the greeting, the form is the
+ * errand, and the worked example is the thing you look at afterwards while
+ * the page loads. A single left column can only put the whole of itself
+ * above the form or the whole of itself below.
+ */
+.ed-main {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 468px;
+    grid-template-areas:
+        'lede card'
+        'panel card';
+    column-gap: var(--space-12);
+    align-content: center;
+    width: 100%;
+    max-width: 1312px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-8) 72px;
+}
+
+.ed-lede {
+    grid-area: lede;
+}
+
+.ed-panel-wrap {
+    grid-area: panel;
+    margin-top: 38px;
+}
+
+.ed-card-wrap {
+    grid-area: card;
+    align-self: center;
+}
+
+.ed-kicker {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+}
+
+.ed-display {
+    margin: 20px 0 0;
+    max-width: 600px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 60px;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+}
+
+/* The console's line is one word longer and sets to the same two lines a
+   step down. */
+.ed-display--console {
+    font-size: 56px;
+    line-height: 1.05;
+}
+
+.ed-sub {
+    margin: 22px 0 0;
+    max-width: 440px;
+    font-size: 16.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+}
+
+/* ---- The preview panel (diary, and the platform table) --------------- */
+
+.ed-panel {
+    max-width: 520px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-diary);
+    background: var(--white);
+    overflow: hidden;
+}
+
+.ed-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) 20px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.ed-panel-title {
+    font-size: 14.5px;
+    font-weight: 500;
+}
+
+.ed-panel-note {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--accent);
+}
+
+/* The console's region label is a fact, not a win. */
+.ed-panel-note--quiet {
+    color: var(--ink-2);
+}
+
+.ed-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.ed-row:last-child {
+    border-bottom: 0;
+}
+
+.ed-time {
+    width: 52px;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-2);
+}
+
+.ed-slot {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px;
+    border-radius: var(--radius-slot);
+    background: var(--canvas-sunk);
+    font-size: 14px;
+}
+
+.ed-slot .ed-quiet {
+    color: var(--ink-2);
+}
+
+/*
+ * The one row the page exists to show. Clay border, clay tint, mono — the
+ * same three signals `.slot.reclaimed` uses on the marketing home page, so a
+ * reclaimed slot looks like a reclaimed slot on both surfaces.
+ */
+.ed-slot--reclaimed {
+    background: var(--reclaimed-fill);
+    border: 1px solid var(--reclaimed-rule);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+}
+
+.ed-cells {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ed-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: var(--space-2) 20px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+}
+
+.ed-cell:nth-child(odd) {
+    border-right: 1px solid var(--rule);
+}
+
+.ed-cell:nth-last-child(-n + 2) {
+    border-bottom: 0;
+}
+
+.ed-dot {
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.ed-panel-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: 14px 20px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+}
+
+/* ---- The sign-in card ------------------------------------------------ */
+
+.ed-card {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--white);
+    padding: 40px;
+}
+
+.ed-card-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 27px;
+    letter-spacing: -0.025em;
+}
+
+.ed-card-sub {
+    margin: 9px 0 0;
+    font-size: 14px;
+    color: var(--ink-2);
+}
+
+.ed-form {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.ed-card-foot {
+    margin-top: var(--space-3);
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.ed-card-note {
+    margin: 18px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-2);
+}
+
+.ed-price {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-2);
+    white-space: nowrap;
+}
+
+/* An underline drawn as a border, so it sits a pixel clear of the descenders
+   rather than through them. */
+.ed-link {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule-loud);
+    padding-bottom: 1px;
+}
+
+.ed-link:hover {
+    border-bottom-color: var(--ink);
+}
+
+/* ---- Controls -------------------------------------------------------- */
+
+/*
+ * Read by `Components/ui/EditorialField.vue`, `EditorialButton.vue` and
+ * `EditorialCheckbox.vue`. They live in `Components/ui/` because that is
+ * where this codebase keeps the one implementation of a control —
+ * `check:components` enforces it — and their appearance lives here because
+ * that is where this surface's other appearances live.
+ */
+
+.ed-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.ed-field-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.ed-field-link {
+    font-weight: 400;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    text-decoration: none;
+}
+
+.ed-field-link:hover {
+    color: var(--accent);
+}
+
+.ed-field-control {
+    position: relative;
+    display: flex;
+}
+
+.ed-input {
+    flex: 1;
+    min-width: 0;
+    height: 46px;
+    padding: 0 15px;
+    font-family: inherit;
+    font-size: 14.5px;
+    color: var(--ink);
+    background: var(--canvas);
+    border: 1px solid var(--rule-loud);
+    border-radius: var(--radius-slot);
+    transition:
+        border-color var(--duration-fast) ease,
+        background var(--duration-fast) ease;
+}
+
+/* Room for the reveal control, so a long password never runs under it. */
+.ed-input--revealable {
+    padding-right: 76px;
+}
+
+.ed-input::placeholder {
+    color: var(--ink-3);
+}
+
+.ed-input:hover {
+    border-color: var(--ink-3);
+}
+
+.ed-input:focus {
+    outline: none;
+    border-color: var(--ink);
+    background: var(--white);
+}
+
+/*
+ * A field the server rejected. Clay border on a clay tint — the artboard's
+ * "field border terracotta · 4% tint · no shadow" — and never a fill dark
+ * enough to make the typed value hard to read back.
+ */
+.ed-input--error,
+.ed-input--error:hover,
+/*
+ * `:focus` last, and for the reason `base.css` gives the same rule on the app
+ * side: `.ed-input:focus` is a class and a pseudo, the same weight as the
+ * error rule, so without naming the focused case the field a person has just
+ * been sent to fix is the one field that stops looking wrong — at the moment
+ * they are looking at it. The ring says "here"; the clay says "this".
+ */
+.ed-input--error:focus,
+.ed-input--error:focus-visible {
+    border-color: var(--accent);
+    background: var(--highlight-fill);
+}
+
+.ed-field-error {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--accent);
+}
+
+.ed-reveal {
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition:
+        color var(--duration-fast) ease,
+        background var(--duration-fast) ease;
+}
+
+.ed-reveal:hover {
+    color: var(--accent);
+    background: var(--reclaimed-fill);
+}
+
+.ed-btn {
+    position: relative;
+    height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        background var(--duration-fast) ease,
+        border-color var(--duration-fast) ease;
+}
+
+.ed-btn--block {
+    width: 100%;
+}
+
+.ed-btn--solid {
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--canvas);
+}
+
+.ed-btn--solid:hover {
+    background: var(--ink-2);
+    border-color: var(--ink-2);
+}
+
+/*
+ * The console's button is outlined where the operator's is filled, and that
+ * is the artboard being deliberate rather than inconsistent: an admin door
+ * has nothing to sell, so its one control does not need to be the loudest
+ * thing on the page.
+ */
+.ed-btn--outline {
+    height: 48px;
+    border: 1px solid var(--rule-loud);
+    background: transparent;
+    font-size: 14.5px;
+    color: var(--ink);
+}
+
+.ed-btn--outline:hover {
+    border-color: var(--ink);
+    background: var(--canvas-sunk);
+}
+
+/* Working, not unavailable: a submitting button keeps its contrast. Only a
+   genuinely disabled one fades. */
+.ed-btn:disabled {
+    cursor: not-allowed;
+}
+
+.ed-btn[aria-busy='true'] {
+    cursor: progress;
+}
+
+.ed-btn:disabled:not([aria-busy='true']) {
+    border-color: transparent;
+    background: var(--canvas-sunk);
+    color: var(--ink-3);
+}
+
+.ed-btn-label--loading {
+    visibility: hidden;
+}
+
+.ed-btn-spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ed-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+/*
+ * The tick is a fill inside a border, drawn with `background-clip` rather
+ * than the artboard's inset `box-shadow`. This system has exactly one shadow
+ * — the focus ring — and `check:design` enforces it; padding plus a
+ * content-box fill is the same 10px square by other means.
+ */
+.ed-check-box {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    appearance: none;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid var(--rule-loud);
+    border-radius: 5px;
+    background-color: transparent;
+    background-clip: content-box;
+    cursor: pointer;
+    transition:
+        background-color var(--duration-fast) ease,
+        border-color var(--duration-fast) ease;
+}
+
+.ed-check-box:checked {
+    border-color: var(--ink);
+    background-color: var(--ink);
+}
+
+/* ---- Alerts ---------------------------------------------------------- */
+
+/*
+ * Three tones, and they are not decoration: they say whose problem it is.
+ *
+ *   accent   clay — a wrong password. She can fix this by typing again.
+ *   ink      the hard stop. The artboard's "hard stop uses ink, not
+ *            terracotta": a locked account is not a typo, and painting it in
+ *            the same colour as one invites a fourth attempt.
+ *   neutral  nothing she did was wrong, so nothing should look like an error.
+ */
+.ed-alert {
+    display: flex;
+    gap: 11px;
+    padding: 13px 15px;
+    border-radius: var(--radius-slot);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.ed-alert--accent {
+    border: 1px solid var(--reclaimed-rule);
+    border-left: 2px solid var(--accent);
+    background: var(--reclaimed-fill);
+}
+
+.ed-alert--ink {
+    border: 1px solid var(--rule-loud);
+    border-left: 2px solid var(--ink);
+    background: var(--canvas-sunk);
+}
+
+.ed-alert--neutral {
+    border: 1px solid var(--rule);
+    background: var(--canvas-sunk);
+}
+
+.ed-alert-dot {
+    margin-top: 6px;
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.ed-alert--ink .ed-alert-dot {
+    background: var(--ink);
+}
+
+.ed-alert--neutral .ed-alert-dot {
+    background: var(--ink-3);
+}
+
+.ed-alert .ed-fig {
+    font-family: var(--font-mono);
+}
+
+/* The live alert sits between the card's subhead and its form. */
+.ed-card > .ed-alert {
+    margin-top: 26px;
+}
+
+/* ---- Footer ---------------------------------------------------------- */
+
+.ed-foot {
+    position: relative;
+    width: 100%;
+    max-width: 1312px;
+    margin: 0 auto;
+    padding: 0 var(--space-8) 44px;
+}
+
+.ed-foot-rule {
+    height: 1px;
+    background: var(--rule);
+}
+
+.ed-foot-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    padding-top: 22px;
+    font-size: 13px;
+    color: var(--ink-2);
+}
+
+.ed-foot-nav {
+    display: flex;
+    gap: 28px;
+}
+
+.ed-foot-nav a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.ed-foot-nav a:hover {
+    color: var(--accent);
+}
+
+/* ---- Narrow ---------------------------------------------------------- */
+
+/*
+ * The same three steps the marketing site takes — 1024, 760, 640 — so a
+ * person moving between the front page and this one does not cross two
+ * different sets of breakpoints.
+ */
+@media (max-width: 1024px) {
+    .ed-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            'lede'
+            'card'
+            'panel';
+        padding: var(--space-6) var(--space-4) var(--space-6);
+    }
+
+    .ed-card-wrap {
+        margin-top: var(--space-6);
+    }
+
+    .ed-panel-wrap {
+        margin-top: var(--space-6);
+    }
+
+    .ed-panel,
+    .ed-card-wrap {
+        max-width: 520px;
+    }
+
+    .ed-display {
+        font-size: 48px;
+    }
+
+    .ed-display--console {
+        font-size: 44px;
+    }
+
+    .ed-nav,
+    .ed-foot {
+        padding-left: var(--space-4);
+        padding-right: var(--space-4);
+    }
+}
+
+@media (max-width: 760px) {
+    .ed-nav {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
+    }
+
+    .ed-navlinks {
+        flex-wrap: wrap;
+        gap: 0 var(--space-2);
+    }
+
+    .ed-nav-pill {
+        padding: 10px 14px;
+    }
+
+    .ed-main {
+        padding: var(--space-4) var(--space-3) var(--space-6);
+    }
+
+    .ed-display {
+        font-size: 40px;
+    }
+
+    .ed-display--console {
+        font-size: 36px;
+    }
+
+    .ed-sub {
+        font-size: 15.5px;
+    }
+
+    .ed-card {
+        padding: var(--space-3);
+    }
+
+    .ed-foot {
+        padding: 0 var(--space-3) var(--space-4);
+    }
+
+    .ed-foot-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ed-foot-nav {
+        flex-wrap: wrap;
+        gap: 0 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .ed-display {
+        font-size: 34px;
+    }
+
+    .ed-display--console {
+        font-size: 32px;
+    }
+
+    .ed-glow {
+        width: 760px;
+        height: 480px;
+        top: -120px;
+    }
+
+    /*
+     * The marketing links go, the trial pill stays. At 375 the masthead is
+     * the width of four words and "How it works · Pricing · Start free trial"
+     * wraps to two ragged rows above a form somebody opened to sign in — the
+     * one call to action worth keeping there is the one for the person who
+     * has no account yet, and it is a 44px target rather than a link in a
+     * wrapped row.
+     */
+    .ed-navlinks a:not(.ed-nav-pill) {
+        display: none;
+    }
+
+    .ed-panel-foot {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /*
+     * The date and the count stop fitting on one line at about 360px of card,
+     * and left to wrap they became two ragged two-line columns — which reads
+     * as a layout that broke rather than one that bent.
+     */
+    .ed-panel-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .ed-cells {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ed-cell:nth-child(odd) {
+        border-right: 0;
+    }
+
+    .ed-cell:nth-last-child(2) {
+        border-bottom: 1px solid var(--rule);
+    }
+}

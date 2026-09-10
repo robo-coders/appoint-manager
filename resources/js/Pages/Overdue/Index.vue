@@ -5,6 +5,7 @@ import Callout from '@/Components/ui/Callout.vue';
 import ConfirmDialog from '@/Components/ui/ConfirmDialog.vue';
 import MenuItem from '@/Components/ui/MenuItem.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import HiddenContact from '@/Components/ui/HiddenContact.vue';
 import PhoneLink from '@/Components/ui/PhoneLink.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -20,8 +21,11 @@ import { computed, ref } from 'vue';
 type Row = {
     subject_id: number;
     subject_name: string;
+    customer_id: number | null;
     customer_name: string | null;
+    /** The number, or the masked stand-in when `contact_hidden`. */
     phone: string | null;
+    contact_hidden?: boolean;
     service_name: string;
     due_on: string;
     due_label: string;
@@ -35,8 +39,10 @@ type Row = {
 type DryRunMessage = {
     subject_id: number;
     subject_name: string;
+    customer_id: number | null;
     customer_name: string | null;
     phone: string | null;
+    contact_hidden?: boolean;
     body: string;
     segments: number;
     encoding: string;
@@ -64,7 +70,9 @@ const props = defineProps<{
     timezone: string;
     recent_sends: Array<{
         id: number;
+        /** The number the text went to, masked when `contact_hidden`. */
         to: string;
+        contact_hidden?: boolean;
         customer_name: string | null;
         sent_on: string | null;
         status: string;
@@ -204,8 +212,15 @@ const call = (phone: string) => {
             empty-title="Nobody is overdue"
             empty-description="When a regular goes past their interval, they land here."
         >
+            <!--
+                A number this person may not read is shown masked rather than
+                blank: this is the screen for ringing people, and an empty cell
+                here reads as "no number on file" — which would send somebody
+                looking for a record to fix. See `ui/HiddenContact`.
+            -->
             <template #cell:phone="{ row }">
-                <PhoneLink :phone="row.phone as string | null" />
+                <HiddenContact v-if="row.contact_hidden && row.phone" :masked="row.phone as string" />
+                <PhoneLink v-else :phone="row.phone as string | null" />
             </template>
             <template #cell:subject_name="{ row }">
                 <span class="font-medium">{{ row.subject_name }}</span>
@@ -225,7 +240,7 @@ const call = (phone: string) => {
                 <span class="numeral">{{ row.price }}</span>
             </template>
             <template #actions="{ row }">
-                <MenuItem v-if="row.phone" @click="call(String(row.phone))">Call</MenuItem>
+                <MenuItem v-if="row.phone && !row.contact_hidden" @click="call(String(row.phone))">Call</MenuItem>
                 <MenuItem @click="router.post(route('overdue.contacted', Number(row.subject_id)))">Mark contacted</MenuItem>
                 <MenuItem @click="router.post(route('overdue.snooze', Number(row.subject_id)), { days: 14 })">
                     Snooze two weeks
@@ -276,7 +291,11 @@ const call = (phone: string) => {
                 <li v-for="send in recent_sends" :key="send.id" class="flex flex-wrap items-baseline justify-between gap-3 py-3">
                     <p>
                         <span class="font-medium">{{ send.customer_name ?? send.to }}</span>
-                        <span class="text-ink-2"> · {{ send.to }}</span>
+                        <span class="text-ink-2">
+                            ·
+                            <HiddenContact v-if="send.contact_hidden" :masked="send.to" />
+                            <template v-else>{{ send.to }}</template>
+                        </span>
                         <span v-if="send.error" class="text-ink-2"> · {{ send.error }}</span>
                     </p>
                     <p class="text-13 text-ink-2">

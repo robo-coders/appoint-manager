@@ -88,7 +88,7 @@ const submit = () =>
 <template>
     <AppLayout>
         <Head title="Settings" />
-        <PageHeader title="Settings" description="Business details, branding, loyalty, calendars and payments." />
+        <PageHeader title="Settings" description="Business details, branding, loyalty, calendars, payments and billing." />
 
         <SettingsNav current="business" />
 

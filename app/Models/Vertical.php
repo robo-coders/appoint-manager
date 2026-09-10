@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\VerticalFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Vertical extends Model
 {
@@ -17,6 +18,7 @@ class Vertical extends Model
     protected $fillable = [
         'key',
         'label',
+        'business_noun',
         'subject_singular',
         'subject_plural',
         'customer_singular',
@@ -47,6 +49,7 @@ class Vertical extends Model
     {
         return [
             'label' => $this->label,
+            'business_noun' => $this->business_noun,
             'subject_singular' => $this->subject_singular,
             'subject_plural' => $this->subject_plural,
             'customer_singular' => $this->customer_singular,
@@ -54,6 +57,29 @@ class Vertical extends Model
             'subject_fields' => $this->subject_fields ?? [],
             'default_services' => $this->default_services ?? [],
         ];
+    }
+
+    /**
+     * The one line under this trade wherever it is offered as a choice.
+     *
+     * It is the vertical's own vocabulary — "dogs · per visit", "clients only" —
+     * because what actually differs between these options is the words the
+     * product will use afterwards, and a person recognises their trade by those
+     * faster than by a description of it.
+     *
+     * On the model rather than in a controller because two screens ask the
+     * question: `/register` collects the trade and `/onboarding` confirms it,
+     * and the second was written first with this as a private method of
+     * `OnboardingController`. A note that differed between the screen that
+     * takes the answer and the screen that shows it back would be two answers.
+     */
+    public function note(): string
+    {
+        $definition = $this->definition();
+
+        return count($definition['subject_fields'] ?? []) > 0
+            ? Str::lower($definition['subject_plural']).' · per visit'
+            : Str::lower($definition['customer_singular']).'s only';
     }
 
     /**
@@ -69,6 +95,7 @@ class Vertical extends Model
 
         return $vertical?->definition() ?? [
             'label' => 'Dog grooming',
+            'business_noun' => 'salon',
             'subject_singular' => 'dog',
             'subject_plural' => 'dogs',
             'customer_singular' => 'client',

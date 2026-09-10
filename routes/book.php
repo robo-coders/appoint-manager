@@ -15,6 +15,7 @@
 
 use App\Http\Controllers\ManageBookingController;
 use App\Http\Controllers\PreviewBookingController;
+use App\Http\Controllers\Public\IcalFeedController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\SlotOfferController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,12 @@ Route::middleware('throttle:booking-manage')->group(function (): void {
 Route::get('/preview/{token}', PreviewBookingController::class)
     ->middleware('throttle:booking-manage')
     ->name('booking.preview');
+
+Route::get('/ical/{tenantSlug}/{token}.ics', [IcalFeedController::class, 'show'])
+    ->where('tenantSlug', '[a-z0-9-]+')
+    ->where('token', '[A-Za-z0-9]+')
+    ->middleware('throttle:calendar-feed')
+    ->name('ical.feed');
 
 Route::middleware('public-tenant')->group(function (): void {
     Route::get('/{tenant_slug}', [PublicBookingController::class, 'show'])->name('public.booking.show');

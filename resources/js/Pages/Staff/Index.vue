@@ -55,6 +55,7 @@ const form = useForm({
     colour: DEFAULT_STAFF_COLOUR,
     is_bookable: true,
     is_active: true,
+    can_see_customer_contacts: true,
 });
 
 const openCreate = () => {
@@ -63,8 +64,16 @@ const openCreate = () => {
     form.colour = DEFAULT_STAFF_COLOUR;
     form.is_bookable = true;
     form.is_active = true;
+    form.can_see_customer_contacts = true;
     sheetOpen.value = true;
 };
+
+/*
+ * An owner's own row has no contact-visibility control — see the sheet below.
+ */
+const editingOwner = computed(
+    () => props.staff.find((person) => person.id === editingId.value)?.role === 'owner',
+);
 
 const openEdit = (person: StaffRecord) => {
     editingId.value = person.id;
@@ -73,6 +82,7 @@ const openEdit = (person: StaffRecord) => {
     form.colour = person.colour ?? DEFAULT_STAFF_COLOUR;
     form.is_bookable = person.is_bookable;
     form.is_active = person.is_active;
+    form.can_see_customer_contacts = person.can_see_customer_contacts;
     sheetOpen.value = true;
 };
 
@@ -215,6 +225,25 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                 -->
                 <StaffColourField v-model="form.colour" :error="form.errors.colour" />
                 <Checkbox v-model="form.is_bookable" label="Takes bookings" hint="Appears as a column in the diary." />
+
+                <!--
+                    The wording is the wording the onboarding step used when it
+                    first asked. A permission described one way while it is being
+                    granted and another way afterwards is a permission nobody is
+                    sure they set — so both screens say the same sentence, and
+                    the hint states what "off" does rather than leaving it to be
+                    inferred from the absence of "on".
+
+                    Not offered on an owner: `ContactVisibility` reads `isOwner()`
+                    before it reads the column, so the control would be a switch
+                    that visibly does nothing.
+                -->
+                <Checkbox
+                    v-if="!editingOwner"
+                    v-model="form.can_see_customer_contacts"
+                    label="Can see every customer's contact details"
+                    hint="Off means they only see subjects booked to them."
+                />
                 <Checkbox
                     v-if="editingId"
                     v-model="form.is_active"

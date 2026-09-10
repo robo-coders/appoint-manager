@@ -6,8 +6,9 @@ use App\Enums\BookingSource;
 use App\Enums\UserRole;
 use App\Enums\Weekday;
 use App\Exceptions\SlotUnavailableException;
+use App\Http\Requests\Onboarding\CompleteOnboardingRequest;
+use App\Http\Requests\Onboarding\UpdateBasicsRequest;
 use App\Http\Requests\Onboarding\UpdateBusinessDetailsRequest;
-use App\Http\Requests\Onboarding\UpdateOpeningHoursRequest;
 use App\Http\Requests\Onboarding\UpdateServicesRequest;
 use App\Http\Requests\Onboarding\UpdateStaffRequest;
 use App\Models\AvailabilityRule;
@@ -15,18 +16,36 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vertical;
 use App\Services\Booking\BookingService;
 use App\Support\SetupSteps;
+use App\Support\TenantSlug;
 use App\Support\Timezones;
 use App\Support\VerticalInterval;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * The five signed-in screens between registering and a diary.
+ *
+ * One Inertia page, five steps, one endpoint each. Every step saves on
+ * continue, so `show()` can rebuild the flow from the database on any request —
+ * which is what makes closing the tab halfway through survivable, and what
+ * makes Back a link rather than a piece of client state to be defended.
+ *
+ * Progress lives on the tenant (`settings.onboarding.completed_steps`) and the
+ * gate is `EnsureOnboardingComplete`, reading `onboarding_completed_at`. That
+ * timestamp is written by `Tenant::markOnboardingStep()` when the last step —
+ * `SetupSteps::FINAL` — is saved, and nothing else sets it.
+ */
 class OnboardingController extends Controller
 {
     public function show(Request $request): Response|RedirectResponse
@@ -48,38 +67,17 @@ class OnboardingController extends Controller
 
         $completed = $tenant->onboardingCompletedSteps();
         $step = $request->string('step')->toString();
-        $allowed = SetupSteps::ONBOARDING;
 
-        if (! in_array($step, $allowed, true)) {
+        /*
+         * A step is reachable if it is done or if it is the first one that is
+         * not. Asking for a step further ahead than that lands on the first
+         * incomplete one instead of on a form whose defaults depend on answers
+         * that have not been given — the same rule the progress rail uses to
+         * decide what it will link to.
+         */
+        if (! in_array($step, $completed, true)) {
             $step = $this->firstIncompleteStep($completed);
         }
-
-        $serviceRows = $services->isEmpty() && ! in_array('services', $completed, true)
-            ? collect(current_tenant()?->vertical()['default_services'] ?? [])->map(fn (array $service, int $index) => [
-                'id' => null,
-                'name' => $service['name'],
-                'duration_minutes' => $service['duration_minutes'],
-                'price' => $service['price'],
-                'deposit_amount' => $service['deposit_amount'],
-                'sort_order' => $index,
-            ])->all()
-            : $services->map(fn (Service $service) => [
-                'id' => $service->id,
-                'name' => $service->name,
-                'duration_minutes' => $service->duration_minutes,
-                'price' => $service->price->amount,
-                'deposit_amount' => $service->deposit_amount->amount,
-                'sort_order' => $service->sort_order,
-            ])->all();
-
-        $hours = $rules->isEmpty() && ! in_array('hours', $completed, true)
-            ? $this->defaultOwnerHours($owner)
-            : $rules->map(fn (AvailabilityRule $rule) => [
-                'user_id' => $rule->user_id,
-                'weekday' => $rule->weekday->value,
-                'start_time' => substr((string) $rule->start_time, 0, 5),
-                'end_time' => substr((string) $rule->end_time, 0, 5),
-            ])->all();
 
         return Inertia::render('Onboarding/Index', [
             'step' => $step,
@@ -92,7 +90,29 @@ class OnboardingController extends Controller
              */
             'completedSteps' => array_values(array_unique(['account', ...$completed])),
             'steps' => SetupSteps::all(),
+            'onboardingSteps' => SetupSteps::ONBOARDING,
             'timezones' => Timezones::identifiers(),
+
+            'basics' => [
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+                'type' => $tenant->type,
+                'hours' => $this->weekFor($owner, $rules, in_array('basics', $completed, true)),
+            ],
+            'verticals' => Vertical::query()
+                ->orderBy('label')
+                ->get()
+                ->map(fn (Vertical $vertical) => [
+                    'value' => $vertical->key,
+                    'label' => $vertical->label,
+                    // The vertical's own vocabulary, from the model, because
+                    // `/register` offers the same list and must say the same
+                    // thing about each option. See `Vertical::note()`.
+                    'note' => $vertical->note(),
+                ])
+                ->values()
+                ->all(),
+
             'business' => [
                 'timezone' => $tenant->timezone,
                 'phone' => $tenant->phone,
@@ -103,7 +123,9 @@ class OnboardingController extends Controller
                 'booking_mode' => $tenant->booking_mode->value,
                 'request_requires_deposit' => $tenant->request_requires_deposit,
             ],
-            'services' => $serviceRows,
+
+            'service' => $this->serviceFor($services, in_array('services', $completed, true)),
+
             'staff' => $staff->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -111,7 +133,8 @@ class OnboardingController extends Controller
                 'role' => $user->role,
                 'is_owner' => $user->isOwner(),
             ])->all(),
-            'hours' => $hours,
+
+            'bookingUrl' => $tenant->publicBookingUrl(),
             /*
              * Tomorrow at nine, in the salon's own timezone, formatted the way
              * `datetime-local` wants it. Built here rather than in the browser
@@ -125,6 +148,71 @@ class OnboardingController extends Controller
         ]);
     }
 
+    /**
+     * Is this slug free, as of right now?
+     *
+     * Called as you type on step one, so the answer arrives beside the field
+     * instead of on the far side of a failed submit. It is advisory and it does
+     * not reserve anything — `UpdateBasicsRequest` and
+     * `CompleteOnboardingRequest` both check again against the unique index,
+     * which is the only answer that is actually binding.
+     */
+    public function checkSlug(Request $request): JsonResponse
+    {
+        $slug = Str::slug((string) $request->string('slug'));
+
+        if ($slug === '' || strlen($slug) < 3) {
+            return response()->json(['slug' => $slug, 'available' => false, 'suggestion' => null]);
+        }
+
+        $taken = Tenant::withTrashed()
+            ->where('slug', $slug)
+            ->whereKeyNot(current_tenant_id())
+            ->exists();
+
+        return response()->json([
+            'slug' => $slug,
+            'available' => ! $taken,
+            'suggestion' => $taken ? TenantSlug::generate($slug) : null,
+        ]);
+    }
+
+    public function updateBasics(UpdateBasicsRequest $request): RedirectResponse
+    {
+        $tenant = current_tenant();
+        $owner = User::query()->where('role', UserRole::Owner)->first() ?? $request->user();
+
+        DB::transaction(function () use ($request, $tenant, $owner): void {
+            $tenant->update([
+                'name' => $request->validated('name'),
+                'slug' => $request->validated('slug'),
+                'type' => $request->validated('type'),
+            ]);
+
+            /*
+             * The owner's week, rewritten wholesale. Only the owner's rules are
+             * touched: by the time anybody else has hours of their own this
+             * step is behind them, and deleting every rule in the tenant would
+             * quietly clear a colleague's week if somebody came back to edit
+             * step one.
+             */
+            AvailabilityRule::query()->where('user_id', $owner->id)->delete();
+
+            foreach ($request->openDays() as $day) {
+                AvailabilityRule::query()->create([
+                    'user_id' => $owner->id,
+                    'weekday' => Weekday::from($day['weekday']),
+                    'start_time' => $day['start_time'].':00',
+                    'end_time' => $day['end_time'].':00',
+                ]);
+            }
+        });
+
+        $tenant->markOnboardingStep('basics');
+
+        return redirect()->route('onboarding.show', ['step' => 'business']);
+    }
+
     public function updateBusiness(UpdateBusinessDetailsRequest $request): RedirectResponse
     {
         $tenant = current_tenant();
@@ -136,38 +224,28 @@ class OnboardingController extends Controller
 
     public function updateServices(UpdateServicesRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
-            $keepIds = [];
+        $payload = [
+            'name' => $request->validated('name'),
+            'duration_minutes' => $request->validated('duration_minutes'),
+            'price' => $request->validated('price'),
+            'deposit_amount' => $request->validated('deposit_amount'),
+            'sort_order' => 0,
+            'is_active' => true,
+        ];
 
-            foreach (array_values($request->validated('services')) as $index => $row) {
-                $service = isset($row['id'])
-                    ? Service::query()->find($row['id'])
-                    : null;
+        $id = $request->validated('id');
+        $service = $id === null ? null : Service::query()->find($id);
 
-                $payload = [
-                    'name' => $row['name'],
-                    'duration_minutes' => $row['duration_minutes'],
-                    'price' => $row['price'],
-                    'deposit_amount' => $row['deposit_amount'],
-                    'sort_order' => $index,
-                    'is_active' => true,
-                ];
+        if ($service !== null) {
+            $service->update($payload);
+        } else {
+            $payload['suggested_interval_days'] = VerticalInterval::daysForNamedService(
+                (string) current_tenant()?->type,
+                $payload['name'],
+            );
 
-                if ($service) {
-                    $service->update($payload);
-                } else {
-                    $payload['suggested_interval_days'] = VerticalInterval::daysForNamedService(
-                        (string) current_tenant()?->type,
-                        $row['name'],
-                    );
-                    $service = Service::query()->create($payload);
-                }
-
-                $keepIds[] = $service->id;
-            }
-
-            Service::query()->whereNotIn('id', $keepIds)->get()->each->delete();
-        });
+            Service::query()->create($payload);
+        }
 
         current_tenant()?->markOnboardingStep('services');
 
@@ -176,68 +254,93 @@ class OnboardingController extends Controller
 
     public function updateStaff(UpdateStaffRequest $request): RedirectResponse
     {
-        $existingEmails = User::query()->pluck('email')->all();
+        $member = $request->validated('staff');
 
-        foreach ($request->validated('staff') as $row) {
-            if (in_array($row['email'], $existingEmails, true)) {
-                continue;
-            }
-
+        if ($member !== null) {
             User::query()->create([
-                'name' => $row['name'],
-                'email' => $row['email'],
+                'name' => $member['name'],
+                'email' => $member['email'],
                 'password' => Str::password(32),
                 'role' => UserRole::Staff,
                 'is_bookable' => true,
                 'is_active' => true,
+                'can_see_customer_contacts' => (bool) ($member['can_see_customer_contacts'] ?? true),
                 'colour' => '#0F766E',
             ]);
         }
 
         current_tenant()?->markOnboardingStep('staff');
 
-        return redirect()->route('onboarding.show', ['step' => 'hours']);
+        return redirect()->route('onboarding.show', ['step' => 'link']);
     }
 
-    public function updateHours(UpdateOpeningHoursRequest $request): RedirectResponse
+    /**
+     * The last click. Confirms the slug is still free, optionally writes the
+     * first appointment, and stamps `onboarding_completed_at`.
+     */
+    public function complete(CompleteOnboardingRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
-            AvailabilityRule::query()->delete();
+        $tenant = current_tenant();
 
-            foreach ($request->validated('rules') as $row) {
-                AvailabilityRule::query()->create([
-                    'user_id' => $row['user_id'],
-                    'weekday' => Weekday::from((int) $row['weekday']),
-                    'start_time' => $row['start_time'].':00',
-                    'end_time' => $row['end_time'].':00',
-                ]);
+        /*
+         * The slug was validated as free a line ago; this closes the last of
+         * the gap by taking the row before writing it. Two tenants racing for
+         * the same address now serialise here, and the loser is told on the
+         * field rather than by the unique index.
+         */
+        $collision = DB::transaction(function () use ($request, $tenant): bool {
+            $locked = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->first();
+
+            $taken = Tenant::withTrashed()
+                ->where('slug', $request->validated('slug'))
+                ->whereKeyNot($tenant->getKey())
+                ->lockForUpdate()
+                ->exists();
+
+            if ($taken) {
+                return true;
             }
+
+            $locked->update([
+                'slug' => $request->validated('slug'),
+                'booking_page_live' => true,
+            ]);
+
+            return false;
         });
 
-        $tenant = current_tenant();
-        $tenant?->markOnboardingStep('hours');
+        if ($collision) {
+            throw ValidationException::withMessages([
+                'slug' => 'Someone claimed that address while you were setting up. Pick another one on step one.',
+            ]);
+        }
 
         /*
          * The optional first appointment. It is written *after* the hours,
-         * deliberately — `BookingService` checks the slot against availability,
-         * so writing it first would refuse every booking for a salon that has
-         * not stated its hours yet, which at this exact moment is every salon.
+         * which step one now owns — `BookingService` checks the slot against
+         * availability, so a booking written before a salon has stated its
+         * week would be refused for every salon.
          */
         $first = $request->validated('first_booking');
+        $booking = null;
 
-        if ($tenant !== null && $first !== null) {
+        if ($first !== null) {
             try {
                 $booking = $this->createFirstBooking($tenant, $first);
             } catch (SlotUnavailableException $exception) {
                 return back()->withErrors(['first_booking' => $exception->getMessage()]);
             }
+        }
 
+        $tenant->markOnboardingStep(SetupSteps::FINAL);
+
+        if ($booking !== null) {
             return redirect()->route('diary.index', [
                 'date' => $booking->starts_at->timezone($tenant->timezone)->toDateString(),
             ])->with('toast', 'You’re open. Here is your diary, with your first appointment in it.');
         }
 
-        return redirect()->route('diary.index')->with('toast', 'You’re set up. This is your diary.');
+        return redirect()->route('diary.index')->with('toast', 'You’re open. This is your diary.');
     }
 
     /**
@@ -286,25 +389,89 @@ class OnboardingController extends Controller
             }
         }
 
-        return 'hours';
+        return SetupSteps::FINAL;
     }
 
     /**
-     * @return list<array{user_id: int, weekday: int, start_time: string, end_time: string}>
+     * Seven days, one row each, in the shape step one's toggles expect.
+     *
+     * Before the step has been saved this is the suggested week — Monday to
+     * Friday, nine to five, weekend shut — rather than a blank form. After it
+     * has, it is whatever is actually in `availability_rules`, so coming back
+     * to the step shows what you last said and not the suggestion again.
+     *
+     * A day holding several ranges collapses to its outer edges here. The full
+     * grid lives in Settings; this row cannot express a lunch break and should
+     * not pretend to, but it must not silently narrow one either.
+     *
+     * @param  Collection<int, AvailabilityRule>  $rules
+     * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
      */
-    private function defaultOwnerHours(User $owner): array
+    private function weekFor(User $owner, $rules, bool $saved): array
     {
-        $hours = [];
+        $mine = $rules->where('user_id', $owner->id);
+        $week = [];
 
-        foreach ([Weekday::Monday, Weekday::Tuesday, Weekday::Wednesday, Weekday::Thursday, Weekday::Friday] as $weekday) {
-            $hours[] = [
-                'user_id' => $owner->id,
+        foreach (Weekday::cases() as $weekday) {
+            $day = $mine->where('weekday', $weekday);
+
+            if ($day->isNotEmpty()) {
+                $week[] = [
+                    'weekday' => $weekday->value,
+                    'open' => true,
+                    'start_time' => substr((string) $day->min('start_time'), 0, 5),
+                    'end_time' => substr((string) $day->max('end_time'), 0, 5),
+                ];
+
+                continue;
+            }
+
+            $weekend = in_array($weekday, [Weekday::Saturday, Weekday::Sunday], true);
+
+            $week[] = [
                 'weekday' => $weekday->value,
+                'open' => $saved ? false : ! $weekend,
                 'start_time' => '09:00',
                 'end_time' => '17:00',
             ];
         }
 
-        return $hours;
+        return $week;
+    }
+
+    /**
+     * The one service step three edits.
+     *
+     * Prefilled from the vertical's first default until the step has been
+     * saved, so a groomer starts on "Full groom" at that trade's usual length
+     * and price rather than on an empty form. `id` is null for a suggestion and
+     * set for a real row, which is how `updateServices` tells them apart.
+     *
+     * @param  Collection<int, Service>  $services
+     * @return array{id: int|null, name: string, duration_minutes: int, price: int, deposit_amount: int}
+     */
+    private function serviceFor($services, bool $saved): array
+    {
+        $existing = $services->first();
+
+        if ($existing !== null) {
+            return [
+                'id' => $existing->id,
+                'name' => $existing->name,
+                'duration_minutes' => $existing->duration_minutes,
+                'price' => $existing->price->amount,
+                'deposit_amount' => $existing->deposit_amount->amount,
+            ];
+        }
+
+        $default = $saved ? null : (current_tenant()?->vertical()['default_services'][0] ?? null);
+
+        return [
+            'id' => null,
+            'name' => $default['name'] ?? '',
+            'duration_minutes' => (int) ($default['duration_minutes'] ?? 60),
+            'price' => (int) ($default['price'] ?? 0),
+            'deposit_amount' => (int) ($default['deposit_amount'] ?? 0),
+        ];
     }
 }

@@ -10,6 +10,8 @@ use App\Models\Subject;
 use App\Models\Tenant;
 use App\Services\Rebooking\OverdueSubjects;
 use App\Services\Rebooking\RebookMessenger;
+use App\Support\ContactVisibility;
+use App\Support\MaskedContact;
 use App\Support\SendWindow;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +21,7 @@ use Inertia\Response;
 
 class OverdueController extends Controller
 {
-    public function index(OverdueSubjects $overdue, RebookMessenger $messages): Response
+    public function index(OverdueSubjects $overdue, RebookMessenger $messages, Request $request): Response
     {
         $tenant = current_tenant();
         abort_unless($tenant, 403);
@@ -28,16 +30,31 @@ class OverdueController extends Controller
         $summary = $overdue->summary($tenant);
         $previewing = session()->get('rebooking_preview') === true;
 
+        /*
+         * The masking happens here rather than in `OverdueSubjects`, because
+         * that service has a second caller: `RebookMessenger` reads `phone` off
+         * the same rows to actually send the text. Masking at the source would
+         * send eight bullet points to Twilio.
+         */
+        $contacts = ContactVisibility::for($request->user());
+        $dryRun = $previewing ? $messages->dryRun($tenant) : null;
+
         return Inertia::render('Overdue/Index', [
             'summary' => $summary,
-            'rows' => $rows,
+            'rows' => $this->maskRows($rows, $contacts),
+            // `stopped` and `snoozed` carry no number — subject, customer name
+            // and a date — so there is nothing on them to mask.
             'stopped' => $overdue->stoppedForTenant($tenant),
             'snoozed' => $overdue->snoozedForTenant($tenant),
             'messages_enabled' => $messages->isEnabled($tenant),
-            'dry_run' => $previewing ? $messages->dryRun($tenant) : null,
+            'dry_run' => $dryRun === null ? null : [
+                ...$dryRun,
+                'messages' => $this->maskRows($dryRun['messages'] ?? [], $contacts),
+                'suppressed' => $this->maskRows($dryRun['suppressed'] ?? [], $contacts),
+            ],
             'window' => SendWindow::describe($tenant),
             'timezone' => $tenant->timezone,
-            'recent_sends' => $this->recentSends($tenant),
+            'recent_sends' => $this->recentSends($tenant, $contacts),
             'noun' => $tenant->vertical()['subject_singular'] ?? 'subject',
             'noun_plural' => $tenant->vertical()['subject_plural'] ?? 'subjects',
         ]);
@@ -132,7 +149,34 @@ class OverdueController extends Controller
      *
      * @return list<array<string, mixed>>
      */
-    private function recentSends(Tenant $tenant): array
+    /**
+     * Blank the number on every row this person may not read it on.
+     *
+     * `customer_id` is the key rather than `subject_id`: the permission is
+     * about the person you would be ringing, and one customer's three dogs are
+     * three rows here.
+     *
+     * @template T of iterable<int, array<string, mixed>>
+     *
+     * @param  T  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function maskRows(iterable $rows, ContactVisibility $contacts): array
+    {
+        $out = [];
+
+        foreach ($rows as $row) {
+            $visible = $contacts->customer($row['customer_id'] ?? null);
+
+            $out[] = $visible
+                ? [...$row, 'contact_hidden' => false]
+                : [...$row, 'phone' => MaskedContact::phone($row['phone'] ?? null), 'contact_hidden' => true];
+        }
+
+        return $out;
+    }
+
+    private function recentSends(Tenant $tenant, ContactVisibility $contacts): array
     {
         return Message::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
@@ -144,7 +188,11 @@ class OverdueController extends Controller
             ->get()
             ->map(fn (Message $message) => [
                 'id' => $message->id,
-                'to' => $message->to,
+                // `to` is the number the text went to, which is the customer's.
+                'to' => $contacts->customer($message->customer_id)
+                    ? $message->to
+                    : MaskedContact::phone($message->to),
+                'contact_hidden' => ! $contacts->customer($message->customer_id),
                 'customer_name' => $message->customer?->name,
                 'sent_on' => $message->created_at?->timezone($tenant->timezone)->format('j M H:i'),
                 'status' => $message->status->value,

@@ -129,7 +129,29 @@
         border-top: 1px solid var(--rule);
     }
 
-    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),
+    /*
+     * ── `:not(.editorial-surface *)` ──────────────────────────────────────
+     *
+     * This is the operator app's control, and the five `:not()`s above give it
+     * six selectors of specificity so that it is what an `<input>` looks like
+     * anywhere nobody asked for something else. `.editorial-surface` — the two
+     * auth doors, and nothing else in the product — is the one place that does
+     * ask, and a single class on `.ed-input` cannot outrank six.
+     *
+     * It could not, and the cost was invisible: `auth-editorial.css` sets a
+     * clay border and a 4% clay tint on a rejected field, exactly as the
+     * artboards specify, and none of it ever reached the screen. What did
+     * reach it was `--danger` — the operator app's red, from the
+     * `[aria-invalid='true']:focus` rule below — on a surface whose palette
+     * has no red in it. The error message under the field was the only part of
+     * a rejected field that was ever drawn in this product's own colours.
+     *
+     * So the app's controls stop at the edge of that surface. Excluding rather
+     * than out-specifying, because "the editorial door draws its own fields"
+     * is the actual rule, and a longer selector on the other side would only
+     * have said it in a way nobody could read.
+     */
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not(.editorial-surface *),
     select,
     textarea {
         background-color: var(--white);
@@ -141,7 +163,7 @@
         transition: border-color var(--duration-fast) var(--ease);
     }
 
-    input:not([type='checkbox']):not([type='radio']):hover,
+    input:not([type='checkbox']):not([type='radio']):not(.editorial-surface *):hover,
     select:hover,
     textarea:hover {
         border-color: var(--rule-hover);
@@ -170,8 +192,8 @@
      * signal, which is what `--focus-ring` was designed as: two rings, paper
      * then accent, offset from the control.
      */
-    input:not([type='checkbox']):not([type='radio']):focus,
-    input:not([type='checkbox']):not([type='radio']):focus-visible,
+    input:not([type='checkbox']):not([type='radio']):not(.editorial-surface *):focus,
+    input:not([type='checkbox']):not([type='radio']):not(.editorial-surface *):focus-visible,
     select:focus,
     select:focus-visible,
     textarea:focus,
@@ -188,8 +210,8 @@
      * the rule above would quietly un-mark every field a person is fixing, at
      * exactly the moment they are looking at it.
      */
-    input[aria-invalid='true']:focus,
-    input[aria-invalid='true']:focus-visible,
+    input[aria-invalid='true']:not(.editorial-surface *):focus,
+    input[aria-invalid='true']:not(.editorial-surface *):focus-visible,
     select[aria-invalid='true']:focus,
     textarea[aria-invalid='true']:focus {
         border-color: var(--danger);

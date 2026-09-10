@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"><style>*{box-sizing:border-box}body{margin:0;background:#FCFBF9;color:#181714;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#A85729;text-decoration:none}a:hover{color:#8C4720}button,textarea,select{font-family:inherit}</style></helmet>
+<div style="min-height:100vh;padding:44px 48px 90px">
+
+<div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:22px;border-bottom:1px solid rgba(24,23,20,.1);margin-bottom:30px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(24,23,20,.45)">Screen 06 · customer record</div>
+<h1 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:32px;line-height:1.1;letter-spacing:-.015em">Client history</h1>
+</div>
+<div style="display:inline-flex;border:1px solid rgba(24,23,20,.14);border-radius:6px;overflow:hidden">
+<sc-for list="{{ clientTabs }}" as="c" hint-placeholder-count="2">
+<button onClick="{{ c.pick }}" style="border:none;border-left:{{ c.sep }};background:{{ c.bg }};color:{{ c.fg }};font-size:12.5px;font-weight:500;padding:8px 15px;cursor:pointer">{{ c.label }}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 318px;gap:26px;align-items:start">
+
+<div style="display:flex;flex-direction:column;gap:26px;min-width:0">
+
+<section style="border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:24px">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:24px">
+<div style="min-width:0">
+<div style="display:flex;align-items:center;gap:11px;margin-bottom:6px">
+<h2 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:300;font-size:26px;letter-spacing:-.015em">{{ name }}</h2>
+<span style="border:1px solid {{ flagBorder }};border-radius:6px;font-size:11.5px;color:{{ flagFg }};padding:3px 9px;white-space:nowrap">{{ flagLabel }}</span>
+</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.6)">{{ contact }}</div>
+<div style="font-size:13px;color:rgba(24,23,20,.7);margin-top:3px">{{ subject }}</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+<button style="border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:13px;color:#181714;padding:9px 14px;cursor:pointer" style-hover="border-color:#181714">Message</button>
+<button style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:13px;font-weight:500;padding:10px 15px;cursor:pointer" style-hover="background:#8C4720">Book a visit</button>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:18px;margin-top:26px;padding-top:22px;border-top:1px solid rgba(24,23,20,.1)">
+<sc-for list="{{ stats }}" as="s" hint-placeholder-count="5">
+<div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45);margin-bottom:8px">{{ s.k }}</div>
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:22px;line-height:1;letter-spacing:-.02em;color:{{ s.color }}">{{ s.v }}</div>
+<div style="font-size:11.5px;color:rgba(24,23,20,.5);margin-top:6px">{{ s.note }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:24px">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:30px">
+<div>
+<div style="font-size:14px;font-weight:500">Visit cadence</div>
+<div style="font-size:12.5px;color:rgba(24,23,20,.55);margin-top:3px">Marks sit on the date they happened, so the gaps are real</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px;font-size:11.5px;color:rgba(24,23,20,.55)">
+<span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#181714"></span>attended</span>
+<span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #A85729"></span>no-show</span>
+<span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;border:1.5px dashed rgba(24,23,20,.4)"></span>booked</span>
+</div>
+</div>
+
+<div style="position:relative;height:94px;margin:0 {{ axisRight }} 0 10px">
+<span style="position:absolute;left:0;right:0;top:52px;height:1px;background:rgba(24,23,20,.16)"></span>
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="12">
+<span style="position:absolute;left:{{ m.left }};top:52px;width:1px;height:{{ m.h }};background:rgba(24,23,20,.18)"></span>
+</sc-for>
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="12">
+<span style="position:absolute;left:{{ m.left }};top:70px;transform:translateX(-50%);font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;color:rgba(24,23,20,.42);white-space:nowrap;opacity:{{ m.labelOp }}">{{ m.label }}</span>
+</sc-for>
+<sc-for list="{{ marks }}" as="v" hint-placeholder-count="9">
+<button onMouseEnter="{{ v.enter }}" onClick="{{ v.enter }}" style="position:absolute;left:{{ v.left }};top:52px;transform:translate(-50%,-50%);width:26px;height:26px;display:grid;place-items:center;background:transparent;border:none;padding:0;cursor:pointer">
+<span style="width:{{ v.size }};height:{{ v.size }};border-radius:50%;background:{{ v.bg }};border:{{ v.border }};box-shadow:{{ v.ring }}"></span>
+</button>
+</sc-for>
+<sc-for list="{{ gaps }}" as="g" hint-placeholder-count="3">
+<span style="position:absolute;left:{{ g.left }};top:24px;transform:translateX(-50%);font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;color:rgba(24,23,20,.42);white-space:nowrap;opacity:{{ g.op }}">{{ g.label }}</span>
+</sc-for>
+<sc-if value="{{ hasUpcoming }}" hint-placeholder-val="{{ true }}">
+<span style="position:absolute;left:100%;top:52px;display:flex;align-items:center;gap:9px;padding-left:16px">
+<span style="width:26px;height:1px;background:rgba(24,23,20,.16);position:absolute;left:-12px;top:0"></span>
+<button onClick="{{ upcomingPick }}" style="border:none;background:transparent;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;width:22px;height:22px;transform:translateY(-50%)">
+<span style="width:{{ upcomingSize }};height:{{ upcomingSize }};border-radius:50%;border:1.5px dashed rgba(24,23,20,.4);box-shadow:{{ upcomingRing }}"></span>
+</button>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;color:rgba(24,23,20,.45);white-space:nowrap;transform:translateY(-50%)">{{ upcomingLabel }}</span>
+</span>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:20px;margin-top:14px;padding-top:16px;border-top:1px solid rgba(24,23,20,.1);min-height:42px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:14px">{{ selDate }}</span>
+<span style="font-size:13.5px;font-weight:500">{{ selService }}</span>
+<span style="font-size:13px;color:rgba(24,23,20,.55)">{{ selStaff }}</span>
+<span style="border:1px solid {{ selTagBorder }};border-radius:6px;font-size:11.5px;color:{{ selTagFg }};padding:3px 9px">{{ selOutcome }}</span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:rgba(24,23,20,.6)">{{ selPaid }}</span>
+</div>
+</section>
+
+<section style="border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:24px">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:12px">
+<div style="font-size:14px;font-weight:500">Visit ledger</div>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:rgba(24,23,20,.45)">{{ ledgerMeta }}</span>
+</div>
+<div style="display:grid;grid-template-columns:80px minmax(80px,1fr) 48px 100px 60px;column-gap:12px;border-top:1px solid rgba(24,23,20,.14)">
+<span style="padding:9px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Date</span>
+<span style="padding:9px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Service</span>
+<span style="padding:9px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">With</span>
+<span style="padding:9px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Outcome</span>
+<span style="padding:9px 0;text-align:right;font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(24,23,20,.45)">Paid</span>
+<span style="grid-column:1 / -1;height:0;border-bottom:1px solid rgba(24,23,20,.1)"></span>
+<sc-for list="{{ ledger }}" as="r" hint-placeholder-count="6">
+<span style="display:contents">
+<span style="display:flex;align-items:center;padding:13px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;white-space:nowrap">{{ r.date }}</span>
+<span style="display:flex;align-items:center;padding:13px 0;font-size:13.5px;min-width:0">{{ r.service }}</span>
+<span style="display:flex;align-items:center;padding:13px 0;font-size:13px;color:rgba(24,23,20,.55)">{{ r.staff }}</span>
+<span style="display:flex;align-items:center;padding:13px 0">
+<span style="border:1px solid {{ r.tagBorder }};border-radius:6px;font-size:11.5px;color:{{ r.tagFg }};padding:3px 9px;white-space:nowrap">{{ r.outcome }}</span>
+</span>
+<span style="display:flex;align-items:center;justify-content:flex-end;padding:13px 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;color:{{ r.paidColor }}">{{ r.paid }}</span>
+<span style="grid-column:1 / -1;height:0;border-bottom:1px solid rgba(24,23,20,.08)"></span>
+</span>
+</sc-for>
+</div>
+<button onClick="{{ toggleAll }}" style="border:none;background:transparent;padding:0;margin-top:16px;font-size:12.5px;color:rgba(24,23,20,.55);cursor:pointer;border-bottom:1px solid rgba(24,23,20,.2)" style-hover="color:#181714">{{ ledgerToggle }}</button>
+</section>
+
+</div>
+
+<div style="display:flex;flex-direction:column;gap:26px">
+
+<section style="border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:24px">
+<div style="font-size:14px;font-weight:500;margin-bottom:16px">Attendance</div>
+<div style="display:flex;align-items:baseline;gap:11px;margin-bottom:14px">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:30px;line-height:1;letter-spacing:-.025em;color:{{ attendColor }}">{{ attendPct }}</span>
+<span style="font-size:13px;color:rgba(24,23,20,.55)">{{ attendSub }}</span>
+</div>
+<div style="display:flex;gap:3px;height:8px;margin-bottom:14px">
+<sc-for list="{{ attendBars }}" as="b" hint-placeholder-count="10">
+<span style="flex:1;border-radius:2px;background:{{ b.bg }};border:{{ b.border }}"></span>
+</sc-for>
+</div>
+<div style="font-size:12.5px;line-height:1.55;color:rgba(24,23,20,.6)">{{ attendNote }}</div>
+
+<div style="display:flex;flex-direction:column;gap:11px;margin-top:22px;padding-top:16px;border-top:1px solid rgba(24,23,20,.1)">
+<sc-for list="{{ signals }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px">
+<span style="font-size:13px;color:rgba(24,23,20,.55)">{{ s.k }}</span>
+<span style="font-size:13px;text-align:right;color:{{ s.color }}">{{ s.v }}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<sc-if value="{{ atRisk }}" hint-placeholder-val="{{ false }}">
+<section style="border:1px solid rgba(168,87,41,.4);border-radius:6px;padding:24px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+<svg width="14" height="13" viewBox="0 0 14 13" fill="none" stroke="#A85729" stroke-width="1.5" style="flex:none"><path d="M7 1 13 12H1L7 1Z"></path><path d="M7 5.4v3M7 10.1v.5"></path></svg>
+<span style="font-size:14px;font-weight:500">Suggested rule</span>
+</div>
+<div style="font-size:13px;line-height:1.55;color:rgba(24,23,20,.72);margin-bottom:18px">Two missed visits in three months. Take the full amount up front for this customer and the slot is never lost.</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
+<button style="border:none;border-radius:6px;background:#A85729;color:#FCFBF9;font-size:12.5px;font-weight:500;padding:9px 14px;cursor:pointer" style-hover="background:#8C4720">Require full payment</button>
+<button style="border:none;background:transparent;padding:0;font-size:12.5px;color:rgba(24,23,20,.55);cursor:pointer;border-bottom:1px solid rgba(24,23,20,.2)" style-hover="color:#181714">Dismiss</button>
+</div>
+</section>
+</sc-if>
+
+<section style="border:1px solid rgba(24,23,20,.13);border-radius:6px;padding:24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:12px">
+<div style="font-size:14px;font-weight:500">Notes</div>
+<span style="font-size:11.5px;color:rgba(24,23,20,.42)">Only you and your staff see this</span>
+</div>
+<textarea rows="4" defaultValue="{{ noteText }}" style="width:100%;border:1px solid rgba(24,23,20,.16);border-radius:6px;background:transparent;padding:11px 12px;font-size:13.5px;line-height:1.55;color:#181714;resize:vertical;outline:none" style-focus="border-color:#A85729"></textarea>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px">
+<span style="font-size:11.5px;color:rgba(24,23,20,.45)">{{ noteMeta }}</span>
+<button style="border:1px solid rgba(24,23,20,.18);border-radius:6px;background:transparent;font-size:12.5px;color:#181714;padding:8px 13px;cursor:pointer" style-hover="border-color:#181714">Save note</button>
+</div>
+</section>
+
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { client: 'claire', sel: null, all: false };
+
+  data() {
+    return {
+      claire: {
+        name: 'Claire Donnelly', contact: '07700 900114 · claire.donnelly@gmail.com',
+        subject: 'Nala · cockapoo, medium coat', flag: 'reliable',
+        note: 'Nervous with the dryer — low setting, radio off. Matting behind the ears most visits, allow an extra 10 min.',
+        noteMeta: 'Last edited by Erin · 22 Aug 2026',
+        visits: [
+          ['2025-03-12', 'Full groom', 'Erin', 'Attended', '£42.00'],
+          ['2025-05-09', 'Bath and tidy', 'Erin', 'Attended', '£26.00'],
+          ['2025-07-04', 'Full groom', 'Sam', 'Attended', '£42.00'],
+          ['2025-09-01', 'Full groom', 'Erin', 'Attended', '£42.00'],
+          ['2025-11-20', 'Nail clip', 'Sam', 'Attended', '£12.00'],
+          ['2026-01-16', 'Full groom', 'Erin', 'Attended', '£42.00'],
+          ['2026-04-03', 'Full groom', 'Erin', 'Late — 20 min', '£42.00'],
+          ['2026-06-19', 'Bath and tidy', 'Sam', 'Attended', '£26.00'],
+          ['2026-08-22', 'Full groom', 'Erin', 'Attended', '£42.00'],
+          ['2026-09-10', 'Full groom', 'Erin', 'Booked', '£10.00 held']
+        ]
+      },
+      hazel: {
+        name: 'Hazel Muir', contact: '07700 900552 · hazel.muir@outlook.com',
+        subject: 'Bruce · collie cross, double coat', flag: 'risk',
+        note: 'Confirm by phone the day before. Deposit forfeited twice — worth taking the full amount up front.',
+        noteMeta: 'Last edited by Erin · 30 Aug 2026',
+        visits: [
+          ['2026-02-02', 'Full groom', 'Erin', 'Attended', '£48.00'],
+          ['2026-04-11', 'Bath and tidy', 'Sam', 'Attended', '£26.00'],
+          ['2026-06-14', 'Full groom', 'Erin', 'No-show', '£10.00 kept'],
+          ['2026-06-28', 'Full groom', 'Erin', 'Attended', '£48.00'],
+          ['2026-08-02', 'Nail clip', 'Sam', 'No-show', '£10.00 kept'],
+          ['2026-08-30', 'Full groom', 'Erin', 'Attended', '£48.00']
+        ]
+      }
+    };
+  }
+
+  fmt(iso) {
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const d = new Date(iso + 'T12:00:00');
+    return d.getDate() + ' ' + m[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  renderVals() {
+    const key = this.state.client;
+    const c = this.data()[key];
+    const risk = c.flag === 'risk';
+    const visits = c.visits;
+    const t = iso => new Date(iso + 'T12:00:00').getTime();
+    const booked = visits.filter(v => v[3] === 'Booked');
+    const past = visits.filter(v => v[3] !== 'Booked');
+    const t0 = t(past[0][0]);
+    const t1 = t(past[past.length - 1][0]);
+    const span = Math.max(1, t1 - t0);
+    const pos = iso => 4 + ((t(iso) - t0) / span) * 92;
+    const day = 86400000;
+
+    const attended = visits.filter(v => v[3] === 'Attended' || v[3].indexOf('Late') === 0).length;
+    const missed = visits.filter(v => v[3] === 'No-show').length;
+    const settled = visits.filter(v => v[3] !== 'Booked');
+    const pct = Math.round((attended / Math.max(1, settled.length)) * 100);
+    const spend = settled.reduce((a, v) => a + (v[3] === 'No-show' ? 10 : parseFloat(v[4].replace(/[^0-9.]/g, '')) || 0), 0);
+
+    let gapSum = 0;
+    for (let i = 1; i < visits.length; i++) gapSum += (t(visits[i][0]) - t(visits[i - 1][0])) / day;
+    const avgGap = Math.round(gapSum / Math.max(1, visits.length - 1));
+
+    const tag = o => o === 'No-show'
+      ? { border: 'rgba(168,87,41,.45)', fg: '#A85729' }
+      : { border: 'rgba(24,23,20,.18)', fg: 'rgba(24,23,20,.7)' };
+
+    const months = [];
+    const cur = new Date(t0);
+    cur.setDate(1);
+    while (cur.getTime() <= t1) {
+      const p = 4 + ((cur.getTime() - t0) / span) * 92;
+      if (p >= 0 && p <= 100) {
+        const q = cur.getMonth() % 3 === 0;
+        months.push({
+          left: p.toFixed(2) + '%', h: q ? '9px' : '5px',
+          label: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][cur.getMonth()] + (cur.getMonth() === 0 ? ' ' + String(cur.getFullYear()).slice(2) : ''),
+          labelOp: q ? '1' : '0'
+        });
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+
+    const sel = this.state.sel === null ? past.length - 1 : this.state.sel;
+    const s = visits[sel];
+    const selTag = tag(s[3]);
+
+    const gaps = [];
+    for (let i = 1; i < past.length; i++) {
+      const d = Math.round((t(past[i][0]) - t(past[i - 1][0])) / day);
+      const mid = (pos(past[i - 1][0]) + pos(past[i][0])) / 2;
+      gaps.push({ left: mid.toFixed(2) + '%', label: d + 'd', op: d >= avgGap * 1.25 ? '.9' : '0' });
+    }
+    const upIdx = booked.length ? visits.indexOf(booked[0]) : -1;
+
+    const rows = (this.state.all ? visits : visits.slice(-5)).slice().reverse();
+
+    return {
+      name: c.name, contact: c.contact, subject: c.subject,
+      flagBorder: risk ? 'rgba(168,87,41,.45)' : 'rgba(24,23,20,.18)',
+      flagFg: risk ? '#A85729' : 'rgba(24,23,20,.7)',
+      flagLabel: risk ? 'Watch — 2 no-shows' : 'Reliable',
+      atRisk: risk,
+      clientTabs: [['claire', 'Reliable record'], ['hazel', 'Has no-shows']].map(([k, label], i) => ({
+        label,
+        sep: i === 0 ? 'none' : '1px solid rgba(24,23,20,.14)',
+        bg: key === k ? 'rgba(24,23,20,.06)' : 'transparent',
+        fg: key === k ? '#181714' : 'rgba(24,23,20,.55)',
+        pick: () => this.setState({ client: k, sel: null, all: false })
+      })),
+      stats: [
+        { k: 'Visits', v: String(settled.length), note: 'since ' + this.fmt(visits[0][0]).slice(-8), color: '#181714' },
+        { k: 'No-shows', v: String(missed), note: missed ? 'deposit kept each time' : 'never missed', color: missed ? '#A85729' : 'rgba(24,23,20,.35)' },
+        { k: 'Lifetime value', v: '£' + spend.toFixed(2), note: missed ? 'incl. kept deposits' : 'across ' + settled.length + ' visits', color: '#181714' },
+        { k: 'Average gap', v: avgGap + 'd', note: 'between visits', color: '#181714' },
+        { k: 'Next visit', v: risk ? '—' : '10 Sep', note: risk ? 'nothing booked' : 'Full groom, 09:30', color: risk ? 'rgba(24,23,20,.35)' : '#A85729' }
+      ],
+      months,
+      axisRight: upIdx >= 0 ? '112px' : '10px',
+      hasUpcoming: upIdx >= 0,
+      upcomingSize: sel === upIdx ? '13px' : '10px',
+      upcomingRing: sel === upIdx ? '0 0 0 4px rgba(168,87,41,.16)' : 'none',
+      upcomingLabel: upIdx >= 0 ? 'next · ' + this.fmt(visits[upIdx][0]).slice(0, 6) : '',
+      upcomingPick: () => this.setState({ sel: upIdx }),
+      marks: past.map((v, i) => {
+        const missedOne = v[3] === 'No-show';
+        const on = i === sel;
+        return {
+          left: pos(v[0]).toFixed(2) + '%',
+          size: on ? '13px' : '10px',
+          bg: missedOne ? 'transparent' : '#181714',
+          border: missedOne ? '1.5px solid #A85729' : 'none',
+          ring: on ? '0 0 0 4px rgba(168,87,41,.16)' : 'none',
+          enter: () => this.setState({ sel: i })
+        };
+      }),
+      gaps,
+      selDate: this.fmt(s[0]), selService: s[1], selStaff: 'with ' + s[2],
+      selOutcome: s[3], selTagBorder: selTag.border, selTagFg: selTag.fg, selPaid: s[4],
+      ledger: rows.map(v => {
+        const tg = tag(v[3]);
+        return {
+          date: this.fmt(v[0]).replace(' 20', ' '), service: v[1], staff: v[2], outcome: v[3],
+          tagBorder: tg.border, tagFg: tg.fg,
+          paid: v[4].replace(' kept', '').replace(' held', ''),
+          paidColor: v[3] === 'No-show' ? '#A85729' : '#181714'
+        };
+      }),
+      ledgerMeta: (this.state.all ? visits.length : Math.min(5, visits.length)) + ' of ' + visits.length + ' shown · newest first',
+      ledgerToggle: this.state.all ? 'Show recent only' : 'Show all ' + visits.length + ' visits',
+      toggleAll: () => this.setState(st => ({ all: !st.all })),
+      attendPct: pct + '%',
+      attendSub: attended + ' kept of ' + settled.length + ' booked',
+      attendColor: pct >= 90 ? '#181714' : '#A85729',
+      attendBars: settled.slice(-10).map(v => ({
+        bg: v[3] === 'No-show' ? 'transparent' : '#181714',
+        border: v[3] === 'No-show' ? '1px solid rgba(168,87,41,.55)' : 'none'
+      })),
+      attendNote: risk
+        ? 'Both misses came without a call. The pattern is recent rather than historic.'
+        : 'One late arrival in eighteen months, never a missed visit.',
+      signals: [
+        { k: 'Deposit behaviour', v: risk ? 'Forfeited twice' : 'Always paid on booking', color: risk ? '#A85729' : '#181714' },
+        { k: 'Books through', v: risk ? 'Phone enquiry' : 'Booking link', color: '#181714' },
+        { k: 'Reminder replies', v: risk ? '1 of 4' : '9 of 9', color: '#181714' },
+        { k: 'Usual slot', v: risk ? 'Saturday morning' : 'Weekday morning', color: '#181714' }
+      ],
+      noteText: c.note, noteMeta: c.noteMeta
+    };
+  }
+}
+</script>
+</body>
+</html>

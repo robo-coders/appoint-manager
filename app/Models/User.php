@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'role',
         'is_bookable',
+        'can_see_customer_contacts',
         'is_active',
         'colour',
         'is_super_admin',
@@ -49,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_bookable' => 'boolean',
+            'can_see_customer_contacts' => 'boolean',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
         ];

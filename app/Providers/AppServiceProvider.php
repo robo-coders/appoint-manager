@@ -294,13 +294,68 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->ip().'|'.$request->route('token'));
         });
 
+        RateLimiter::for('calendar-feed', function (Request $request) {
+            return Limit::perMinute((int) config('calendar_sync.rate_limit_per_minute'))
+                ->by($request->ip().'|'.$request->route('token'))
+                ->response(fn (Request $request, array $headers) => response(
+                    'Too many requests for this calendar feed. Try again shortly.',
+                    429,
+                    [...$headers, 'Content-Type' => 'text/plain; charset=utf-8'],
+                ));
+        });
+
+        /*
+         * ── The two sign-in limiters are floods stops, not the lockout ──────
+         *
+         * Both of these used to be the lockout itself — 5 a minute here, 3 on
+         * the console — and both were set to exactly the number of failures the
+         * *application* allows. That is the bug, and it was invisible because
+         * each half worked: `LoginRequest::ensureIsNotRateLimited()` builds the
+         * "Too many attempts. Try again in N minutes" message that
+         * `Auth/Login.vue` renders in ink, and this middleware returns a 429.
+         *
+         * The middleware runs first. Two counters, two different cache keys —
+         * this one is `md5('login'.$key)` inside `ThrottleRequests`, the form
+         * request's is the bare key — so on the sixth POST the middleware had
+         * already spent its budget and answered 429 before the controller was
+         * ever reached. The friendly lockout could not fire on the fifth
+         * failure (it had not happened yet) and could not fire on the sixth
+         * (the request never arrived). The mockup's "account locked" state was
+         * built, tested by eye, and then permanently shadowed: what a locked-out
+         * groomer actually got was the full-page "Too many tries, too quickly"
+         * error over the top of the login form.
+         *
+         * So the two are given different jobs. The **application** owns the
+         * lockout, because only it can tell a failed password from a page
+         * refresh and only it can say when the door reopens. These limiters own
+         * flooding, and their ceilings are set well above the lockout so that
+         * reaching one means something the login form has no answer for.
+         *
+         * The brute-force budget is unchanged by this and that is the point:
+         * `Auth::attempt()` still runs at most five times a minute per
+         * email-and-IP on the app and three on the console, because the
+         * lockout throws before attempting. Requests past that are refused
+         * without touching the password hasher.
+         */
         RateLimiter::for('login', function (Request $request) {
-            return Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+            return Limit::perMinute(30)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+        });
+
+        /*
+         * Registration, on the same terms and for the same reason: the
+         * application owns the lockout (ten failed attempts, in
+         * `RegisterRequest`) because only it can tell a mistyped password
+         * confirmation from a page refresh, and this ceiling is above that so
+         * the friendly message is the one a new salon actually meets.
+         */
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(30)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
 
         // Strictest of the three surfaces: this one is ours and has two users.
+        // The lockout it backs is three failures, in `AdminSessionController`.
         RateLimiter::for('admin-login', function (Request $request) {
-            return Limit::perMinute(3)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+            return Limit::perMinute(20)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
 
         RateLimiter::for('admin', function (Request $request) {

@@ -13,9 +13,18 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerPrivacyController extends Controller
 {
+    /**
+     * The subject-access download: everything held about one customer.
+     *
+     * Authorised on `viewContact`, not `view`. The file is the contact details
+     * in their entirety — masking it would produce a GDPR export that is not
+     * one — so a staff member who cannot read the number on screen cannot pull
+     * it out of here either. Every other route to this data is masked; leaving
+     * this one open would make the mask decorative.
+     */
     public function export(Customer $customer): Response
     {
-        $this->authorize('view', $customer);
+        $this->authorize('viewContact', $customer);
 
         $customer->load(['subjects', 'bookings']);
 
