@@ -19,20 +19,25 @@ import { MENU_CLOSE } from './menuClose';
  * last row of a list would otherwise open into the heading underneath. Same
  * panel, no extra motion.
  */
-withDefaults(defineProps<{ label?: string; align?: 'left' | 'right' }>(), {
+const props = withDefaults(defineProps<{ label?: string; align?: 'left' | 'right' }>(), {
     label: 'Actions',
     align: 'right',
 });
 
+const GAP = 4;
+const MARGIN = 8;
+
 const open = ref(false);
-const dropUp = ref(false);
+const placed = ref(false);
 const root = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLButtonElement | null>(null);
+const position = ref({ top: 0, left: 0 });
 
 const close = (restoreFocus = true) => {
     if (!open.value) return;
     open.value = false;
-    dropUp.value = false;
+    placed.value = false;
     if (restoreFocus) trigger.value?.focus();
 };
 
@@ -44,11 +49,9 @@ const close = (restoreFocus = true) => {
 provide(MENU_CLOSE, () => close(false));
 
 const toggle = async () => {
-    open.value = !open.value;
-    if (!open.value) {
-        dropUp.value = false;
-        return;
-    }
+    if (open.value) return close();
+
+    open.value = true;
     await nextTick();
     place();
     items()[0]?.focus();
@@ -60,22 +63,26 @@ const toggle = async () => {
  */
 const place = () => {
     const triggerEl = trigger.value;
-    const panel = root.value?.querySelector<HTMLElement>('[role="menu"]');
+    const panelEl = panel.value;
 
-    if (!triggerEl || !panel) {
-        dropUp.value = false;
-        return;
-    }
+    if (!triggerEl || !panelEl) return;
 
     const rect = triggerEl.getBoundingClientRect();
-    const height = panel.offsetHeight || panel.getBoundingClientRect().height;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const { height, width } = panelEl.getBoundingClientRect();
 
-    dropUp.value = height > 0 && spaceBelow < height + 8 && spaceAbove > spaceBelow;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropUp = height > 0 && spaceBelow < height + GAP && rect.top > spaceBelow;
+    const alignedLeft = props.align === 'left' ? rect.left : rect.right - width;
+
+    position.value = {
+        top: dropUp ? Math.max(MARGIN, rect.top - height - GAP) : rect.bottom + GAP,
+        left: Math.min(Math.max(MARGIN, alignedLeft), Math.max(MARGIN, window.innerWidth - width - MARGIN)),
+    };
+
+    placed.value = true;
 };
 
-const items = () => Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+const items = () => Array.from(panel.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
 
 const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') return close();
@@ -100,11 +107,30 @@ const onKeydown = (event: KeyboardEvent) => {
 };
 
 const onOutside = (event: MouseEvent) => {
-    if (open.value && root.value && !root.value.contains(event.target as Node)) close(false);
+    if (!open.value) return;
+
+    const target = event.target as Node;
+
+    if (root.value?.contains(target) || panel.value?.contains(target)) return;
+
+    close(false);
 };
 
-onMounted(() => document.addEventListener('mousedown', onOutside));
-onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
+const reposition = () => {
+    if (open.value) place();
+};
+
+onMounted(() => {
+    document.addEventListener('mousedown', onOutside);
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('mousedown', onOutside);
+    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', reposition);
+});
 </script>
 
 <template>
@@ -125,14 +151,22 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
             </svg>
         </button>
 
-        <div
-            v-if="open"
-            role="menu"
-            class="appear absolute z-30 min-w-44 rounded border border-rule bg-white py-1"
-            :class="[align === 'right' ? 'right-0' : 'left-0', dropUp ? 'bottom-full mb-1' : 'top-full mt-1']"
-            @click="close(false)"
-        >
-            <slot />
-        </div>
+        <Teleport to="body">
+            <div
+                v-if="open"
+                ref="panel"
+                role="menu"
+                class="appear fixed z-[45] min-w-44 rounded border border-rule bg-white py-1"
+                :style="{
+                    top: `${position.top}px`,
+                    left: `${position.left}px`,
+                    visibility: placed ? 'visible' : 'hidden',
+                }"
+                @click="close(false)"
+                @keydown="onKeydown"
+            >
+                <slot />
+            </div>
+        </Teleport>
     </div>
 </template>

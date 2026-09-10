@@ -3736,3 +3736,92 @@ comments, at the user's standing request, which is why the reasoning above is
 here at this length. The heavily-commented files they sit next to keep their
 comments; the block added to `tests/js/islands.test.ts` follows that file's own
 convention of one note per `describe` block.
+
+# The row-actions menu, and the scroll container that was eating it
+
+Opening the `⋮` menu on Time off and Overdue made the rows' own data disappear.
+It reproduced on both, so the cause was shared, and it was: `ui/Menu`.
+
+## What it actually was — measured, not guessed
+
+The row's data was **never removed from the DOM**. `innerText` of the row before
+and after opening the menu is identical, cell for cell, which rules out a
+re-render, a reactive-state collision and a `v-if` on the row wrapper. What was
+happening was paint.
+
+`ui/Table` wraps its wide table in `overflow-x-auto`, which it needs — the
+bookings table is wider than a phone. But **`overflow-x: auto` cannot compute
+`overflow-y: visible`**: the used value becomes `auto` too, so that wrapper is a
+scroll container in both axes. The menu panel was an `absolute` child of the
+trigger, therefore a descendant of that wrapper, and it got three things done to
+it at once:
+
+1. **Clipped at the table's bottom edge.** Measured on `/overdue`: panel bottom
+   478, scroller bottom 438 — 40px gone, which is the whole fifth item. "Stop
+   chasing" was rendered, inside the scroll container, and unreachable.
+   `/bookings` clipped by 36px.
+2. **Painted over the neighbouring rows.** An opaque `bg-white` panel, 176px
+   wide, right-aligned to a 56px actions cell whose `px-pad-x` padding insets it
+   12px from the table's edge. So it sat *inside* the table covering the `Usual`
+   and `£` columns of the rows below, with a 12px strip of table still visible
+   down its right-hand side. That is what read as the rows blanking: not missing
+   data, a white rectangle punched into the middle of the list, with no bottom
+   border because the scroller had cut it off.
+3. **`place()` was measuring the wrong box.** It compared the panel's height
+   against the *viewport's* remaining space, while the thing doing the clipping
+   was the scroll container. On `/overdue` there were 460px of viewport below the
+   trigger, so it never flipped the panel up, while the panel was being cut in
+   half 40px down.
+
+The proof it is the scroll container and not the component: `Staff/Index` uses
+the same `ui/Menu`, outside a `Table`, and is clean — panel not inside any
+scroller, nothing clipped, no cells covered. Same component, no bug.
+
+Blast radius: every screen whose menu is inside a `Table` — Time off, Overdue,
+Bookings, Customers, Waitlist, Services and SuperAdmin. Seven, not two.
+
+## The fix
+
+`Teleport to="body"`, with `position: fixed` coordinates computed from the
+trigger's own `getBoundingClientRect()`. This is not a new pattern — `Modal`,
+`SlideOver`, `ConfirmDialog` and `CommandPalette` are all
+`Teleport to="body"` already. `Menu` was the one overlay in the library that was
+not, and that is the whole of the bug.
+
+The panel is no longer a descendant of the row, so it cannot paint on it and the
+row's bindings cannot reach it. Nothing in `ui/Table` changed: the
+`overflow-x-auto` is still there doing the job it is there for.
+
+- **`z-[45]`** — above the fixed chrome (`NavRail` and `MobileTabBar`, both
+  `z-40`) and below the dialogs (`z-50`). A `MenuItem` closes its menu before
+  its own handler runs, so a menu and a dialog never coexist; if they ever did,
+  the dialog has to win.
+- **`visibility: hidden` until placed.** The drop-up decision needs the panel's
+  measured height, so the panel has to be in the DOM before it can be
+  positioned. Without this there is one frame of it at 0,0.
+- **Outside-click tests both boxes.** "Outside" used to mean "not inside the
+  trigger's wrapper". The panel is not in that wrapper any more, so the first
+  click on any menu item closed the menu from under itself before the item's
+  handler ran. It now checks the wrapper *and* the panel.
+- **`keydown` is bound to the panel as well.** Escape and the arrow keys used to
+  reach the root by bubbling from a focused item. A teleported item does not
+  bubble to the root's DOM ancestor, so the same handler is bound in both
+  places.
+- **Reposition on scroll, in the capture phase.** Fixed coordinates go stale the
+  moment anything scrolls, and the trigger can sit inside a horizontally
+  scrolling table as well as on a scrolling page. Capture is the only way to
+  hear an ancestor scroller rather than only the window.
+- **`provide`/`inject` needed nothing.** It follows the component tree, not the
+  DOM, so `MENU_CLOSE` crosses the `Teleport` and the items still close the menu
+  they are written inside.
+
+## `tests/js/menu.test.ts`
+
+`setup.ts` stubs `Teleport` globally, so that Modal, SlideOver and
+ConfirmDialog keep their content inside the wrapper where a test can look at it.
+This suite opts back out per mount, because the claim under test is that the
+panel genuinely leaves the table — a stubbed `Teleport` renders it inline and
+would pass while the bug was back.
+
+The two placement tests changed shape: there are no `top-full` / `bottom-full`
+classes to assert any more, so they assert the computed `style.top` instead.

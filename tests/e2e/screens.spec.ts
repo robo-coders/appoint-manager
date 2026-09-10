@@ -123,6 +123,63 @@ test.describe('the operator app', () => {
     }
 });
 
+test.describe('the row-actions menu', () => {
+    for (const screen of [
+        { name: 'time-off', path: '/time-off', heading: 'Time off' },
+        { name: 'overdue', path: '/overdue', heading: /^Overdue/ },
+    ] as const) {
+        test(`leaves the row readable with the menu open on ${screen.name}`, async ({ page }) => {
+            await freezeTime(page);
+            await page.setViewportSize({ width: 1280, height: 1000 });
+            await page.goto(screen.path);
+            await expect(page.getByRole('heading', { name: screen.heading })).toBeVisible();
+            await settled(page);
+
+            const row = page.locator('table tbody tr').first();
+            await expect(row).toBeVisible();
+
+            const cells = row.locator('td');
+            const before = await cells.allInnerTexts();
+            expect(before.filter((text) => text.trim() !== '').length).toBeGreaterThan(1);
+
+            await row.locator('button[aria-haspopup="menu"]').click();
+
+            const panel = page.locator('body > [role="menu"]');
+            await expect(panel).toBeVisible();
+
+            expect(await cells.allInnerTexts()).toEqual(before);
+
+            for (let index = 0; index < before.length; index++) {
+                if (before[index].trim() !== '') await expect(cells.nth(index)).toBeVisible();
+            }
+
+            expect(await panel.evaluate((el) => el.closest('.overflow-x-auto') !== null)).toBe(false);
+            expect(await panel.evaluate((el) => el.parentElement === document.body)).toBe(true);
+
+            const overflow = await panel.evaluate((el) => {
+                const box = el.getBoundingClientRect();
+
+                return {
+                    below: box.bottom - window.innerHeight,
+                    right: box.right - window.innerWidth,
+                };
+            });
+            expect(overflow.below).toBeLessThanOrEqual(0);
+            expect(overflow.right).toBeLessThanOrEqual(0);
+
+            const actions = panel.locator('[role="menuitem"]');
+            expect(await actions.count()).toBeGreaterThan(0);
+            await expect(actions.last()).toBeVisible();
+
+            await expect(page).toHaveScreenshot(`row-menu-${screen.name}.png`, { mask: volatileRegions(page) });
+
+            await page.keyboard.press('Escape');
+            await expect(panel).toBeHidden();
+            await expect(row.locator('button[aria-haspopup="menu"]')).toHaveAttribute('aria-expanded', 'false');
+        });
+    }
+});
+
 /*
  * Customers at 375, and only at 375.
  *
