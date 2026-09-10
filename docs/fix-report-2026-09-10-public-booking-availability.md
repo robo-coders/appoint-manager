@@ -423,3 +423,4 @@ Vitest, in `tests/js/islands.test.ts` (now 212 total):
 | `check:design` / `check:contrast` / `check:name` / `check:php` | clean |
 | `vue-tsc` | clean |
 | `check:components` | the same 3 pre-existing files, untouched here |
+| Playwright | **93 passed**, 13 failed — the same 13 stale `auth`/`register`/`marketing` baselines as above. Run once at the end of the session, after all three parts |

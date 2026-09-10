@@ -325,7 +325,25 @@ island):
 | `check:design` / `check:contrast` / `check:name` | clean |
 | `check:components` | the same 3 pre-existing files from the audit's decision table |
 
-Playwright is recorded in §7 below, run once after all three parts.
+### Playwright — one full pass, after all three parts
+
+Run the way the seed requires: `./scripts/e2e-setup.sh`, `npm run build`, then
+exactly one foreground `./scripts/e2e-playwright.sh`.
+
+| | Result |
+|---|---|
+| Full pass | **93 passed**, 13 failed |
+| The 13 | `auth` 7, `register` 5, `marketing` 1 — the same 13 named in `docs/audit-report-2026-09-10.md` and in the previous fix report. Stale baselines from the auth/onboarding redesign. None is on a surface this work touches and none is new |
+| Passed before this session | 87. 93 − 87 = the 6 specs added here: 4 in `alerts.spec.ts`, 2 in `screens.spec.ts` |
+| `alerts.spec.ts` | **4 passed**, confirmed again by name against a fresh seed |
+| `screens.spec.ts` row-actions | **2 passed**, confirmed again by name against a fresh seed |
+
+Two new baselines were written on their first run — `row-menu-time-off.png` and
+`row-menu-overdue.png` — which Playwright reports as a failure by design. They
+were captured against a freshly seeded database, before `slot-race` mutates it,
+and then re-verified against another fresh seed. No existing baseline was
+regenerated: the 13 stale ones are left exactly as the audit's decision table
+has them.
 
 ---
 
