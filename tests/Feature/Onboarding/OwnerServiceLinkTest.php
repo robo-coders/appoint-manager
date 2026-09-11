@@ -1,0 +1,199 @@
+<?php
+
+use App\Enums\UserRole;
+use App\Models\Booking;
+use App\Models\Service;
+use App\Models\Tenant;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * The owner is a member of staff, and setup has to say so.
+ *
+ * A service is only bookable by the people attached to it, and a solo salon —
+ * one person, no employees, which is most of them on day one — never attaches
+ * anybody. Inviting a colleague on step four linked *them* to every active
+ * service; the owner's own account was linked nowhere, by any path, ever.
+ *
+ * The failure is silent and total: setup says "You're open", the readiness
+ * check passes because it only asks whether a service and an hours-carrying
+ * member of staff exist, and the public page then tells every customer that
+ * every service is not bookable online yet. The optional first appointment on
+ * the last screen is refused for the same reason, with "that slot has gone"
+ * about a completely empty diary.
+ *
+ * `FirstAppointmentTest` attaches the owner by hand in its fixture, which is
+ * exactly why the suite never saw this. Nothing below touches `service_user`:
+ * every row in it has to have been written by the flow itself.
+ */
+
+/** A registered owner with a tenant and nothing else — step one, before the first save. */
+function aSalonAtStepOne(): array
+{
+    $tenant = Tenant::factory()->onboardingIncomplete()->create([
+        'timezone' => 'Europe/London',
+        'booking_page_live' => false,
+    ]);
+
+    $owner = User::factory()->create([
+        'tenant_id' => $tenant->id,
+        'role' => UserRole::Owner,
+        'is_bookable' => true,
+        'is_active' => true,
+    ]);
+
+    return compact('tenant', 'owner');
+}
+
+/**
+ * Seven days, open 09:00-17:00 on the ones named and shut on the rest.
+ *
+ * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
+ */
+function anOnboardingWeekOpen(int ...$weekdays): array
+{
+    return collect(range(1, 7))
+        ->map(fn (int $day) => [
+            'weekday' => $day,
+            'open' => in_array($day, $weekdays, true),
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ])
+        ->all();
+}
+
+/**
+ * The four steps before the last one, driven through the real endpoints.
+ *
+ * @param  array{name: string, email: string}|null  $colleague
+ */
+function runSetupSteps(User $owner, string $slug, ?array $colleague = null): void
+{
+    actingAsTenant($owner)->patch(route('onboarding.basics'), [
+        'name' => 'Paws & Whiskers Grooming',
+        'slug' => $slug,
+        'type' => 'groomer',
+        'hours' => anOnboardingWeekOpen(1, 2, 3, 4, 5),
+    ])->assertSessionHasNoErrors();
+
+    test()->patch(route('onboarding.business'), [
+        'timezone' => 'Europe/London',
+    ])->assertSessionHasNoErrors();
+
+    test()->patch(route('onboarding.services'), [
+        'name' => 'Full groom',
+        'duration_minutes' => 60,
+        'price' => 4200,
+        'deposit_amount' => 0,
+    ])->assertSessionHasNoErrors();
+
+    test()->patch(route('onboarding.staff'), [
+        'staff' => $colleague,
+    ])->assertSessionHasNoErrors();
+}
+
+/** The props the public booking page renders with, read out of the page itself. */
+function propsOnTheBookingPage(string $slug): array
+{
+    $html = test()->get(route('public.booking.show', $slug))->assertOk()->getContent();
+
+    preg_match('/id="booking-props"[^>]*>(.*?)<\/script>/s', $html, $matches);
+
+    return json_decode(html_entity_decode($matches[1] ?? '{}', ENT_QUOTES), true) ?? [];
+}
+
+/** @return list<int> */
+function serviceIdsLinkedTo(User $staff): array
+{
+    return DB::table('service_user')
+        ->where('user_id', $staff->id)
+        ->pluck('service_id')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+}
+
+beforeEach(fn () => test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'Europe/London')));
+
+it('links a solo owner to the service created during setup', function () {
+    $salon = aSalonAtStepOne();
+
+    runSetupSteps($salon['owner'], 'paws-and-whiskers');
+
+    $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
+
+    expect(serviceIdsLinkedTo($salon['owner']))->toBe([$service->id]);
+});
+
+it('links both the owner and a colleague invited on step four', function () {
+    $salon = aSalonAtStepOne();
+
+    runSetupSteps($salon['owner'], 'paws-and-whiskers', [
+        'name' => 'Erin MacKay',
+        'email' => 'erin@example.com',
+    ]);
+
+    $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
+    $colleague = User::withoutGlobalScopes()->where('email', 'erin@example.com')->sole();
+
+    expect(serviceIdsLinkedTo($salon['owner']))->toBe([$service->id])
+        ->and(serviceIdsLinkedTo($colleague))->toBe([$service->id]);
+});
+
+/*
+ * The symptom the operator actually sees. A solo salon that has just been told
+ * it is open must have a bookable page — not the setup notice, and not a
+ * service headed "is not bookable online yet".
+ */
+it('offers real times on the public page the moment a solo owner finishes setup', function () {
+    $salon = aSalonAtStepOne();
+
+    runSetupSteps($salon['owner'], 'paws-and-whiskers');
+
+    test()->post(route('onboarding.complete'), ['slug' => 'paws-and-whiskers'])
+        ->assertRedirect(route('diary.index'));
+
+    $props = propsOnTheBookingPage('paws-and-whiskers');
+
+    expect($props['suggestion']['state'])->toBe('proposal')
+        ->and($props['suggestion']['setup_reason'])->toBeNull()
+        ->and($props['suggestion']['primary'])->not->toBeNull();
+
+    $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
+
+    $days = test()->getJson(route('public.booking.availability', [
+        'tenant_slug' => 'paws-and-whiskers',
+        'service' => $service->id,
+        'from' => '2026-09-07',
+        'to' => '2026-09-07',
+    ]))->assertOk()->json('days.2026-09-07');
+
+    expect(collect($days)->where('available', true))->not->toBeEmpty();
+});
+
+/*
+ * The other half of the same bug. The first appointment is written by
+ * `BookingService`, which asks who can do the service before it asks anything
+ * about the clock — so an unlinked owner is refused with "that slot has gone"
+ * for a slot in an empty diary.
+ */
+it('books the optional first appointment for a solo owner', function () {
+    $salon = aSalonAtStepOne();
+
+    runSetupSteps($salon['owner'], 'paws-and-whiskers');
+
+    $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
+
+    test()->post(route('onboarding.complete'), [
+        'slug' => 'paws-and-whiskers',
+        'first_booking' => [
+            'customer_name' => 'Naomi Ellery',
+            'customer_email' => 'naomi@example.com',
+            'service_id' => $service->id,
+            'staff_id' => $salon['owner']->id,
+            'starts_at' => '2026-09-07T09:00',
+        ],
+    ])->assertSessionHasNoErrors()->assertRedirect(route('diary.index', ['date' => '2026-09-07']));
+
+    expect(Booking::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->count())->toBe(1);
+});

@@ -181,7 +181,7 @@ class OnboardingController extends Controller
     public function updateBasics(UpdateBasicsRequest $request): RedirectResponse
     {
         $tenant = current_tenant();
-        $owner = User::query()->where('role', UserRole::Owner)->first() ?? $request->user();
+        $owner = $this->owner($request);
 
         DB::transaction(function () use ($request, $tenant, $owner): void {
             $tenant->update([
@@ -247,6 +247,8 @@ class OnboardingController extends Controller
 
             Service::query()->create($payload);
         }
+
+        StaffServices::linkAllActive($this->owner($request));
 
         current_tenant()?->markOnboardingStep('services');
 
@@ -379,6 +381,11 @@ class OnboardingController extends Controller
             CarbonImmutable::parse($first['starts_at'], $tenant->timezone)->utc(),
             BookingSource::Manual,
         );
+    }
+
+    private function owner(Request $request): User
+    {
+        return User::query()->where('role', UserRole::Owner)->first() ?? $request->user();
     }
 
     /**

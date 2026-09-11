@@ -4238,3 +4238,68 @@ The new production files — `App\Support\StaffServices`, and the changes to
 `Staff/Index.vue` and `Services/Index.vue` — carry no prose comments, per the
 standing instruction and the precedent in the phase 13 section above. PHPDoc
 type annotations stay. The two test files keep their explanatory notes.
+
+# Phase 15 — The owner's own service links
+
+## The bug was the one staff member nobody thought of
+
+Phase 14 gave every path that *creates* a staff member the "link to all active
+services" default — `StaffController::store`, and the onboarding people step for
+an invited colleague. The owner does not go through either. Their account is
+written by `RegisteredUserController::store` before a single service exists, and
+no later step ever came back for it, so `service_user` had no row for the owner
+on any path in the codebase.
+
+For a salon with employees that was invisible: a colleague was linked, the
+service had somebody, the page worked. For a solo salon — one person, which is
+most of them on day one — it was total. Setup said "You're open", and every
+service on the public page read "is not bookable online yet".
+
+## Why the readiness check did not catch it
+
+`BookingReadiness::reasonFor()` asks two tenant-level questions: is there an
+active service, and is there an active bookable member of staff with hours. Both
+were true. The third question — whether anybody is linked to *this* service —
+is `hasStaffForService()`, which the per-service path uses and the gate does
+not. Nothing is changed here: the gate is about whether the salon is set up,
+and the fix makes the answer it was already giving correct.
+
+## The link is written on the services step, not on the last click
+
+`updateServices` is the only place that marks `services` complete, so it is the
+one point every salon passes through with a service in hand, and it runs before
+the staff step, which is where the vertical's default already assumes there is
+something to link. Writing it at `complete()` instead would leave the owner
+unlinked for the whole of steps four and five — including the optional first
+appointment on the final screen, which `BookingService` refuses with "that time
+is no longer available" when nobody can perform the service.
+
+It goes through `StaffServices::linkAllActive()` — the same call the invited
+colleague gets — rather than new linking logic. `syncWithoutDetaching` means
+coming back to edit the service, or adding a second one, re-links without
+disturbing a choice made later on the staff screen.
+
+## The owner lookup is now one method
+
+`updateBasics` and `updateServices` both need the owner's row, and both want the
+same fallback to the signed-in user for a tenant whose owner has been renamed or
+removed. That expression is a private `owner()` on the controller now. `show()`
+keeps its own, because it already has the staff collection loaded and a second
+query for a row it is holding would be worse.
+
+## The regression test drives the flow, not the fixture
+
+`FirstAppointmentTest` attaches the owner to the service by hand in
+`aSalonSettingUp()`, which is precisely why 1200 tests were green over a
+completely broken first-run experience. `OwnerServiceLinkTest` touches
+`service_user` nowhere: every row it asserts on has to have been written by the
+four onboarding endpoints it calls. It checks the pivot for a solo owner and for
+an owner-plus-colleague, that the public page answers `proposal` rather than
+`setup_incomplete` with real times on the availability endpoint, and that the
+optional first appointment saves.
+
+## Comments
+
+The changes to `OnboardingController` carry no prose comments, per the standing
+instruction and the precedent in phase 14. The existing comments in the file are
+untouched, and the new test file keeps its explanatory notes.
