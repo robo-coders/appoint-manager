@@ -23,11 +23,9 @@
  * `reversed` is the choice between the two colourways, and it is a property of
  * the *background*, not a preference: `logo.svg` is drawn in --ink and vanishes
  * on anything dark; `logo-reversed.svg` is drawn in --paper and vanishes on
- * anything light. Nothing in the product is dark today — the rail is
- * --paper-sunk, the auth column and the marketing footer are paper — so
- * `reversed` is currently exercised only by `/dev/components`, on the ink
- * swatch there. It is wired because the alternative is a surface inventing its
- * own `<img>` the first time something ships on ink.
+ * anything light. The operator app now has a dark palette, so this component
+ * follows `data-theme` unless `reversed` is set explicitly.
+
  *
  * The public booking page deliberately does not use this component. That
  * surface wears the salon's initial in the salon's colour; ours is the one logo
@@ -37,6 +35,7 @@ import iconReversedUrl from '@/assets/icon-reversed.svg';
 import iconUrl from '@/assets/icon.svg';
 import logoReversedUrl from '@/assets/logo-reversed.svg';
 import logoUrl from '@/assets/logo.svg';
+import { useTheme } from '@/composables/useTheme';
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -75,10 +74,14 @@ const name = computed(() => (usePage().props.appName as string) ?? '');
 /** `label` is optional, so `undefined` means "use the name" and '' means "none". */
 const altText = computed(() => (props.label === undefined ? name.value : props.label));
 
-const src = computed(() => {
-    if (props.variant === 'mark') return props.reversed ? iconReversedUrl : iconUrl;
+const { resolved } = useTheme();
 
-    return props.reversed ? logoReversedUrl : logoUrl;
+const dark = computed(() => props.reversed || resolved.value === 'dark');
+
+const src = computed(() => {
+    if (props.variant === 'mark') return dark.value ? iconReversedUrl : iconUrl;
+
+    return dark.value ? logoReversedUrl : logoUrl;
 });
 
 /*

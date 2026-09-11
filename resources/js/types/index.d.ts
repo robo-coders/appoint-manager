@@ -6,6 +6,7 @@ export interface User {
     email: string;
     role: UserRole;
     email_verified_at?: string | null;
+    theme_preference?: 'light' | 'dark' | 'system';
 }
 
 /** Mirrors the `tenant` payload in HandleInertiaRequests::share(). */

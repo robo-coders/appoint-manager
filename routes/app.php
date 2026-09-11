@@ -14,6 +14,7 @@
 |
 */
 
+use App\Http\Controllers\AppearanceController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
@@ -90,6 +91,7 @@ Route::middleware(['auth', 'tenant'])->group(function (): void {
     Route::patch('/onboarding/services', [OnboardingController::class, 'updateServices'])->name('onboarding.services');
     Route::patch('/onboarding/staff', [OnboardingController::class, 'updateStaff'])->name('onboarding.staff');
     Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::patch('/appearance', [AppearanceController::class, 'update'])->name('appearance.update');
 });
 
 Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed', 'billing-access'])->group(function (): void {

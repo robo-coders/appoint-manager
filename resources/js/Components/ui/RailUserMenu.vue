@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useTheme } from '@/composables/useTheme';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import Check from 'lucide-vue-next/dist/esm/icons/check';
+import Monitor from 'lucide-vue-next/dist/esm/icons/monitor';
+import Moon from 'lucide-vue-next/dist/esm/icons/moon';
+import Sun from 'lucide-vue-next/dist/esm/icons/sun';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import type { ThemePreference } from '@/lib/theme';
 
 /**
  * The signed-in person, pinned to the bottom of the nav rail.
@@ -27,7 +33,6 @@ withDefaults(
         profileHref: string;
         billingHref?: string;
         logoutHref: string;
-        /** Icon rail width: the initial only, and the menu opens beside it. */
         collapsed?: boolean;
         impersonating?: boolean;
         impersonatedTenant?: string | null;
@@ -36,17 +41,43 @@ withDefaults(
     { collapsed: false, impersonating: false },
 );
 
+const { preference, setPreference } = useTheme();
+const showAppearance = computed(() => Boolean(usePage().props.tenant));
+
+const APPEARANCE: Array<{ value: ThemePreference; label: string; icon: typeof Sun }> = [
+    { value: 'light', label: 'Light', icon: Sun },
+    { value: 'system', label: 'System', icon: Monitor },
+    { value: 'dark', label: 'Dark', icon: Moon },
+];
+
+const preferenceIcon = computed(
+    () => APPEARANCE.find((option) => option.value === preference.value)?.icon ?? Monitor,
+);
+
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLButtonElement | null>(null);
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
-const items = () => Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+const items = () =>
+    Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]') ?? []);
 
 const close = (restoreFocus = true) => {
+    if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = undefined;
+    }
     if (!open.value) return;
     open.value = false;
     if (restoreFocus) trigger.value?.focus();
 };
+
+const chooseAppearance = (next: ThemePreference) => {
+    setPreference(next);
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => close(false), 180);
+};
+
 
 /*
  * Opening upward means the *last* item is the one nearest the trigger, so
@@ -102,7 +133,10 @@ const post = (href: string) => {
 const initial = (value: string) => (value.trim()[0] ?? '?').toUpperCase();
 
 onMounted(() => document.addEventListener('mousedown', onOutside));
-onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
+onBeforeUnmount(() => {
+    if (closeTimer) clearTimeout(closeTimer);
+    document.removeEventListener('mousedown', onOutside);
+});
 </script>
 
 <template>
@@ -134,6 +168,35 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
                 aria-label="Account"
                 class="appear absolute bottom-full left-2 right-2 mb-1 rounded border border-rule bg-white p-1"
             >
+                <div v-if="showAppearance" role="group" aria-label="Appearance">
+                    <p class="px-2 pb-1 pt-1 text-12 text-ink-2">Appearance</p>
+                    <button
+                        v-for="option in APPEARANCE"
+                        :key="option.value"
+                        type="button"
+                        role="menuitemradio"
+                        :aria-checked="preference === option.value"
+                        class="flex min-h-row w-full items-center gap-2 rounded px-2 py-1 text-left text-13 text-ink transition duration-fast ease-product hover:bg-paper-sunk"
+                        @click="chooseAppearance(option.value)"
+                    >
+                        <component
+                            :is="option.icon"
+                            :size="15"
+                            :stroke-width="1.8"
+                            class="shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span class="flex-1 truncate">{{ option.label }}</span>
+                        <Check
+                            :size="15"
+                            :stroke-width="1.8"
+                            class="shrink-0 text-accent"
+                            :class="preference === option.value ? '' : 'invisible'"
+                            aria-hidden="true"
+                        />
+                    </button>
+                </div>
+                <hr v-if="showAppearance" role="separator" class="my-2" />
                 <Link
                     :href="profileHref"
                     role="menuitem"
@@ -180,23 +243,14 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
                     {{ initial(name) }}
                 </span>
                 <span v-if="!collapsed" class="flex-1 truncate text-left">{{ name }}</span>
-                <svg
-                    v-if="!collapsed"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
+                <component
+                    :is="preferenceIcon"
+                    v-if="showAppearance && !collapsed"
+                    :size="15"
+                    :stroke-width="1.8"
+                    class="ml-auto shrink-0 text-ink-2"
                     aria-hidden="true"
-                    class="shrink-0 text-ink-2"
-                >
-                    <path
-                        :d="open ? 'M2.5 4.5 6 8l3.5-3.5' : 'M2.5 7.5 6 4l3.5 3.5'"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.25"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    />
-                </svg>
+                />
             </button>
         </template>
     </div>

@@ -4508,3 +4508,50 @@ convention — `./scripts/e2e-setup.sh`, then exactly one foreground
 `./scripts/e2e-playwright.sh --update-snapshots` — and was not done here
 because the `public` project still carries 13 baselines left stale by the
 auth/onboarding redesign, and one pass would bake those in as well.
+
+## Operator dark mode
+
+One token set, swapped by `data-theme` on `<html>`. Not a second stylesheet,
+not a Tailwind `dark:` tree, and not a theme for marketing, public booking, or
+the super admin console.
+
+The light values in `:root` are unchanged. `[data-theme='dark']` in
+`tokens.css` overrides only colour tokens. The brief named an Editorial A
+vocabulary (`--surface`, `--terracotta`, `--text-muted`, `--badge-bg`, …).
+Those roles already exist here under the names the operator app has used since
+the rebuild — `--paper` / `--paper-sunk` / `--white`, `--accent`, `--ink` /
+`--ink-2` / `--ink-3`, `--rule` / `--rule-strong`, `--accent-tint` /
+`--accent-rule` — so the dark hexes land on those names rather than growing a
+parallel vocabulary that every screen would have to be rewritten onto. Radius
+stays 6px, shadows stay off except the focus ring, fills stay flat.
+
+`--danger` and `--accent-strong` have no brief dark values. The light danger
+(`#a8342c`) is 2.8:1 on the dark paper and unusable as error text, so dark
+mode lightens it (and `--accent-strong`, which is type on the accent pill)
+just enough to clear 4.5:1. `--white` becomes a raised dark sheet (`#201e19`)
+so `bg-white` menus still sit a step above `--paper-sunk` and `text-white` on
+`bg-ink` inverts into dark type on a light fill.
+
+The preference is `light` / `dark` / `system`, default `system`. A blocking
+script in `app.blade.php` — before any stylesheet — reads `localStorage`,
+falls back to `users.theme_preference` on the document, and sets `data-theme`
+to the resolved light or dark so a signed-in operator never flashes the other
+palette. `matchMedia('(prefers-color-scheme: dark)')` is the system resolver;
+if it is missing, the fallback is light. A `change` listener on that query
+keeps the page in sync while the preference is `system`.
+
+`localStorage` wins on the first paint (same machine, instant). An empty
+store — new device, cleared cache — is seeded from the user row. Selecting an
+option writes both immediately; a failed server write is retried in the
+background and does not roll back the local theme.
+
+The toggle lives in the sidebar user menu (`RailUserMenu`), not as a floating
+control and not on Settings. Appearance is three plain rows (Light / System /
+Dark) with lucide outline icons and a terracotta check on the active row,
+above the existing Profile / Billing / Log out rows. The closed user row
+shows the current preference icon on the right. The console rail is the same
+component with no tenant, so the section is absent there.
+
+Visual pairs for Diary, Bookings and Settings in both palettes are in
+`.design/mockups/Backend/visual-check/`.
+

@@ -20,13 +20,16 @@ not in that file it does not belong in a template.
 
 ---
 
-## Light only
+## Light and dark
 
-**Dark mode is deliberately not implemented.** The previous dark system was
-never correct, and light is the design target. The dark branches were removed
-rather than left broken. There is no `prefers-color-scheme` branch and no
-theme toggle; adding one later means adding a second palette, not un-breaking
-this one.
+The operator app (`app.diarydesk.com`) has two palettes and one token set.
+`:root` holds the light values; `[data-theme='dark']` overrides the colour
+tokens. Radius, type, space and the no-shadow rule do not change. Marketing,
+public booking and the console never set `data-theme`, so they stay light.
+
+The preference is `light`, `dark` or `system` (the default). It lives in
+`localStorage` for the first paint and on `users.theme_preference` so it
+follows the operator across devices. The toggle is in the sidebar user menu.
 
 ---
 

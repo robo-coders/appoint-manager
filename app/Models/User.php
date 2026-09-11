@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ThemePreference;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\UserFactory;
@@ -30,6 +31,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_active',
         'colour',
         'is_super_admin',
+        'theme_preference',
     ];
 
     /**
@@ -53,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'can_see_customer_contacts' => 'boolean',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
+            'theme_preference' => ThemePreference::class,
         ];
     }
 

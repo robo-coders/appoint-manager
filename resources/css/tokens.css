@@ -5,7 +5,9 @@
  * booking page only. The register is Mercury, Ramp, Linear, Stripe: quiet,
  * precise, expensive without being flashy.
  *
- * Dark mode is deliberately not implemented. See DESIGN.md.
+ * Operator dark values live under [data-theme='dark']. Marketing, booking
+ * and the console never set that attribute, so they stay on the light
+ * palette in this file.
  *
  * Every colour, size, radius and duration in the product comes from this file.
  * `npm run check:design` fails the build on anything that does not.
@@ -315,15 +317,42 @@
     --pad-x: 12px;
 }
 
+[data-theme='dark'] {
+    color-scheme: dark;
+
+    --paper: #14130f;
+    --paper-sunk: #1c1a16;
+    --white: #201e19;
+
+    --ink: #f2eee7;
+    --ink-2: #9a968d;
+    --ink-3: #6b6862;
+    --ink-4: #3a3730;
+
+    --rule: #2a2822;
+    --rule-strong: #332f28;
+    --rule-hover: rgb(242 238 231 / 0.34);
+
+    --danger: #d46b63;
+
+    --accent: #c97d4f;
+    --accent-tint: #241c16;
+    --accent-rule: #3d2e22;
+    --accent-strong: #e09a70;
+
+    --pill-neutral: rgb(242 238 231 / 0.1);
+    --pill-muted: rgb(242 238 231 / 0.06);
+    --pill-accent: rgb(201 125 79 / 0.22);
+    --ink-tint: rgb(242 238 231 / 0.08);
+    --overlay: rgb(20 19 15 / 0.64);
+}
+
 /*
- * Email, in a dark client. The one place this product has a dark palette.
- *
- * `DESIGN.md` says dark mode is deliberately not implemented, and that stands
- * for the app: there is one design, it is light, and a second palette would be
- * a second design to keep correct. Email is not the app. Apple Mail and Outlook
- * repaint a message for dark mode whether or not we have an opinion, and an
- * auto-inverted warm-paper email comes back muddy blue-grey with the ink action
- * flipped to near-white on near-white. Specifying beats being repainted.
+ * Email, in a dark client. Separate from the operator app's [data-theme='dark']
+ * palette: Apple Mail and Outlook repaint a message for dark mode whether or
+ * not we have an opinion, and an auto-inverted warm-paper email comes back
+ * muddy blue-grey with the ink action flipped to near-white on near-white.
+ * Specifying beats being repainted.
  *
  * These are the same roles, not a second design: a sunk page, a raised sheet, a
  * hairline, primary and secondary ink. They live here rather than inline in

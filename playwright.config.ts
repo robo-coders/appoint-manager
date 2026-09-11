@@ -112,7 +112,7 @@ export default defineConfig({
         {
             name: 'operator',
             dependencies: ['setup'],
-            testMatch: /(screens|mobile|manage-booking|logout|alerts|loyalty-settings)\.spec\.ts/,
+            testMatch: /(screens|mobile|manage-booking|logout|alerts|loyalty-settings|theme)\.spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: AUTH_STATE },
         },
         {

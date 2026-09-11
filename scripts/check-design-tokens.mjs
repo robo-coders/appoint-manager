@@ -110,7 +110,7 @@ const RULES = [
     {
         scope: 'all',
         id: 'raw-hex',
-        why: 'Raw colour. Every colour comes from resources/css/tokens.css.',
+        why: 'Raw colour. Every colour comes from resources/css/tokens.css. var(--token-name) is the compliant form.',
         re: /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b(?![0-9a-zA-Z])/g,
     },
     {

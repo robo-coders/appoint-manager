@@ -3,9 +3,10 @@
  * Computes WCAG contrast from the actual values in tokens.css, so the numbers
  * in DESIGN.md cannot drift from the palette.
  *
- * The system is light-only, so there is one mode to check — but every text
- * colour is checked against every surface it can land on, because muted text
- * on a white input is the case that actually fails.
+ * Light and dark palettes are both measured. Dark values live under
+ * `[data-theme='dark']` and are merged onto `:root` so a token the dark
+ * block does not restate still resolves. Tenant brand presets are light-only:
+ * they belong to the public booking page, which does not set `data-theme`.
  *
  * Run: npm run check:contrast
  */
@@ -23,12 +24,28 @@ const TOKENS_PATH = process.argv[2] ?? 'resources/css/tokens.css';
 
 const css = readFileSync(TOKENS_PATH, 'utf8');
 
-const raw = (name) => (css.match(new RegExp(`--${name}:\\s*([^;]+);`)) || [, ''])[1].trim();
+const blockOf = (selector) => {
+    const re = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{`);
+    const match = re.exec(css);
+    if (!match) return '';
+    const open = match.index + match[0].length - 1;
+    const close = css.indexOf('}', open);
 
-const resolve = (name, depth = 0) => {
-    const v = raw(name);
+    return close === -1 ? '' : css.slice(open + 1, close);
+};
+
+const declarations = (block) =>
+    new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name.slice(2), value.trim()]));
+
+const lightTokens = declarations(blockOf(':root'));
+const darkTokens = new Map([...lightTokens, ...declarations(blockOf("[data-theme='dark']"))]);
+
+const resolveFrom = (tokens, name, depth = 0) => {
+    const v = tokens.get(name) ?? '';
     if (depth > 4 || !v.startsWith('var(')) return v;
-    return resolve(v.slice(6, -1).trim(), depth + 1);
+    const inner = v.match(/^var\(--([^)]+)\)$/);
+
+    return inner ? resolveFrom(tokens, inner[1].trim(), depth + 1) : v;
 };
 
 const toRgb = (v) => {
@@ -135,32 +152,41 @@ const check = (label, fg, bg, min) => {
     console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(40)} ${r.toFixed(2).padStart(6)}:1  (min ${min})`);
 };
 
-console.log('text on every surface it lands on');
-for (const [name, min] of TEXT) {
-    for (const s of SURFACES) check(`${name} on ${s}`, toRgb(resolve(name)), toRgb(resolve(s)), min);
-}
+const audit = (heading, tokens, { brands = false } = {}) => {
+    const resolve = (name) => resolveFrom(tokens, name);
 
-console.log('\nstatus pills — a wash over paper, so the fill is flattened first');
-for (const [fg, fill, note] of PILLS) {
-    check(`${fg} on ${fill} — ${note}`, toRgb(resolve(fg)), over(resolve(fill), toRgb(resolve('paper'))), 4.5);
-}
+    console.log(heading);
+    for (const [name, min] of TEXT) {
+        for (const s of SURFACES) check(`${name} on ${s}`, toRgb(resolve(name)), toRgb(resolve(s)), min);
+    }
 
-console.log('\nnon-text, held to 3:1 or noted');
-for (const [name, min, note] of NON_TEXT) {
-    check(`${name} on paper — ${note}`, toRgb(resolve(name)), toRgb(resolve('paper')), min);
-}
+    console.log('\nstatus pills — a wash over paper, so the fill is flattened first');
+    for (const [fg, fill, note] of PILLS) {
+        check(`${fg} on ${fill} — ${note}`, toRgb(resolve(fg)), over(resolve(fill), toRgb(resolve('paper'))), 4.5);
+    }
 
-console.log('\nink as a fill');
-check('white on ink (primary button)', toRgb(resolve('white')), toRgb(resolve('ink')), 4.5);
+    console.log('\nnon-text, held to 3:1 or noted');
+    for (const [name, min, note] of NON_TEXT) {
+        check(`${name} on paper — ${note}`, toRgb(resolve(name)), toRgb(resolve('paper')), min);
+    }
 
-console.log('\nthe brand default — dead until --brand existed, so never measured');
-check('brand-fg on brand (default)', toRgb(resolve('brand-fg')), toRgb(resolve('brand')), 4.5);
+    console.log('\nink as a fill');
+    check('white on ink (primary button)', toRgb(resolve('white')), toRgb(resolve('ink')), 4.5);
 
-console.log('\ntenant brand presets — white text on the fill, and the fill on paper');
-for (const [name, hex] of Object.entries(BRAND_PRESETS)) {
-    check(`brand-fg on ${name}`, toRgb(resolve('brand-fg')), toRgb(hex), 4.5);
-    check(`${name} on paper`, toRgb(hex), toRgb(resolve('paper')), 3.0);
-}
+    console.log('\nthe brand default — dead until --brand existed, so never measured');
+    check('brand-fg on brand (default)', toRgb(resolve('brand-fg')), toRgb(resolve('brand')), 4.5);
+
+    if (!brands) return;
+
+    console.log('\ntenant brand presets — white text on the fill, and the fill on paper');
+    for (const [name, hex] of Object.entries(BRAND_PRESETS)) {
+        check(`brand-fg on ${name}`, toRgb(resolve('brand-fg')), toRgb(hex), 4.5);
+        check(`${name} on paper`, toRgb(hex), toRgb(resolve('paper')), 3.0);
+    }
+};
+
+audit('text on every surface it lands on', lightTokens, { brands: true });
+audit('\n[data-theme=dark] — the same roles on the dark palette', darkTokens);
 
 console.log(failed === 0 ? '\ncontrast: all pass' : `\ncontrast: ${failed} FAILING`);
 process.exit(failed === 0 ? 0 : 1);

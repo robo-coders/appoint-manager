@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\BookingStatus;
+use App\Enums\ThemePreference;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Service;
@@ -91,6 +92,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role,
                     'email_verified_at' => $user->email_verified_at,
+                    'theme_preference' => ($user->theme_preference ?? ThemePreference::System)->value,
                 ] : null,
             ],
             'tenant' => $tenant ? [

@@ -1,7 +1,59 @@
+@php
+    $surface = App\Support\Surface::current(request()->getHost(), request()->path());
+    $appearance = auth()->user()?->theme_preference?->value ?? 'system';
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-app-name="{{ config('product.name') }}">
+<html
+    lang="{{ str_replace('_', '-', app()->getLocale()) }}"
+    data-app-name="{{ config('product.name') }}"
+    @if ($surface === App\Support\Surface::App && auth()->check())
+        data-theme-preference="{{ $appearance }}"
+        data-signed-in="1"
+    @endif
+>
     <head>
         <meta charset="utf-8">
+        @if ($surface === App\Support\Surface::App && auth()->check())
+            <script>
+                (function () {
+                    var root = document.documentElement;
+                    var key = 'diarydesk.appearance';
+                    var allowed = { light: 1, dark: 1, system: 1 };
+                    var stored = null;
+                    try { stored = localStorage.getItem(key); } catch (e) {}
+                    var fromDom = root.getAttribute('data-theme-preference');
+                    var preference = allowed[stored] ? stored : (allowed[fromDom] ? fromDom : 'system');
+                    if (!stored) {
+                        try { localStorage.setItem(key, preference); } catch (e) {}
+                    }
+                    var resolve = function () {
+                        var current = null;
+                        try { current = localStorage.getItem(key); } catch (e) {}
+                        var pref = allowed[current] ? current : preference;
+                        if (pref === 'dark' || pref === 'light') return pref;
+                        try {
+                            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                        } catch (e) {
+                            return 'light';
+                        }
+                    };
+                    var apply = function () {
+                        root.setAttribute('data-theme', resolve());
+                    };
+                    apply();
+                    try {
+                        var media = window.matchMedia('(prefers-color-scheme: dark)');
+                        var onChange = function () {
+                            var current = null;
+                            try { current = localStorage.getItem(key); } catch (e) {}
+                            if ((allowed[current] ? current : preference) === 'system') apply();
+                        };
+                        if (media.addEventListener) media.addEventListener('change', onChange);
+                        else if (media.addListener) media.addListener(onChange);
+                    } catch (e) {}
+                })();
+            </script>
+        @endif
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
         <title inertia>{{ config('product.name') }}</title>
@@ -36,7 +88,6 @@
         about how the app renders, which is deliberate: it is the hook, not a
         restyle.
     --}}
-    @php($surface = App\Support\Surface::current(request()->getHost(), request()->path()))
     <body
         class="font-sans antialiased"
         data-surface="{{ $surface->value }}"

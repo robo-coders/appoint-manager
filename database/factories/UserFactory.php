@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ThemePreference;
 use App\Enums\UserRole;
 use App\Models\Tenant;
 use App\Models\User;
@@ -32,6 +33,7 @@ class UserFactory extends Factory
             'is_active' => true,
             'is_super_admin' => false,
             'colour' => '#4F46E5',
+            'theme_preference' => ThemePreference::System,
             'remember_token' => Str::random(10),
         ];
     }

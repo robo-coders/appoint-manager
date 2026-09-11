@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { bootTheme } from '@/composables/useTheme';
 import Banner from '@/Components/ui/Banner.vue';
 import BetaSandboxBanner from '@/Components/BetaSandbox/Banner.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
@@ -30,6 +31,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
  */
 
 const page = usePage();
+
+if (page.props.tenant) {
+    bootTheme(page.props.auth.user?.theme_preference);
+}
 
 const DEFAULT_MOBILE_BREAKPOINT = 768;
 const DEFAULT_RAIL_CEILING = 1023;
