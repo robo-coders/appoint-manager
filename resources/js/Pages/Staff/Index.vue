@@ -5,6 +5,7 @@ import AddCard from '@/Components/ui/AddCard.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import StaffColourField from '@/Components/ui/StaffColourField.vue';
 import Button from '@/Components/ui/Button.vue';
+import Callout from '@/Components/ui/Callout.vue';
 import Checkbox from '@/Components/ui/Checkbox.vue';
 import EmptyState from '@/Components/ui/EmptyState.vue';
 import Menu from '@/Components/ui/Menu.vue';
@@ -13,7 +14,7 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import SlideOver from '@/Components/ui/SlideOver.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import type { StaffRecord } from '@/types/models';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 /**
@@ -33,16 +34,18 @@ import { computed, ref } from 'vue';
  * only behind the header button is what makes a one-person salon look like a
  * salon that could have two.
  */
+type StaffRow = StaffRecord & {
+    initial: string;
+    role_label: string;
+    hours: string;
+    weekly_hours: string | null;
+    booked_this_week: number;
+    service_ids: number[];
+};
+
 const props = defineProps<{
-    staff: Array<
-        StaffRecord & {
-            initial: string;
-            role_label: string;
-            hours: string;
-            weekly_hours: string | null;
-            booked_this_week: number;
-        }
-    >;
+    staff: StaffRow[];
+    services: Array<{ id: number; name: string }>;
 }>();
 
 const page = usePage();
@@ -56,6 +59,7 @@ const form = useForm({
     is_bookable: true,
     is_active: true,
     can_see_customer_contacts: true,
+    service_ids: [] as number[],
 });
 
 const openCreate = () => {
@@ -65,6 +69,7 @@ const openCreate = () => {
     form.is_bookable = true;
     form.is_active = true;
     form.can_see_customer_contacts = true;
+    form.service_ids = props.services.map((service) => service.id);
     sheetOpen.value = true;
 };
 
@@ -75,7 +80,7 @@ const editingOwner = computed(
     () => props.staff.find((person) => person.id === editingId.value)?.role === 'owner',
 );
 
-const openEdit = (person: StaffRecord) => {
+const openEdit = (person: StaffRow) => {
     editingId.value = person.id;
     form.name = person.name;
     form.email = person.email;
@@ -83,8 +88,15 @@ const openEdit = (person: StaffRecord) => {
     form.is_bookable = person.is_bookable;
     form.is_active = person.is_active;
     form.can_see_customer_contacts = person.can_see_customer_contacts;
+    form.service_ids = [...person.service_ids];
     sheetOpen.value = true;
 };
+
+const toggleService = (id: number, checked: boolean) => {
+    form.service_ids = checked ? [...form.service_ids, id] : form.service_ids.filter((each) => each !== id);
+};
+
+const nothingSelected = computed(() => props.services.length > 0 && form.service_ids.length === 0);
 
 const submit = () => {
     if (editingId.value) {
@@ -250,6 +262,33 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                     label="Active"
                     hint="Inactive people keep their history but stop appearing anywhere new."
                 />
+
+                <fieldset class="space-y-2">
+                    <legend class="caption">Services</legend>
+
+                    <Callout v-if="services.length === 0" data-testid="staff-services-empty">
+                        There is nothing to assign yet.
+                        <template #action>
+                            <Link :href="route('services.index')" class="underline decoration-rule underline-offset-4">
+                                Add a service
+                            </Link>
+                        </template>
+                    </Callout>
+
+                    <template v-else>
+                        <Checkbox
+                            v-for="service in services"
+                            :key="service.id"
+                            :model-value="form.service_ids.includes(service.id)"
+                            :label="service.name"
+                            @update:model-value="toggleService(service.id, $event)"
+                        />
+
+                        <Callout v-if="nothingSelected" tone="danger" data-testid="staff-services-warning">
+                            This person won't be bookable online for anything.
+                        </Callout>
+                    </template>
+                </fieldset>
             </form>
             <template #footer>
                 <Button :loading="form.processing" @click="submit">Save</Button>

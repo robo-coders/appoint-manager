@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Staff;
 
+use App\Models\Service;
+use App\Rules\ExistsForTenant;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,6 +37,8 @@ class UpdateStaffRequest extends FormRequest
             'is_bookable' => ['sometimes', 'boolean'],
             'can_see_customer_contacts' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['integer', ExistsForTenant::of(Service::class)],
         ];
     }
 

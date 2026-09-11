@@ -7,7 +7,7 @@ use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Enums\DepositStatus;
 use App\Models\Concerns\BelongsToTenant;
-use App\Services\Loyalty\Loyalty;
+use App\Services\Loyalty\LoyaltyStampService;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -70,8 +70,9 @@ class Booking extends Model
          * way, and a salon switching loyalty on should not have last year's
          * bookings hand out free grooms.
          *
-         * `Loyalty::stamp()` returns immediately unless the tenant has the
-         * feature on, so for everybody else this hook is one enum comparison.
+         * `LoyaltyStampService::stampAutomatically()` returns immediately unless
+         * the tenant has the feature on, so for everybody else this hook is one
+         * enum comparison.
          */
         static::updating(function (Booking $booking): void {
             if ($booking->isDirty(['starts_at', 'ends_at'])) {
@@ -84,7 +85,7 @@ class Booking extends Model
                 return;
             }
 
-            app(Loyalty::class)->stamp($booking);
+            app(LoyaltyStampService::class)->stampAutomatically($booking);
         });
     }
 

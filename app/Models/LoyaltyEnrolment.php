@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\LoyaltyCardStatus;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\LoyaltyEnrolmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One customer's progress through one package.
@@ -49,6 +51,9 @@ class LoyaltyEnrolment extends Model
         'loyalty_package_id',
         'stamps_used',
         'cycles_completed',
+        'status',
+        'completed_at',
+        'redeemed_at',
     ];
 
     /**
@@ -59,6 +64,9 @@ class LoyaltyEnrolment extends Model
         return [
             'stamps_used' => 'integer',
             'cycles_completed' => 'integer',
+            'status' => LoyaltyCardStatus::class,
+            'completed_at' => 'datetime',
+            'redeemed_at' => 'datetime',
         ];
     }
 
@@ -90,6 +98,19 @@ class LoyaltyEnrolment extends Model
         }
 
         return max(0, (int) $this->package->sessions_required - $this->stamps_used);
+    }
+
+    public function isFull(): bool
+    {
+        return $this->status === LoyaltyCardStatus::StampedOut;
+    }
+
+    /**
+     * @return HasMany<LoyaltyStamp, $this>
+     */
+    public function stamps(): HasMany
+    {
+        return $this->hasMany(LoyaltyStamp::class, 'loyalty_enrolment_id');
     }
 
     /**

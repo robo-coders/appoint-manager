@@ -32,6 +32,7 @@ export interface ServiceRecord {
     is_active: boolean;
     sort_order: number;
     staff_ids: number[];
+    staff_count: number;
 }
 
 export interface StaffRecord {

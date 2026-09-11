@@ -25,6 +25,7 @@ class ServicePayload
             'is_active' => $service->is_active,
             'sort_order' => $service->sort_order,
             'staff_ids' => $service->staff->pluck('id')->all(),
+            'staff_count' => $service->staff->where('is_active', true)->count(),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Loyalty;
 
+use App\Enums\LoyaltyCardStatus;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\LoyaltyEnrolment;
@@ -10,15 +11,17 @@ use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Loyalty packages, v1: a count of sessions, and the next one free.
+ * Loyalty packages: a count of sessions, and the next one free.
  *
- * Everything the feature does is one of four questions, and they are all here so
- * that the booking flow it hangs off has to learn as little as possible:
+ * Everything the feature decides is one of four questions, and they are all here
+ * so that the booking flow it hangs off has to learn as little as possible:
  *
  *   - `enabled()` — is this switched on for this tenant at all
  *   - `enrol()` — the automatic enrolment, on a customer's next booking
  *   - `rewardDue()` — is this customer's next appointment the free one
- *   - `stamp()` — a completed appointment, counted
+ *   - `spendReward()` / `refundReward()` — the free one, taken and given back
+ *
+ * Adding a stamp is not one of them: `LoyaltyStampService` owns that.
  *
  * **Off by default, and off means nothing happens.** The flag lives in
  * `tenants.settings['loyalty']['enabled']`, beside `notifications.sms_enabled`
@@ -106,7 +109,13 @@ final class Loyalty
              * sessions did happen.
              */
             if (! $enrolment->isEarning()) {
-                $enrolment->forceFill(['loyalty_package_id' => $package->id, 'stamps_used' => 0])->save();
+                $enrolment->forceFill([
+                    'loyalty_package_id' => $package->id,
+                    'stamps_used' => 0,
+                    'status' => LoyaltyCardStatus::Active,
+                    'completed_at' => null,
+                    'redeemed_at' => null,
+                ])->save();
             }
 
             return $enrolment;
@@ -125,7 +134,13 @@ final class Loyalty
             return false;
         }
 
-        return $this->enrolmentFor($tenant, $customer)?->rewardDue() ?? false;
+        $enrolment = $this->enrolmentFor($tenant, $customer);
+
+        if ($enrolment === null || ! $enrolment->isEarning() || ! $enrolment->package->auto_apply_reward) {
+            return false;
+        }
+
+        return $enrolment->rewardDue();
     }
 
     /**
@@ -160,6 +175,9 @@ final class Loyalty
             ->update([
                 'stamps_used' => 0,
                 'cycles_completed' => DB::raw('cycles_completed + 1'),
+                'status' => LoyaltyCardStatus::Redeemed->value,
+                'completed_at' => null,
+                'redeemed_at' => now(),
                 'updated_at' => now(),
             ]);
     }
@@ -211,57 +229,9 @@ final class Loyalty
             ->update([
                 'stamps_used' => (int) $enrolment->package->sessions_required,
                 'cycles_completed' => DB::raw('GREATEST(cycles_completed - 1, 0)'),
-                'updated_at' => now(),
-            ]);
-    }
-
-    /**
-     * One completed appointment, counted.
-     *
-     * Called from `Booking`'s `updated` hook when a booking's status becomes
-     * `completed`, rather than from a controller, for the reason
-     * `Customer::booted()` gives about the same shape of problem: a status a
-     * seeder, an import, a support script or tinker can also set is a status
-     * whose consequence must not live down one route.
-     *
-     * Not incremented past the package's own count. Two sessions completed after
-     * the stamps were already full would otherwise read "7 of 5" on the customer
-     * screen and hand out one free session for two earned — the paper-card
-     * behaviour is that the card is full and the next one is free, once.
-     */
-    public function stamp(Booking $booking): void
-    {
-        $tenant = $booking->tenant_id === null
-            ? null
-            : Tenant::query()->find($booking->tenant_id);
-
-        if ($tenant === null || ! $this->enabled($tenant) || $booking->is_loyalty_reward) {
-            return;
-        }
-
-        $customer = Customer::withoutGlobalScopes()->find($booking->customer_id);
-
-        if ($customer === null) {
-            return;
-        }
-
-        $enrolment = $this->enrolmentFor($tenant, $customer);
-
-        if ($enrolment === null || ! $enrolment->isEarning()) {
-            return;
-        }
-
-        $required = (int) $enrolment->package->sessions_required;
-
-        if ($enrolment->stamps_used >= $required) {
-            return;
-        }
-
-        // In SQL, and unscoped, for the reasons `spendReward()` sets out.
-        LoyaltyEnrolment::withoutGlobalScopes()
-            ->whereKey($enrolment->getKey())
-            ->update([
-                'stamps_used' => DB::raw('stamps_used + 1'),
+                'status' => LoyaltyCardStatus::StampedOut->value,
+                'completed_at' => now(),
+                'redeemed_at' => null,
                 'updated_at' => now(),
             ]);
     }
@@ -316,7 +286,7 @@ final class Loyalty
             .' more until your free session.';
     }
 
-    private function enrolmentFor(Tenant $tenant, Customer $customer): ?LoyaltyEnrolment
+    public function enrolmentFor(Tenant $tenant, Customer $customer): ?LoyaltyEnrolment
     {
         return LoyaltyEnrolment::withoutGlobalScopes()
             ->with('package')

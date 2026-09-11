@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\Vertical;
 use App\Services\Booking\BookingService;
 use App\Support\SetupSteps;
+use App\Support\StaffServices;
 use App\Support\TenantSlug;
 use App\Support\Timezones;
 use App\Support\VerticalInterval;
@@ -257,7 +258,7 @@ class OnboardingController extends Controller
         $member = $request->validated('staff');
 
         if ($member !== null) {
-            User::query()->create([
+            $created = User::query()->create([
                 'name' => $member['name'],
                 'email' => $member['email'],
                 'password' => Str::password(32),
@@ -267,6 +268,8 @@ class OnboardingController extends Controller
                 'can_see_customer_contacts' => (bool) ($member['can_see_customer_contacts'] ?? true),
                 'colour' => '#0F766E',
             ]);
+
+            StaffServices::linkAllActive($created);
         }
 
         current_tenant()?->markOnboardingStep('staff');

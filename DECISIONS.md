@@ -3944,3 +3944,297 @@ And `Onboarding`'s clipboard fallback keeps its "Selected" label and its
 `Ctrl`/`Cmd`+`C` line: that is an instruction about text selected on screen
 right now, not a notification of something that happened, and a toast would
 outlive the selection it refers to.
+
+# Phase 13 — Loyalty stamping, and the settings tab that configures it
+
+## Why this extends v1 rather than replacing it
+
+The brief specified `loyalty_schemes`, `loyalty_cards` and `loyalty_stamps`, a
+`LoyaltyStampService`, and a `Settings/Loyalty.vue` built from scratch. All
+three already existed in another form: `loyalty_packages` +
+`loyalty_enrolments`, stamping from `Booking`'s `updated` hook, and a live
+settings tab with its own controller and routes. Building the specified model
+alongside them would have stamped every completed appointment twice, and
+replacing them outright would have meant rewriting the customer profile and the
+booking confirmation, both of which the brief put out of scope and both of which
+read the v1 model.
+
+So the tables keep their names and their meaning, and the feature grew:
+`loyalty_packages` gained `eligible_service_id` and the four switches,
+`loyalty_enrolments` gained `status`, `completed_at` and `redeemed_at`, and
+`loyalty_stamps` is new. Every existing consumer — `Customers/Show.vue`,
+`Bookings/Show.vue`, the SMS progress line, `BookingService` — is untouched, and
+the 35 tests that covered v1 still pass unedited.
+
+## The stamp is a row now, and there is still only one trigger
+
+`Loyalty::stamp()` is gone and `LoyaltyStampService` has its logic. The point of
+the move is that a stamp stopped being an increment: it carries a date, a
+method, a person and optionally a booking, and that record is what the card
+renders. Both entry points — the completion hook and the operator's hand — go
+through one private `recordStamp()`, so locking, idempotency and the
+"card is full" transition cannot diverge between them.
+
+`Booking::booted()` still owns the *when*. The brief asked for the trigger to be
+found rather than duplicated, and that hook is it — deliberately a model hook
+rather than a controller, so an import, a support script or tinker cannot set
+`Completed` without stamping. There is no invoice-paid condition because this
+product has no customer invoices; billing is the tenant's own subscription.
+
+## Idempotency is an index, not a check
+
+`stampAutomatically()` returns null when a stamp already exists for the booking,
+and `recordStamp()` checks again inside the lock. Neither is what makes a
+webhook retry safe — the unique index on `(tenant_id, booking_id)` is, and it is
+tested directly rather than through the service, because two simultaneous
+workers are each relying on the database rather than on each other.
+
+`booking_id` is nullable and MySQL permits repeated NULLs in a unique index,
+which is exactly the behaviour a goodwill stamp needs: many of them, none tied
+to an appointment.
+
+## The reward is still spent at booking
+
+The brief asked for a line-item deduction on the customer's next invoice, held
+as a pending reward record. There is no invoice to deduct from, and v1 already
+records why the reward is applied at *booking* rather than at completion: that
+is when price and deposit are decided, and the promise is that the free one is
+free before the customer is asked for a card.
+
+The pending reward is therefore the card itself — an enrolment sitting at
+`stamped_out` with a `completed_at`. It survives indefinitely, which is the
+property the brief actually wanted, and it avoids a second copy of the same
+state that `spendReward()`/`refundReward()` would have had to keep in step. A
+separate table would have been duplicate truth, not durability.
+
+`auto_apply_reward` is read by `rewardDue()`, so switching it off leaves the
+full card standing and charges the next booking normally.
+
+## `stamped_by` points at `users`
+
+There is no `staff` table. Staff are users — `bookings.staff_id` has referenced
+`users` since the first migration — so the column follows the convention the
+rest of the schema already set.
+
+## `stampManually()` throws rather than returning null
+
+Its return type is non-nullable, which is right: an operator pressing a button
+gets a stamp or an explanation, never silence. `ManualStampRequiresNoteException`
+covers the unexplained goodwill stamp the brief named;
+`LoyaltyCardFullException` covers the two states it did not — a card that is
+already full, and an appointment that has already been stamped. Both are states
+the future button must render, and null would have made them indistinguishable
+from success.
+
+## Neither path resolves the package through the relation
+
+`LoyaltyEnrolment::isEarning()` reads `$this->package`, and that lazy load runs
+through `TenantScope`, which fails closed. Both entry points run from contexts
+with no ambient tenant — a model hook, a queue worker — so the service compares
+`loyalty_package_id` against the package it fetched explicitly instead. This was
+a real bug found by a test, not a precaution.
+
+## The four switches are `sometimes`, not `required`
+
+A PATCH that omits a field is asking for it to stay as it is. The screen always
+sends all four, so the only requests that leave them out are the ones that mean
+to — switching the scheme off does not require restating how it stamps. The
+controller falls back to the current row, then to `true`.
+
+## The stamp is SVG because the design system has no circles
+
+`check:design` forbids `rounded-full`: this system is 6px on everything, no
+pills. The 4a treatment is circles. Drawing them as `<circle>` elements resolves
+that honestly — they are artwork, the same category as the logo files the token
+checker already exempts — rather than by weakening the rule.
+
+The first attempt used `text-10`, which is not a font-size token. It compiled to
+nothing, the dates rendered at inherited size and wrapped across the ring, and
+`check:design` did not catch it. That is precisely the silent failure
+`tokens.css` warns about. The impressions are `text-12` on a five-column grid
+capped at `max-w-booking`, which is the mockup's own card width.
+
+## The preview reaches both states, and neither is hardcoded
+
+`previewFull` is a control on the panel rather than a constant, so the building
+card and the stamped-out card are both reachable for visual QA. The dates come
+from the tenant's real stamps when there are any and are generated backwards at
+28-day intervals when there are not, so a salon that has never stamped anything
+still sees what the card will look like.
+
+## Two things the brief specified that this could not use
+
+`config/verticals.php` does not exist — it was replaced by the `verticals`
+table, read through `Vertical::definitionFor()`, and `Support/VerticalFigures`
+records the removal. The screen takes its wording from the shared `vertical`
+Inertia prop instead, so "appointment" becomes whatever the trade calls it.
+
+`/mnt/user-data/outputs/loyalty-settings-mockup.html`, named as the settings
+panel's spec of record, is not on this machine. The field order, grouping and
+copy come from the ordered list in the brief itself; the card comes from 4a in
+`loyalty-final.dc.html`.
+
+## Comments
+
+New production files carry no prose comments, per the standing instruction. This
+diverges from every file around them, which is why this section exists. Files
+that already had comments keep them; the two that had become wrong — `Loyalty`'s
+list of what it owns, and `Booking`'s note about what the hook calls — were
+corrected rather than left describing code that had moved. PHPDoc type
+annotations stay, because dropping them breaks static analysis. Tests keep their
+explanatory notes.
+
+## One customer per tenant per email, resolved in one place
+
+`POST /bookings` blind-inserted a `Customer` from the submitted name, email and
+phone. A staff member typing an email that a customer record already held hit
+`customers_tenant_id_email_unique` and got a 500 — the constraint was right and
+the code around it was wrong. The public flow had already grown a
+lookup-or-create for the same reason, so the two paths now share
+`Services\Booking\CustomerResolver` rather than each carrying their own.
+
+An existing record is returned untouched. That is the public flow's rule and its
+reasoning carries: a public booking is unauthenticated, so writing the submitted
+name or phone onto a match would let a stranger rewrite a real customer's
+contact details. Extending it to the diary keeps one rule for both, and the
+submitted details still travel on the booking. `CustomerCsvImporter` overwrites
+instead, which is correct there — an import is asserting the file is the source
+of truth.
+
+Phone normalisation stays with the callers. The public flow passes an E.164
+number and the diary passes what was typed, because `PhoneNumber::toE164()`
+throws on a bad number and only the public controller has an `InvalidArgumentException`
+handler to turn that into a 422. Normalising inside the resolver would have
+converted an unparseable diary entry into a fresh 500.
+
+## The concurrent insert deadlocks; it does not raise a duplicate-key error
+
+Two simultaneous first-time bookings for the same new email were expected to
+race into a `UniqueConstraintViolationException`, so the resolver caught that
+and re-read. Under MySQL the losing transaction reports SQLSTATE 40001 instead:
+`SELECT … FOR UPDATE` on an absent key takes a gap lock, both sides then hold an
+insert intention on the same gap, and InnoDB kills one as a deadlock. Catching
+only the unique violation left a 500 on the exact path the lock was added to
+protect — `BookingCustomerResolutionTest` never saw it, and the forked-process
+test in `BookingConcurrencyTest` did on its first run.
+
+So the resolver retries the whole locked read-then-create on either signal,
+looking the row up between attempts: the winner has committed by then, so the
+loser finds it. Two attempts, then `CustomerRecordUnavailableException`, which
+both paths turn into words a customer can read — a field error on the diary
+form, a 409 on the public site — rather than a stack trace.
+
+## The in-app waitlist join goes through the resolver too
+
+`WaitlistController::store` was the last lookup-before-create left. It read
+`Customer::query()->where('email', …)->first()` and inserted when that missed,
+which is the same shape `POST /bookings` had before `CustomerResolver`: right
+for one request at a time, and a 500 on
+`customers_tenant_id_email_unique` for two. It was also the *only* one of the
+three that never scoped the lookup by tenant explicitly — it leaned on the
+global scope, so the query was correct but the reason it was correct lived
+somewhere else.
+
+It now calls `CustomerResolver` the way `BookingController::store` does, with
+the same rule: an existing record is returned untouched, the submitted name and
+phone stay on the waitlist entry. One rule across the diary, the public site and
+the waitlist is worth more than a per-path nicety.
+
+Phone normalisation still happens in the caller, per the section above, but the
+waitlist path now needs the `InvalidArgumentException` handler that only the
+public controller had. Before, `PhoneNumber::toE164()` ran only on the
+create branch, so a bad number typed against an *existing* customer was quietly
+ignored and a bad number against a new one was a 500. Both now come back as a
+field error on `phone`. That is a behaviour change on a path that was already
+broken in one direction and lying in the other.
+
+## An authenticated worker in the concurrency harness
+
+`tests/bin/concurrent-worker.php`'s `http` job could only reach the public
+booking surface, because a forked worker has no session and every operator route
+is behind `auth` + `tenant`. The waitlist race is on an in-app route, so the job
+takes an optional `user_id` and sets the user on the guard before the kernel
+runs — the same thing `actingAs` does in-process, and early enough that
+`Authenticate` finds a user and `ResolveTenant` can read `tenant_id` off it.
+CSRF needs nothing: `VerifyCsrfToken` skips when the app is running unit tests,
+and the worker boots with `APP_ENV=testing` in the CLI.
+
+Verified by reverting the controller and re-running: the loser returns 500 on
+the unique constraint, which is the failure this is for.
+
+# Phase 14 — Assigning services to staff
+
+## The pivot already existed; this is the missing direction
+
+`service_user` has been the availability engine's only answer to "who can
+perform this" since the public booking page shipped — `AvailabilityEngine::staffWhoCanPerform()`
+and `BookingReadiness::hasStaffForService()` both read it through
+`User::services()`, and `DECISIONS.md` has said "a service with no staff on
+`service_user` yields zero public slots" from the start. No new table, no new
+relationship, no migration.
+
+What was missing was the writing direction. The Services screen could set the
+link from the service's side; nothing could set it from the person's. So an
+operator adding a colleague had no way to say what that colleague does, and
+every service that person should have covered stayed unbookable online with
+nothing on either screen saying why.
+
+## The creation default is on the creation path, not on the form
+
+A new staff member is linked to every currently active service. That default is
+applied by the server when `service_ids` is absent from the request, not only by
+the form's initial state — so the two paths that create a staff member agree:
+`StaffController::store` and the onboarding "people" step, which has no
+checklist to pre-tick at all. Onboarding runs services before staff, so there is
+something to link by the time it gets there.
+
+Both go through `App\Support\StaffServices` rather than repeating the rule, and
+`StaffServiceAssignmentTest` asserts it with no `service_ids` in the payload,
+which is the only way to tell the two designs apart.
+
+## A sync only ever touches active services
+
+The checklist lists active services only, so `sync()` on what it submits would
+have detached a link to a service that happened to be hidden that afternoon —
+hide a service for a fortnight, edit anyone, and its links quietly come apart.
+`StaffServices::syncActive()` therefore detaches only the *active* services that
+were not submitted and attaches the ones that were. Links to inactive and
+soft-deleted services are left exactly where they are, and come back intact when
+the service is shown again.
+
+The same reasoning would apply to the Services screen's staff checklist, which
+lists active staff only and does `sync()`. It is left alone here: that is the
+other axis, no worse than it was, and changing it is not this change.
+
+## An empty list has to arrive as an empty list
+
+Unchecking everything is allowed — that is the operator saying "this person
+takes no online bookings" — so `service_ids` has to be distinguishable from
+absent. Inertia's `useForm` sends JSON, where `[]` survives; form encoding drops
+an empty array entirely, which would read as "not submitted" and change nothing.
+The tests that clear the list use `patchJson` for exactly that reason, and say
+so.
+
+Existing bookings are untouched either way. Unchecking is a statement about new
+availability; an appointment already in the diary is one a customer has been
+told about, and this screen does not get to cancel it.
+
+## The count on the Services list is read-only, and counts active staff
+
+`ServicePayload` gained `staff_count` — linked staff who are still active,
+counted off the already-loaded `staff` relation, so no extra query. A service
+with nobody reads "Nobody" in `--danger` rather than "0 staff", because the
+whole point of the column is that zero is the state worth seeing from across the
+room.
+
+It links to `/staff` and does not edit. Two screens that both write the same
+pivot is how the two get out of step; editing stays in the staff edit sheet, and
+the Services screen keeps the checklist it already had.
+
+## Comments
+
+The new production files — `App\Support\StaffServices`, and the changes to
+`StaffController`, the two staff form requests, `ServicePayload`,
+`Staff/Index.vue` and `Services/Index.vue` — carry no prose comments, per the
+standing instruction and the precedent in the phase 13 section above. PHPDoc
+type annotations stay. The two test files keep their explanatory notes.

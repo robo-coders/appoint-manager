@@ -9,9 +9,12 @@ use App\Http\Requests\Staff\StoreStaffRequest;
 use App\Http\Requests\Staff\UpdateStaffRequest;
 use App\Models\AvailabilityRule;
 use App\Models\Booking;
+use App\Models\Service;
 use App\Models\User;
+use App\Support\StaffServices;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -30,9 +33,12 @@ class StaffController extends Controller
         abort_unless($tenant !== null, 403);
 
         $staff = User::query()
+            ->with('services:id,name,is_active')
             ->orderBy('role')
             ->orderBy('name')
             ->get();
+
+        $services = StaffServices::active();
 
         $rules = AvailabilityRule::query()
             ->orderBy('weekday')
@@ -43,6 +49,10 @@ class StaffController extends Controller
         $booked = $this->bookedThisWeek($tenant->timezone);
 
         return Inertia::render('Staff/Index', [
+            'services' => $services
+                ->map(fn (Service $service) => ['id' => $service->id, 'name' => $service->name])
+                ->values()
+                ->all(),
             'staff' => $staff->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -72,6 +82,12 @@ class StaffController extends Controller
                 'hours' => $this->hoursSummary($rules->get($user->id) ?? collect()),
                 'weekly_hours' => $this->weeklyHours($rules->get($user->id) ?? collect()),
                 'booked_this_week' => (int) ($booked[$user->id] ?? 0),
+                'service_ids' => $user->services
+                    ->where('is_active', true)
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all(),
             ]),
         ]);
     }
@@ -204,8 +220,8 @@ class StaffController extends Controller
 
     public function store(StoreStaffRequest $request): RedirectResponse
     {
-        User::query()->create([
-            ...$request->safe()->all(),
+        $staff = User::query()->create([
+            ...$request->safe()->except('service_ids'),
             'password' => Str::password(32),
             'role' => UserRole::Staff,
             'is_bookable' => $request->boolean('is_bookable', true),
@@ -216,12 +232,22 @@ class StaffController extends Controller
             'colour' => $request->input('colour', '#71717A'),
         ]);
 
+        if ($request->exists('service_ids')) {
+            StaffServices::syncActive($staff, $request->collect('service_ids'));
+        } else {
+            StaffServices::linkAllActive($staff);
+        }
+
         return redirect()->route('staff.index')->with('toast', 'Staff saved.');
     }
 
     public function update(UpdateStaffRequest $request, User $staff): RedirectResponse
     {
-        $staff->update($request->validated());
+        $staff->update(Arr::except($request->validated(), 'service_ids'));
+
+        if ($request->exists('service_ids')) {
+            StaffServices::syncActive($staff, $request->collect('service_ids'));
+        }
 
         return redirect()->route('staff.index')->with('toast', 'Staff updated.');
     }

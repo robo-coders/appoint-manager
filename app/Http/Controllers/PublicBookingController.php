@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingSource;
 use App\Enums\PreferredTime;
+use App\Exceptions\CustomerRecordUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\SlotUnavailableException;
 use App\Http\Requests\PublicBooking\StorePublicBookingRequest;
@@ -17,6 +18,7 @@ use App\Models\WaitlistEntry;
 use App\Services\Availability\AvailabilityEngine;
 use App\Services\Booking\AppointmentSuggester;
 use App\Services\Booking\BookingService;
+use App\Services\Booking\CustomerResolver;
 use App\Support\AvailabilityCache;
 use App\Support\PhoneNumber;
 use App\Support\ProposalPayload;
@@ -213,6 +215,8 @@ class PublicBookingController extends Controller
             );
         } catch (SlotUnavailableException $exception) {
             return response()->json(['message' => $exception->getMessage()], 409);
+        } catch (CustomerRecordUnavailableException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 409);
         } catch (PaymentSetupFailedException $exception) {
             return response()->json(['message' => $exception->getMessage()], 503);
         } catch (InvalidArgumentException $exception) {
@@ -249,6 +253,8 @@ class PublicBookingController extends Controller
                 $request->string('email')->toString(),
                 $request->string('phone')->toString(),
             );
+        } catch (CustomerRecordUnavailableException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 409);
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
@@ -309,25 +315,12 @@ class PublicBookingController extends Controller
      */
     private function findOrCreateCustomer(Tenant $tenant, string $name, string $email, string $phone): Customer
     {
-        $customer = Customer::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('email', $email)
-            ->first();
-
-        if ($customer !== null) {
-            return $customer;
-        }
-
-        $customer = new Customer;
-        $customer->forceFill([
-            'tenant_id' => $tenant->id,
-            'name' => $name,
-            'email' => $email,
-            'phone' => $phone === '' ? null : PhoneNumber::toE164($phone, $tenant->country),
-        ]);
-        $customer->save();
-
-        return $customer;
+        return app(CustomerResolver::class)->resolve(
+            $tenant,
+            $name,
+            $email,
+            $phone === '' ? null : PhoneNumber::toE164($phone, $tenant->country),
+        );
     }
 
     private function resolveSubject(Tenant $tenant, Customer $customer, StorePublicBookingRequest $request): ?Subject

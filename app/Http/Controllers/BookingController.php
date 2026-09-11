@@ -8,6 +8,7 @@ use App\Enums\DepositStatus;
 use App\Enums\MessageChannel;
 use App\Enums\MessageStatus;
 use App\Exceptions\BookingNotCompletableException;
+use App\Exceptions\CustomerRecordUnavailableException;
 use App\Exceptions\RequestNotPendingException;
 use App\Exceptions\SlotUnavailableException;
 use App\Http\Requests\Bookings\StoreManualBookingRequest;
@@ -16,8 +17,10 @@ use App\Models\Customer;
 use App\Models\Message;
 use App\Models\Service;
 use App\Models\Subject;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Booking\BookingService;
+use App\Services\Booking\CustomerResolver;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\BookingPayload;
 use App\Support\MaskedContact;
@@ -534,9 +537,13 @@ class BookingController extends Controller
         $staff = User::query()->findOrFail($request->integer('staff_id'));
         $startsAt = CarbonImmutable::parse($request->string('starts_at')->toString(), $tenant->timezone)->utc();
 
-        $customer = $request->filled('customer_id')
-            ? Customer::query()->findOrFail($request->integer('customer_id'))
-            : $this->createCustomer($request);
+        try {
+            $customer = $request->filled('customer_id')
+                ? Customer::query()->findOrFail($request->integer('customer_id'))
+                : $this->resolveCustomer($tenant, $request);
+        } catch (CustomerRecordUnavailableException $exception) {
+            return back()->withErrors(['customer_email' => $exception->getMessage()]);
+        }
 
         $subject = $this->resolveSubject($customer, $request);
 
@@ -565,19 +572,16 @@ class BookingController extends Controller
         ]);
     }
 
-    private function createCustomer(StoreManualBookingRequest $request): Customer
+    private function resolveCustomer(Tenant $tenant, StoreManualBookingRequest $request): Customer
     {
-        $customer = new Customer;
-        $customer->fill([
-            'name' => $request->string('customer_name')->toString(),
-            'email' => $request->filled('customer_email')
+        return app(CustomerResolver::class)->resolve(
+            $tenant,
+            $request->string('customer_name')->toString(),
+            $request->filled('customer_email')
                 ? $request->string('customer_email')->toString()
                 : null,
-            'phone' => $request->input('customer_phone'),
-        ]);
-        $customer->save();
-
-        return $customer;
+            $request->input('customer_phone'),
+        );
     }
 
     private function resolveSubject(Customer $customer, StoreManualBookingRequest $request): ?Subject

@@ -12,7 +12,7 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { penceToPoundsInput, poundsInputToPence } from '@/lib/money';
 import type { ServiceRecord } from '@/types/models';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps<{
@@ -161,6 +161,7 @@ const columns: Column[] = [
      * booking page".
      */
     { key: 'state', label: 'Status', width: 'status', narrow: 'line' },
+    { key: 'staff_count', label: 'Staff', width: 'staff', align: 'right', narrow: 'line' },
 ];
 
 /*
@@ -220,6 +221,17 @@ const rows = computed(() =>
 
             <template #cell:state="{ row }">
                 <Badge :tone="row.is_active ? 'confirmed' : 'neutral'">{{ row.state }}</Badge>
+            </template>
+
+            <template #cell:staff_count="{ row }">
+                <Link
+                    :href="route('staff.index')"
+                    class="underline decoration-rule underline-offset-4"
+                    :class="row.staff_count === 0 ? 'text-danger' : 'text-ink-2'"
+                >
+                    <template v-if="row.staff_count === 0">Nobody</template>
+                    <template v-else><span class="numeral">{{ row.staff_count }}</span> staff</template>
+                </Link>
             </template>
 
             <template #actions="{ row }">

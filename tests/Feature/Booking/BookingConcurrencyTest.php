@@ -137,6 +137,43 @@ it('returns 409 to exactly one of two concurrent public requests for the same sl
         ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
 });
 
+it('reuses one customer when two concurrent public bookings share a new email', function () {
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
+
+    $base = [
+        'service_id' => $service->id,
+        'staff_id' => $staff->id,
+        'name' => 'Alex Reed',
+        'email' => 'alex@example.com',
+        'phone' => '07700900000',
+        'subject_name' => 'Willow',
+        'subject_attributes' => [
+            'breed' => 'Labrador',
+            'size' => 'medium',
+        ],
+    ];
+
+    $uri = route('public.booking.store', $tenant->slug, absolute: false);
+    $job = ['type' => 'http', 'method' => 'POST', 'uri' => $uri];
+
+    $results = Concurrent::withoutWrappingTransaction(fn () => Concurrent::run([
+        [...$job, 'payload' => [...$base, 'starts_at' => CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc()->toIso8601String()]],
+        [...$job, 'payload' => [...$base, 'starts_at' => CarbonImmutable::parse('2026-03-10 11:00:00', 'Europe/London')->utc()->toIso8601String()]],
+    ]));
+
+    $statuses = array_column($results, 'status');
+    sort($statuses);
+
+    $customers = Customer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->get();
+
+    expect($statuses)->toBe([201, 201], 'workers: '.json_encode($results))
+        ->and($customers)->toHaveCount(1)
+        ->and($customers->first()->email)->toBe('alex@example.com')
+        ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(2)
+        ->and(Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->pluck('customer_id')->unique())
+        ->toHaveCount(1);
+});
+
 it('returns 409 with the slot-gone body when a booking write deadlocks', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
     $startsAt = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();

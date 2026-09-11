@@ -14,10 +14,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 
-
 class RegisterRequest extends FormRequest
 {
-
     private const MAX_ATTEMPTS = 10;
 
     public function authorize(): bool

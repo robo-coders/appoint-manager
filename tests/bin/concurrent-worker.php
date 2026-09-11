@@ -106,6 +106,13 @@ function workerBook(array $job): array
 }
 
 /**
+ * A request through the real HTTP kernel.
+ *
+ * `user_id` signs the worker in first, the way `actingAs` does in-process: the
+ * guard is asked for a user before `StartSession` runs, so `Authenticate` finds
+ * one already set and `ResolveTenant` can read `$request->user()->tenant_id`.
+ * Without it only the unauthenticated `book.` surface is reachable from here.
+ *
  * @param  array<string, mixed>  $job
  * @return array<string, mixed>
  */
@@ -129,6 +136,12 @@ function workerHttp(Application $app, array $job): array
         ],
         json_encode($payload, JSON_THROW_ON_ERROR),
     );
+
+    if (isset($job['user_id'])) {
+        $app->make('auth')->guard()->setUser(
+            User::withoutGlobalScopes()->findOrFail($job['user_id']),
+        );
+    }
 
     $response = $app->make(Illuminate\Contracts\Http\Kernel::class)->handle($request);
 

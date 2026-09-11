@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PreferredTime;
+use App\Exceptions\CustomerRecordUnavailableException;
 use App\Models\Booking;
-use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\WaitlistEntry;
+use App\Services\Booking\CustomerResolver;
 use App\Services\Booking\FreedSlots;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\ContactVisibility;
@@ -18,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
 
 class WaitlistController extends Controller
 {
@@ -76,16 +78,17 @@ class WaitlistController extends Controller
             'preferred_times' => ['nullable', 'string'],
         ]);
 
-        $customer = Customer::query()->where('email', $validated['email'])->first();
-
-        if ($customer === null) {
-            $customer = new Customer;
-            $customer->fill([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'phone' => PhoneNumber::toE164($validated['phone'], $tenant->country),
-            ]);
-            $customer->save();
+        try {
+            $customer = app(CustomerResolver::class)->resolve(
+                $tenant,
+                $validated['name'],
+                $validated['email'],
+                PhoneNumber::toE164($validated['phone'], $tenant->country),
+            );
+        } catch (CustomerRecordUnavailableException $exception) {
+            return back()->withErrors(['email' => $exception->getMessage()]);
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['phone' => $exception->getMessage()]);
         }
 
         $entry = new WaitlistEntry;

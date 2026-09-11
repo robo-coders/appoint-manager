@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Staff;
 
+use App\Models\Service;
 use App\Models\User;
+use App\Rules\ExistsForTenant;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,8 @@ class StoreStaffRequest extends FormRequest
             'colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'is_bookable' => ['sometimes', 'boolean'],
             'can_see_customer_contacts' => ['sometimes', 'boolean'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['integer', ExistsForTenant::of(Service::class)],
         ];
     }
 }
