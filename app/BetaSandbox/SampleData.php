@@ -423,10 +423,10 @@ final class SampleData
     private function waitlist(CarbonImmutable $today, array $services, array $pairs, int $count): int
     {
         $times = [PreferredTime::Any, PreferredTime::Morning, PreferredTime::Afternoon, PreferredTime::Any];
+        $waiting = $this->distinctCustomers($pairs, 2, $count);
 
-        for ($i = 0; $i < $count; $i++) {
+        foreach ($waiting as $i => $pair) {
             $preferred = $times[$i % count($times)];
-            $pair = $pairs[($i * 5 + 2) % count($pairs)];
 
             WaitlistEntry::query()->create([
                 'customer_id' => $pair['customer']->id,
@@ -442,7 +442,30 @@ final class SampleData
             ]);
         }
 
-        return $count;
+        return count($waiting);
+    }
+
+    /**
+     * @param  list<array{customer: Customer, subject: Subject}>  $pairs
+     * @return list<array{customer: Customer, subject: Subject}>
+     */
+    private function distinctCustomers(array $pairs, int $from, int $count): array
+    {
+        $picked = [];
+        $seen = [];
+
+        for ($step = 0; $step < count($pairs) && count($picked) < $count; $step++) {
+            $pair = $pairs[($from + $step) % count($pairs)];
+
+            if (isset($seen[$pair['customer']->id])) {
+                continue;
+            }
+
+            $seen[$pair['customer']->id] = true;
+            $picked[] = $pair;
+        }
+
+        return $picked;
     }
 
     /**

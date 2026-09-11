@@ -128,6 +128,7 @@ const pickerOpen = ref(false);
 const detailsOpen = ref(false);
 const servicesOpen = ref(false);
 const waitlistSaved = ref(false);
+const waitlistMessage = ref('');
 
 const error = ref('');
 const submitting = ref(false);
@@ -512,7 +513,7 @@ const joinWaitlist = async () => {
     error.value = '';
 
     try {
-        await axios.post(props.urls.waitlist, {
+        const { data } = await axios.post(props.urls.waitlist, {
             service_id: serviceId.value,
             name: details.name || props.suggestion.customer_name || 'Waiting',
             email: details.email,
@@ -520,6 +521,7 @@ const joinWaitlist = async () => {
             preferred_days: [],
             preferred_times: 'any',
         });
+        waitlistMessage.value = data?.message ?? 'Done. We’ll text you as soon as a slot opens.';
         waitlistSaved.value = true;
     } catch {
         error.value = 'We couldn’t add you to the waitlist. Please try again.';
@@ -614,7 +616,7 @@ const joinWaitlist = async () => {
             </p>
 
             <p v-if="waitlistSaved" class="text-15">
-                Done. We’ll text you as soon as a slot opens.
+                {{ waitlistMessage }}
             </p>
             <div v-else class="space-y-3">
                 <TextInput v-model="details.name" label="Your name" autocomplete="name" />

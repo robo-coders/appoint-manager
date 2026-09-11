@@ -4365,3 +4365,146 @@ claim to what the controller returns.
 The existing docblock on `statusCounts()` is untouched and still accurate — the
 counts are the date window without the status filter, which is what they now
 actually are.
+
+# Phase 17 — One place on the waitlist per person
+
+## Both join paths blind-inserted, and nothing underneath said no
+
+`WaitlistController::store` and `PublicBookingController::waitlist` each built a
+`WaitlistEntry` and saved it unconditionally. `CustomerResolver` already made
+both paths resolve to the *same* customer row, so a second join produced a
+second entry for one person — and `waitlist_entries` carried no unique index,
+no observer and no dedup in `WaitlistOfferer` to stop it.
+
+The dedup that did exist in `WaitlistOfferer::offer()` is per-*entry*: it
+rejects re-offering an entry that already holds a sent or claimed offer for the
+same `starts_at`. Two entries for one customer each pass it independently,
+which is how a batch sized for two distinct people spent both places texting
+the same person twice and left two equally eligible customers with nothing.
+
+So the join is now one method, `Services\Waitlist\WaitlistJoiner`, called by
+both controllers — the same move `CustomerResolver` was for the customer row,
+for the same reason: two paths with their own copy of a rule is how the rule
+ends up only half-applied.
+
+## The uniqueness key is tenant, customer and service — and not the preferences
+
+The audit's read was `(tenant_id, customer_id, service)`, with the preference
+fields as an open question. They are not part of the key, and that is a
+decision rather than an omission:
+
+- `preferred_days` is settable from no form at all. The staff sheet has a
+  "Prefers" select and no day picker; the public island posts
+  `preferred_days: []` hard-coded. Only the seeders and `SampleData` write it.
+  It is also `json`, so MySQL cannot index it without a generated column.
+- `preferred_times` *is* a staff choice, and it genuinely narrows matching in
+  `rankedMatches()` and scores in `fitScore()`. But the windows overlap: an
+  "any time" entry and a "mornings" entry both match a 9am slot. A preference
+  therefore cannot separate two legitimate requests from one person — it just
+  moves the double-occupancy bug to the slots where the two windows meet.
+
+One active entry per customer per service is the guarantee worth having, and it
+is the one that actually holds: nobody takes two places in a batch, ever.
+
+A repeat add with a different "Prefers" value is treated as the same standing
+request and the first one's preference is left alone, matching
+`CustomerResolver`'s rule that an existing record comes back untouched. Nothing
+on the Waitlist screen edits an entry today, and a repeat add is not the way to
+add one.
+
+## Idempotent, not rejected
+
+Both paths silently succeed and return the entry that already exists. On the
+public page a double-tapped submit or a revisit is the common case, and an
+error there would be a lie — they are on the list. `wasRecentlyCreated` carries
+which happened, so no new result type was needed.
+
+The customer-facing wording says which one it was rather than a generic
+success: 201 with "Done. We'll text you as soon as a slot opens." for a new
+entry, 200 with "You're already on the waitlist for this service…" for a repeat,
+and `BookingIsland` renders the server's sentence instead of its own hard-coded
+one. The diary gets the same split as a toast, naming the customer.
+
+## `is_active` is why the index needed a generated column
+
+A claimed offer deactivates its entry (`BookingService::claimOffer`), and that
+customer must be able to join again for the same service next month. So the
+constraint has to bind *active* rows only:
+
+- `(tenant_id, customer_id, service_id)` alone would make the second join a
+  permanent 500 for anyone who has ever claimed a slot.
+- Adding `is_active` to the key breaks the other way: two *inactive* rows for
+  one customer and service collide, which is what a second claim produces.
+- MySQL has no partial or filtered unique index.
+
+So `active_marker` is a stored generated column — `1` while the row is active,
+`NULL` once it is not — and the unique index is
+`(tenant_id, customer_id, service_id, active_marker)`. MySQL treats `NULL`s as
+distinct, so closed history never collides and the live rows are constrained
+exactly once. The application-level check in `WaitlistJoiner` filters on
+`is_active` and the index binds the same rows, so neither can reject something
+the other allows.
+
+Two things the migration needed on top of that. It collapses any pre-existing
+active duplicate first — oldest row keeps its queue position, the rest are
+deactivated — because the index cannot be created over data that already
+violates it, and deactivating is non-destructive where deleting rows that
+`slot_offers` and `bookings` point at would not be. And `down()` recreates
+`waitlist_entries_tenant_id_foreign` before dropping the unique index: MySQL
+drops that standalone index when the new one supersedes it as a prefix, and
+then refuses to drop the unique one because the tenant foreign key is leaning
+on it.
+
+## The joiner takes the same locked read-then-create as `CustomerResolver`
+
+Two simultaneous first-time joins race exactly the way two simultaneous
+first-time bookings did — `SELECT … FOR UPDATE` on an absent key takes a gap
+lock, both sides hold an insert intention on the same gap, and InnoDB kills one
+as SQLSTATE 40001 rather than raising a duplicate key. So the retry catches
+both signals, re-reads between attempts, and the loser finds the winner's row.
+`WaitlistCustomerResolutionTest`'s forked-process test asserted two entries
+before and asserts one now; it is the test that would catch this going wrong.
+
+An entry found by the joiner is returned untouched unless its `expires_at` has
+already passed, in which case that is cleared. Joining is a statement that they
+are still waiting, and the alternative is telling somebody they are on a list
+that `rankedMatches()` has already filtered them out of.
+
+`WaitlistJoiner::join()` takes a `Service` rather than an id, which closed a
+side hole: the diary validated `service_id` as `integer` and nothing more, so a
+foreign salon's id inserted cleanly and a missing one was a foreign-key 500.
+Both are now a 404 from the tenant-scoped lookup.
+
+## The seeders were creating the duplicates they now cannot
+
+`DemoDataSeeder::waitlist()` and `SampleData::waitlist()` both picked their
+waiting customers by stepping through `$pairs` at fixed strides. `$pairs` holds
+one entry per *pet*, so a client with two dogs appears in it twice and two
+strides could land on the same person — which is what four suite failures were.
+Both now walk forward collecting pairs with distinct customer ids, which is
+what "three people waiting" always meant.
+
+`DashboardTest`'s freed-slot count test gave its matching and non-matching
+entries the same customer for convenience; the non-matching one now belongs to
+somebody else. The assertion is unchanged and still about what it was about —
+that `waiting` counts the entries a slot actually matches.
+
+## Comments
+
+The new production files — `WaitlistJoiner`, `WaitlistJoinUnavailableException`
+— carry no prose comments, per the standing instruction, which is why this
+section exists. The two controllers gained none either. `SampleData` and
+`DemoDataSeeder` keep their existing comments and the one line added to each
+explains the constraint the pick is now respecting. Tests keep their notes, and
+`WaitlistDuplicateJoinTest`'s header was rewritten rather than deleted: it used
+to describe the bug it proved, and now describes the fix it pins.
+
+## What still needs a pass
+
+`tests/e2e/__screenshots__/mobile-waitlist-375.png` is stale. The demo seed is
+deterministic (`mt_srand`), so changing how the waiting customers are picked
+changes which names render on `/waitlist`. Regenerating it follows the standing
+convention — `./scripts/e2e-setup.sh`, then exactly one foreground
+`./scripts/e2e-playwright.sh --update-snapshots` — and was not done here
+because the `public` project still carries 13 baselines left stale by the
+auth/onboarding redesign, and one pass would bake those in as well.

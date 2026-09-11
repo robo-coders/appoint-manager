@@ -770,9 +770,12 @@ class DemoDataSeeder extends Seeder
      */
     private function waitlist(Tenant $tenant, User $staff, Service $service, Booking $freed, array $pairs): void
     {
-        foreach ([20, 21, 22] as $n => $index) {
-            $pair = $pairs[$index % count($pairs)];
+        // Distinct people, not distinct pairs: a client with two dogs appears
+        // in `$pairs` twice, and one active entry per customer per service is
+        // now `waitlist_entries_active_join_unique`.
+        $waiting = $this->distinctCustomers($pairs, 20, 8);
 
+        foreach (array_slice($waiting, 0, 3) as $n => $pair) {
             $entry = WaitlistEntry::query()->create([
                 'customer_id' => $pair['customer']->id,
                 'subject_id' => $pair['subject']->id,
@@ -798,9 +801,7 @@ class DemoDataSeeder extends Seeder
 
         // Plus a handful of general waitlist entries so the Waitlist screen is
         // not just the three attached to today's gap.
-        foreach ([30, 33, 36, 39, 42] as $index) {
-            $pair = $pairs[$index % count($pairs)];
-
+        foreach (array_slice($waiting, 3) as $pair) {
             WaitlistEntry::query()->create([
                 'customer_id' => $pair['customer']->id,
                 'subject_id' => $pair['subject']->id,
@@ -811,6 +812,31 @@ class DemoDataSeeder extends Seeder
                 'expires_at' => $this->today->addDays(21),
             ]);
         }
+    }
+
+    /**
+     * The next `$count` pairs from `$from` that belong to different customers.
+     *
+     * @param  list<array{customer: Customer, subject: Subject}>  $pairs
+     * @return list<array{customer: Customer, subject: Subject}>
+     */
+    private function distinctCustomers(array $pairs, int $from, int $count): array
+    {
+        $picked = [];
+        $seen = [];
+
+        for ($step = 0; $step < count($pairs) && count($picked) < $count; $step++) {
+            $pair = $pairs[($from + $step) % count($pairs)];
+
+            if (isset($seen[$pair['customer']->id])) {
+                continue;
+            }
+
+            $seen[$pair['customer']->id] = true;
+            $picked[] = $pair;
+        }
+
+        return $picked;
     }
 
     /**

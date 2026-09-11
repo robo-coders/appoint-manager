@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PreferredTime;
 use App\Exceptions\CustomerRecordUnavailableException;
+use App\Exceptions\WaitlistJoinUnavailableException;
 use App\Models\Booking;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\WaitlistEntry;
 use App\Services\Booking\CustomerResolver;
 use App\Services\Booking\FreedSlots;
+use App\Services\Waitlist\WaitlistJoiner;
 use App\Services\Waitlist\WaitlistOfferer;
 use App\Support\ContactVisibility;
 use App\Support\MaskedContact;
@@ -91,17 +92,26 @@ class WaitlistController extends Controller
             return back()->withErrors(['phone' => $exception->getMessage()]);
         }
 
-        $entry = new WaitlistEntry;
-        $entry->fill([
-            'customer_id' => $customer->id,
-            'service_id' => $validated['service_id'],
-            'preferred_days' => $validated['preferred_days'] ?? [],
-            'preferred_times' => $validated['preferred_times'] ?? PreferredTime::Any->value,
-            'is_active' => true,
-        ]);
-        $entry->save();
+        $service = Service::query()->findOrFail($validated['service_id']);
 
-        return redirect()->route('waitlist.index')->with('toast', 'Added to the waitlist.');
+        try {
+            $entry = app(WaitlistJoiner::class)->join(
+                $tenant,
+                $customer,
+                $service,
+                $validated['preferred_days'] ?? [],
+                $validated['preferred_times'] ?? null,
+            );
+        } catch (WaitlistJoinUnavailableException $exception) {
+            return back()->withErrors(['service_id' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('waitlist.index')->with(
+            'toast',
+            $entry->wasRecentlyCreated
+                ? 'Added to the waitlist.'
+                : $customer->name.' is already on the waitlist for that service.',
+        );
     }
 
     /** @return array<string, mixed>|null */

@@ -102,6 +102,10 @@ it('does not match a customer belonging to another tenant', function () {
  * Two forked processes with their own PDO connections, released from a barrier
  * together, so both lookups really do miss before either insert lands. Without
  * `CustomerResolver` the loser hit `customers_tenant_id_email_unique`.
+ *
+ * One entry, not two: `WaitlistJoiner` takes the same locked read-then-create
+ * over `waitlist_entries_active_join_unique`, so the loser re-reads and finds
+ * the winner's row rather than adding a second place in the queue.
  */
 it('reuses one customer when two concurrent in-app waitlist joins share a new email', function () {
     $salon = aSalon();
@@ -133,6 +137,6 @@ it('reuses one customer when two concurrent in-app waitlist joins share a new em
     expect($statuses)->toBe([302, 302], 'workers: '.json_encode($results))
         ->and($customers)->toHaveCount(1)
         ->and($customers->sole()->email)->toBe('sam@example.com')
-        ->and($entries)->toHaveCount(2)
-        ->and($entries->pluck('customer_id')->unique()->all())->toBe([$customers->sole()->id]);
+        ->and($entries)->toHaveCount(1)
+        ->and($entries->sole()->customer_id)->toBe($customers->sole()->id);
 });

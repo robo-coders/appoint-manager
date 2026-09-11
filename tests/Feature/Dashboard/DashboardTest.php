@@ -187,10 +187,11 @@ it('counts the people who would actually be texted, and the offers already out',
         'is_active' => true,
     ]);
 
-    // Saturday mornings only: wants this service, but not this slot.
+    // Saturday mornings only: wants this service, but not this slot. Somebody
+    // else — one active entry per customer per service is now a unique index.
     WaitlistEntry::factory()->create([
         'tenant_id' => $salon['tenant']->id,
-        'customer_id' => $salon['customer']->id,
+        'customer_id' => Customer::factory()->create(['tenant_id' => $salon['tenant']->id])->id,
         'service_id' => $salon['service']->id,
         'preferred_days' => [6],
         'preferred_times' => PreferredTime::Morning,

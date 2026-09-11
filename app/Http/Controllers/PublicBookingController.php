@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BookingSource;
-use App\Enums\PreferredTime;
 use App\Exceptions\CustomerRecordUnavailableException;
 use App\Exceptions\PaymentSetupFailedException;
 use App\Exceptions\SlotUnavailableException;
+use App\Exceptions\WaitlistJoinUnavailableException;
 use App\Http\Requests\PublicBooking\StorePublicBookingRequest;
 use App\Http\Requests\Waitlist\JoinWaitlistRequest;
 use App\Models\Customer;
@@ -14,11 +14,11 @@ use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\WaitlistEntry;
 use App\Services\Availability\AvailabilityEngine;
 use App\Services\Booking\AppointmentSuggester;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\CustomerResolver;
+use App\Services\Waitlist\WaitlistJoiner;
 use App\Support\AvailabilityCache;
 use App\Support\PhoneNumber;
 use App\Support\ProposalPayload;
@@ -259,19 +259,28 @@ class PublicBookingController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
-        $entry = new WaitlistEntry;
-        $entry->forceFill([
-            'tenant_id' => $tenant->id,
-            'customer_id' => $customer->id,
-            'service_id' => $service->id,
-            'preferred_days' => $request->input('preferred_days', []),
-            'preferred_times' => $request->string('preferred_times')->toString() ?: PreferredTime::Any->value,
-            'notes' => $request->input('notes'),
-            'is_active' => true,
-        ]);
-        $entry->save();
+        try {
+            $entry = app(WaitlistJoiner::class)->join(
+                $tenant,
+                $customer,
+                $service,
+                $request->input('preferred_days', []),
+                $request->string('preferred_times')->toString() ?: null,
+                $request->input('notes'),
+            );
+        } catch (WaitlistJoinUnavailableException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 409);
+        }
 
-        return response()->json(['id' => $entry->id], 201);
+        $joined = $entry->wasRecentlyCreated;
+
+        return response()->json([
+            'id' => $entry->id,
+            'already_waiting' => ! $joined,
+            'message' => $joined
+                ? 'Done. We’ll text you as soon as a slot opens.'
+                : 'You’re already on the waitlist for this service. We’ll text you as soon as a slot opens.',
+        ], $joined ? 201 : 200);
     }
 
     private function tenant(Request $request): Tenant
