@@ -5,21 +5,6 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import { Head } from '@inertiajs/vue3';
 
-/**
- * What broke. Two lists, because they break for different reasons and are read
- * at different moments.
- *
- * The one idea: **an empty failures screen has to say "nothing is broken" and
- * mean it.** This page used to render `JSON.stringify(failed_jobs, null, 2)`
- * into a `<pre>` — so with no failures it printed `[]`, which is indistinguishable
- * from a screen that has not loaded, and with failures it printed several
- * hundred lines of serialised PHP closure in 12px with the exception message
- * somewhere inside it.
- *
- * The exception and its class are columns now, and the payload is behind the
- * row rather than in front of it: `failed_jobs.payload` is a serialised job and
- * nobody reads one at 2am, they read the message and go and look at the code.
- */
 defineProps<{
     failed_jobs: Array<{
         id: number;
@@ -38,15 +23,6 @@ defineProps<{
     }>;
 }>();
 
-/*
- * The exception is the `line` at 375, and that is the point.
- *
- * The first version gave the narrow layout the job name and the timestamp and
- * dropped the exception class and the message — so this screen on a phone said
- * `App\Jobs\SendBookingReminder / 3h ago` and nothing whatsoever about what
- * went wrong, which is the only reason anybody opens it. The name tells you
- * where to look; the message tells you whether you need to.
- */
 const jobColumns: Column[] = [
     { key: 'failed_label', label: 'Failed', width: 'when', sortable: true, narrow: 'meta' },
     { key: 'job_name', label: 'Job', sortable: true, narrow: 'title' },
@@ -69,11 +45,6 @@ const hookColumns: Column[] = [
 
         <PageHeader title="Failures" description="Queue jobs and webhooks that did not get through." />
 
-        <!--
-            "Nothing is broken" is a designed state, and it is the one this
-            screen is in almost every time it is opened. `[]` in a monospace box
-            is not that sentence.
-        -->
         <EmptyState
             v-if="failed_jobs.length === 0 && webhook_failures.length === 0"
             title="Nothing has failed"

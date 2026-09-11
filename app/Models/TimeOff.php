@@ -15,9 +15,7 @@ class TimeOff extends Model
 
     protected $table = 'time_off';
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'user_id',
         'starts_at',
@@ -26,9 +24,7 @@ class TimeOff extends Model
         'is_all_day',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -38,9 +34,7 @@ class TimeOff extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

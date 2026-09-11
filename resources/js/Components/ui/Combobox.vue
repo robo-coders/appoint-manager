@@ -2,22 +2,8 @@
 import { computed, nextTick, ref, useId } from 'vue';
 import Field from './Field.vue';
 
-/**
- * A select you can type into. Exists because a 400-option timezone dropdown is
- * not a control, it is a punishment.
- */
 const model = defineModel<string>({ default: '' });
 
-/*
- * Fields are white — DESIGN.md gives `--white` to "inputs, unselected slots".
- *
- * Every field in the library carried `bg-paper-sunk` and only this one showed
- * it: `base.css` styles `input`, `select` and `textarea` at a higher
- * specificity than a utility class, so on real form elements the class had
- * never done anything. The trigger here is a `<button>`, so it obeyed, and it
- * was the one field on Settings that looked like a different control. All four
- * say white now, which is what all four have always rendered.
- */
 const props = defineProps<{
     id?: string;
     label: string;
@@ -78,14 +64,6 @@ const onKey = (event: KeyboardEvent) => {
 <template>
     <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
         <div class="relative">
-            <!--
-                The closed state is a combobox that happens to be a button, not
-                a button that happens to open a list. Without the role and the
-                state a screen reader announces "Europe · London, button" and
-                gives no clue that pressing it produces four hundred options —
-                and `aria-invalid` was missing entirely, so a rejected timezone
-                was described by a red border and nothing else.
-            -->
             <button
                 v-if="!open"
                 :id="inputId"
@@ -127,11 +105,6 @@ const onKey = (event: KeyboardEvent) => {
                     role="listbox"
                     class="appear absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded border border-rule bg-white py-1"
                 >
-                    <!--
-                        `aria-activedescendant` on the input points here. Without
-                        the id, arrowing down moved a highlight that nothing
-                        announced — the list was navigable by eye only.
-                    -->
                     <li
                         v-for="(option, index) in matches"
                         :id="`${inputId}-option-${index}`"

@@ -6,14 +6,10 @@ use App\Models\Customer;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Subject>
- */
+/** @extends Factory<Subject> */
 class SubjectFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [

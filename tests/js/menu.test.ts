@@ -5,11 +5,6 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { h } from 'vue';
 
-/**
- * The row-actions menu. It hangs below the trigger when there is room, and
- * above it when the last row of a list would otherwise open into the heading
- * underneath. Same hairline panel either way.
- */
 const items = () => [h(MenuItem, () => 'Call'), h(MenuItem, () => 'Snooze two weeks')];
 
 const panel = () => document.body.querySelector('[role="menu"]') as HTMLElement | null;

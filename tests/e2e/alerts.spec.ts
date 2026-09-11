@@ -1,17 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { FROZEN_NOW } from '../../playwright.config';
 
-/**
- * One end-to-end confirmation per call site the alert system took over, against
- * a real browser: the toast actually appears, in the right tone, with a retry
- * that actually retries.
- *
- * `tests/js/toast.test.ts` asserts the store and the two components in jsdom.
- * This asserts that the wiring is real on the screens that fire them — a
- * component that is perfectly correct in a unit test still shows nothing if
- * `ToastContainer` was never mounted on the page doing the firing.
- */
-
 const INK = 'rgb(24, 23, 20)';
 const TERRACOTTA = 'rgb(168, 87, 41)';
 
@@ -34,8 +23,6 @@ test.describe('the toast system, on the screens that fire it', () => {
         const copy = page.locator('[data-testid="calendar-feed-copy"]').first();
         await expect(copy).toBeVisible();
 
-        // The label is the control's name, not a status — that swap is what the
-        // toast replaced.
         await expect(copy).toHaveText('Copy');
 
         await copy.click();
@@ -46,7 +33,6 @@ test.describe('the toast system, on the screens that fire it', () => {
         await expect(toasts(page).first()).toHaveAttribute('role', 'status');
         expect(await background(page)).toBe(INK);
 
-        // Still says Copy afterwards, because the button never became a label.
         await expect(copy).toHaveText('Copy');
     });
 
@@ -73,8 +59,6 @@ test.describe('the toast system, on the screens that fire it', () => {
         const save = page.locator('[data-testid="customer-notes-save"]');
         await expect(note).toBeVisible();
 
-        // The metadata line is record-keeping and stays put; the confirmation
-        // is the thing that moved to a toast.
         const meta = page.getByText(/Last edited by|Not edited yet/).first();
         const before = await meta.innerText();
 
@@ -85,9 +69,6 @@ test.describe('the toast system, on the screens that fire it', () => {
         await expect(toasts(page).first()).toHaveAttribute('data-tone', 'success');
         expect(await background(page)).toBe(INK);
 
-        // The same message a second time still announces itself. This is the
-        // bug the boot-time flash consumer fixed: a `watch` on the prop
-        // compares by value and dropped the repeat.
         await note.fill('Allow fifteen more minutes for the dryer.');
         await save.click();
 
@@ -98,7 +79,6 @@ test.describe('the toast system, on the screens that fire it', () => {
 });
 
 test.describe('the toast system, on the public manage-booking island', () => {
-    /** The `public_token` of the first upcoming booking, from its record page. */
     async function liveToken(page: Page): Promise<string> {
         await page.goto('/bookings?status=confirmed');
         await page.locator('table[aria-label="Bookings"] tbody tr a').first().click();
@@ -143,7 +123,6 @@ test.describe('the toast system, on the public manage-booking island', () => {
         expect(await background(page)).toBe(TERRACOTTA);
         expect(attempts).toBe(1);
 
-        // An error with something to do about it does not vanish on a timer.
         await page.waitForTimeout(6000);
         await expect(toasts(page)).toHaveCount(1);
 

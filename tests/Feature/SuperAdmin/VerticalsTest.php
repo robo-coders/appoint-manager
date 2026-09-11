@@ -126,20 +126,7 @@ it('seeds the groomer defaults exactly as they were in config', function () {
     ]);
 });
 
-/*
-|--------------------------------------------------------------------------
-| The definition columns, edit and delete
-|--------------------------------------------------------------------------
-|
-| `store()` used to write `subject_fields => []` and `default_services => []`
-| over whatever was submitted, and there was no `update()` or `destroy()` at
-| all. These are the tests for the three.
-|
-*/
-
-/**
- * @return array<string, mixed>
- */
+/** @return array<string, mixed> */
 function aVerticalPayload(array $overrides = []): array
 {
     return [

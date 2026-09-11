@@ -9,16 +9,6 @@ use App\Support\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 
-/**
- * The daily chase — except it runs hourly.
- *
- * Hourly, because the send window is evaluated in each tenant's own timezone
- * and a job that runs once at 09:00 UTC can only ever be inside one timezone's
- * window. Hourly is only safe because the duplicate rule is a unique index in
- * `rebook_sends` rather than a condition in this file: twenty-four runs a day
- * produce one message per subject per due cycle, and would do so if it ran
- * every minute.
- */
 class SendRebookReminders extends Command
 {
     protected $signature = 'rebooking:send
@@ -40,12 +30,6 @@ class SendRebookReminders extends Command
             return self::FAILURE;
         }
 
-        /*
-         * `--force` bypasses the switch the operator has to throw before this
-         * feature sends anything. That is defensible for one named subject —
-         * putting a real text on a real handset before a customer sees it is the
-         * whole point — and indefensible for a client base, so it is refused.
-         */
         if ($this->option('force') && $subjects === []) {
             $this->error('--force requires --subject. It exists to send one deliberate test message, not to switch the feature on.');
 
@@ -92,9 +76,7 @@ class SendRebookReminders extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * @param  list<int>  $subjects
-     */
+    /** @param  list<int>  $subjects */
     private function preview(RebookMessenger $messages, Tenant $tenant, array $subjects): int
     {
         $run = $messages->dryRun($tenant);
@@ -128,9 +110,7 @@ class SendRebookReminders extends Command
         return count($rows);
     }
 
-    /**
-     * @return Collection<int, Tenant>
-     */
+    /** @return Collection<int, Tenant> */
     private function tenants(): Collection
     {
         $key = $this->option('tenant');

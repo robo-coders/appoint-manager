@@ -8,20 +8,6 @@ use App\Support\BillingPrice;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 
-/**
- * How many SMS a tenant may still send, and what happens when they cannot.
- *
- * Included allowance resets each billing cycle. Prepaid (top-ups and grants)
- * rolls over. The hard ceiling is a cycle total and cannot be raised by a
- * top-up — only by super admin.
- *
- * **The unit is a segment.** Everything here counts what the carrier bills,
- * not how many times we pressed send. A 200-message allowance spent on
- * two-segment messages is 100 messages, and pretending otherwise means we
- * absorb the difference silently. `consume()` takes a segment count and
- * `canSend()` takes the segment count of the message about to go out, so a
- * two-segment message cannot slip past a one-segment remainder.
- */
 final class SmsAllowance
 {
     public function included(Tenant $tenant): int
@@ -46,16 +32,6 @@ final class SmsAllowance
         return $tenant->sms_ceiling_override ?? (int) config('billing.sms_hard_ceiling');
     }
 
-    /**
-     * Roll the cycle over when it is a month old and nothing external has done
-     * it for us.
-     *
-     * A paying tenant's cycle is reset by the invoice webhook. A tenant with no
-     * invoice yet — anybody on trial — has no such event, so the month is read
-     * off `sms_cycle_started_at`. That is what gives a sixty-day trial two
-     * included packs, and it is deliberate policy now rather than a side effect:
-     * `billing.sms_trial_resets_monthly`.
-     */
     public function maybeResetCycle(Tenant $tenant): void
     {
         $started = $tenant->sms_cycle_started_at;
@@ -86,9 +62,6 @@ final class SmsAllowance
         ])->save();
     }
 
-    /**
-     * @param  int  $segments  What the message about to go out will be billed as.
-     */
     public function canSend(Tenant $tenant, int $segments = 1): bool
     {
         $this->maybeResetCycle($tenant);
@@ -97,14 +70,6 @@ final class SmsAllowance
         return $this->blockReason($tenant, $segments) === null;
     }
 
-    /**
-     * Why SMS will not go out. Null means it will.
-     *
-     * @param  int  $segments  Cost of the message being considered, so a
-     *                         two-segment message cannot be waved through on a
-     *                         one-segment remainder.
-     * @return 'killed'|'ceiling'|'allowance'|null
-     */
     public function blockReason(Tenant $tenant, int $segments = 1): ?string
     {
         $segments = max(1, $segments);
@@ -126,13 +91,6 @@ final class SmsAllowance
         return 'allowance';
     }
 
-    /**
-     * Count a successful send against this tenant, in segments. Call only after
-     * the provider accepted the message.
-     *
-     * A rejected message costs nothing and must not appear here — see
-     * `SendSms::handle()`, which consumes after the gateway returns a SID.
-     */
     public function consume(Tenant $tenant, int $segments = 1): void
     {
         $segments = max(1, $segments);
@@ -145,9 +103,6 @@ final class SmsAllowance
         $used = $before + $segments;
         $prepaid = (int) $tenant->sms_prepaid;
 
-        // Only the part of this send that lands beyond the included pack comes
-        // out of prepaid inventory. A message that straddles the boundary is
-        // split, which is why this is arithmetic rather than a flag.
         $beyondIncluded = max(0, $used - max($included, $before));
 
         if ($beyondIncluded > 0) {
@@ -177,9 +132,7 @@ final class SmsAllowance
         ])->save();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function snapshot(Tenant $tenant): array
     {
         $this->maybeResetCycle($tenant);

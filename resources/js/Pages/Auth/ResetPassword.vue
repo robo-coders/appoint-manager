@@ -4,16 +4,6 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
-/**
- * Choose a new password, from a link.
- *
- * The email is `readonly` rather than editable. It is the address the token was
- * issued for — changing it cannot succeed, so an editable field here is a
- * control whose only outcome is an error. It stays visible, because the person
- * arriving from an email needs to see which account they are about to change,
- * and `autocomplete="username"` keeps password managers able to file the new
- * password against the right entry.
- */
 const props = defineProps<{ email: string; token: string }>();
 
 const form = useForm({

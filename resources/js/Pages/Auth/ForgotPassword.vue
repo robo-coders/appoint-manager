@@ -5,14 +5,6 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
-/**
- * Ask for a reset link.
- *
- * The sent state replaces the form rather than sitting above it. Leaving the
- * form on screen under "we have sent you a link" invites a second submit, and
- * the second submit is the one that gets throttled — so the person who did
- * exactly what the page suggested is the one told to wait.
- */
 defineProps<{ status?: string }>();
 
 const form = useForm({ email: '' });

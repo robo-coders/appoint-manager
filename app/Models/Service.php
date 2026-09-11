@@ -16,9 +16,7 @@ class Service extends Model
     /** @use HasFactory<ServiceFactory> */
     use BelongsToTenant, HasFactory, SoftDeletes;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'name',
         'description',
@@ -31,9 +29,7 @@ class Service extends Model
         'sort_order',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -47,29 +43,18 @@ class Service extends Model
         ];
     }
 
-    /**
-     * How long before this service is due again, in days.
-     *
-     * Falls back to a product-wide default when the salon has not said, so the
-     * suggester always has a number to work from. Customers with a history of
-     * their own override this entirely — see `AppointmentSuggester`.
-     */
     public function suggestedIntervalDays(): int
     {
         return $this->suggested_interval_days ?? (int) config('booking.default_interval_days');
     }
 
-    /**
-     * @return BelongsToMany<User, $this>
-     */
+    /** @return BelongsToMany<User, $this> */
     public function staff(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
     }
 
-    /**
-     * @return HasMany<Booking, $this>
-     */
+    /** @return HasMany<Booking, $this> */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

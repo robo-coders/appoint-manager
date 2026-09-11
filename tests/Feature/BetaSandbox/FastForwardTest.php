@@ -20,19 +20,6 @@ use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
 
-/**
- * "Skip 1 day" and "Skip 1 week". See BETA_SANDBOX.md.
- *
- * The claim under test is the one the brief insists on: this is not cosmetic.
- * Timestamps move *and* the automation that was waiting on them runs — the
- * reminder is sent, the unpaid hold is let go, the expired request is declined,
- * the unclaimed offer is retired. Each of those is asserted by its consequence
- * (a `messages` row, a status change) rather than by a return value, because a
- * counter is easy to make right while the thing it counts never happened.
- *
- * The second claim is that it is a strictly local event: a second salon sits
- * beside the first throughout, with the same data, and nothing about it moves.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-09-08 09:00:00', 'Europe/London'));
     Mail::fake();
@@ -96,23 +83,12 @@ it('does not move the salon\'s own billing dates', function () {
 
     app(FastForward::class)->run($salon['tenant'], 'week');
 
-    // Deliberate: burning trial days would eventually put the shop into
-    // read-only and lock the tester out of the sandbox's own buttons.
     expect(Tenant::query()->find($salon['tenant']->id)->trial_ends_at->toDateTimeString())->toBe($trial);
 });
-
-/*
-|--------------------------------------------------------------------------
-| The automation actually running
-|--------------------------------------------------------------------------
-*/
 
 it('sends the reminder that came due while time was passing', function () {
     $salon = aBetaSalon();
 
-    // Reminders go out `booking.reminder_hours` before the appointment. This
-    // one sits just outside that window — twelve hours beyond it — so nothing
-    // is due now, and one press of "Skip 1 day" brings it inside.
     $hours = (int) config('booking.reminder_hours');
     $booking = aSandboxBooking($salon, CarbonImmutable::now('Europe/London')->addHours($hours + 12)->toDateTimeString());
 
@@ -148,7 +124,6 @@ it('releases an unpaid checkout hold once it has aged past its window', function
         'request_expires_at' => null,
     ])->save();
 
-    // A hold created moments ago is not expired, whatever command is run.
     $result = app(FastForward::class)->run($salon['tenant'], 'day');
 
     expect($result['released'])->toBe(1);
@@ -183,8 +158,6 @@ it('retires a waitlist offer nobody claimed', function () {
     expect($result['offers'])->toBe(1);
     expect($offer->fresh()->status)->toBe(SlotOfferStatus::Expired);
 
-    // The other salon's offer is equally overdue in wall-clock terms and must
-    // still be untouched: this sweep is scoped, not global.
     expect($untouched->fresh()->status)->toBe(SlotOfferStatus::Sent);
 });
 
@@ -215,8 +188,6 @@ it('still records what it would have sent, so the send log is honest', function 
         ->first();
 
     expect($message)->not->toBeNull();
-    // Marked sent rather than left queued: no worker will ever pick it up, and
-    // a permanently queued row reads as a broken product.
     expect($message->status->value)->toBe('sent');
 });
 
@@ -242,7 +213,6 @@ it('goes through the whole thing on a real sample shop without falling over', fu
     actingAsTenant($salon['staff'])->get(route('dashboard'))->assertOk();
 });
 
-/** Reminders logged for one booking. */
 function sandboxReminders(Tenant $tenant, Booking $booking): int
 {
     return Message::withoutGlobalScopes()
@@ -252,11 +222,7 @@ function sandboxReminders(Tenant $tenant, Booking $booking): int
         ->count();
 }
 
-/**
- * A live waitlist offer in a salon, expiring at the given moment.
- *
- * @param  array{tenant: Tenant, staff: User, service: Service}  $salon
- */
+/** @param  array{tenant: Tenant, staff: User, service: Service}  $salon */
 function aSandboxOffer(array $salon, CarbonImmutable $expiresAt): SlotOffer
 {
     $context = app(TenantContext::class);

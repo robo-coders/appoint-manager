@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Label from '@/Components/ui/Label.vue';
 
-/** One entry in the gallery: a title, a note on when to use it, and the states. */
 defineProps<{ name: string; note?: string }>();
 </script>
 

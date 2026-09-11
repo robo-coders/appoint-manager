@@ -5,14 +5,6 @@ use App\Models\User;
 use App\Support\Surface;
 use Illuminate\Support\Facades\Route;
 
-/**
- * With APP_DOMAIN unset, every surface is served from APP_URL on the path
- * prefix it used before the split. This is the mode the test suite and a fresh
- * checkout run in, so nobody has to touch /etc/hosts to work on Appoint Manager.
- *
- * The suite's default config already has subdomain routing off, so these tests
- * assert the default rather than reconfiguring anything.
- */
 it('has subdomain routing off by default', function () {
     expect(Surface::routingBySubdomain())->toBeFalse();
 });

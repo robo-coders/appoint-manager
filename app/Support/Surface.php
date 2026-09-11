@@ -5,17 +5,6 @@ namespace App\Support;
 use App\Models\Tenant;
 use Illuminate\Support\Str;
 
-/**
- * The four hostnames Appoint Manager serves.
- *
- * One app, one database, one deployment. The split exists so a session on one
- * surface cannot be presented to another, so super admin can be firewalled
- * separately, and so the booking page can be CDN-cached without the admin app
- * being cached with it.
- *
- * When subdomain routing is off every surface is served from APP_URL on the
- * path prefix it used before the split, so local development and CI need no DNS.
- */
 enum Surface: string
 {
     case Marketing = 'marketing';
@@ -28,13 +17,11 @@ enum Surface: string
         return (bool) config('app.subdomain_routing');
     }
 
-    /** The configured base URL for this surface. */
     public function url(): string
     {
         return rtrim((string) config("app.surfaces.{$this->value}", config('app.url')), '/');
     }
 
-    /** The bare host, e.g. `app.appoint-manager.test`. Null when routing by path. */
     public function host(): ?string
     {
         if (! self::routingBySubdomain()) {
@@ -44,10 +31,6 @@ enum Surface: string
         return parse_url($this->url(), PHP_URL_HOST) ?: null;
     }
 
-    /**
-     * The path prefix this surface uses when everything shares one host.
-     * Empty under subdomain routing, because the host is the prefix.
-     */
     public function pathPrefix(): string
     {
         if (self::routingBySubdomain()) {
@@ -61,7 +44,6 @@ enum Surface: string
         };
     }
 
-    /** Build an absolute URL on this surface. */
     public function to(string $path = ''): string
     {
         $path = ltrim($path, '/');
@@ -74,18 +56,6 @@ enum Surface: string
         return $path === '' ? $this->url() : $this->url().'/'.$path;
     }
 
-    /**
-     * A path on this surface, for in-request redirects that must stay on the
-     * host the browser is already on.
-     *
-     * `to()` is built from `APP_URL` / `APP_URL_*`. That is correct for mail,
-     * queued jobs, and any link that has to name a hostname because there is
-     * no request. It is wrong for a 302 after login: with `APP_URL` set to
-     * `http://localhost:8000`, a successful POST on `http://127.0.0.1:8000`
-     * used to bounce to localhost, the session cookie did not go with it, and
-     * the form sat there with a cleared password and no error. Relative paths
-     * ride the current request's origin. Cross-surface links still use `to()`.
-     */
     public function path(string $path = ''): string
     {
         $path = ltrim($path, '/');
@@ -98,10 +68,6 @@ enum Surface: string
         return $path === '' ? '/' : '/'.$path;
     }
 
-    /**
-     * The session cookie name. Distinct per surface so a cookie issued on one
-     * host is not even *named* the same as another's.
-     */
     public function cookie(): string
     {
         $base = Str::slug((string) config('app.name', 'appoint manager'), '_');
@@ -113,7 +79,6 @@ enum Surface: string
         };
     }
 
-    /** Resolve from a request host. Falls back to App when nothing matches. */
     public static function fromHost(?string $host): self
     {
         if ($host === null || ! self::routingBySubdomain()) {
@@ -129,20 +94,6 @@ enum Surface: string
         return self::App;
     }
 
-    /**
-     * Which surface this request is actually on, in either routing mode.
-     *
-     * `fromHost` answers the question only under subdomain routing — with
-     * routing by path it returns `App` for every host, because every surface
-     * *is* the same host. That is correct for what it is used for (naming the
-     * session cookie: one host, one cookie) and wrong for anything that has to
-     * know which surface is being rendered, which locally and in CI is every
-     * caller. `app.blade.php` asks this in order to set the console's density,
-     * and asking `fromHost` would have made that dead code everywhere except
-     * production.
-     *
-     * @param  string  $path  The request path, with or without a leading slash.
-     */
     public static function current(?string $host, string $path): self
     {
         if (self::routingBySubdomain()) {

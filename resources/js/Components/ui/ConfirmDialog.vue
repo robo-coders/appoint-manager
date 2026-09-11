@@ -3,11 +3,6 @@ import { ref, toRef } from 'vue';
 import { useFocusTrap } from '@/lib/focusTrap';
 import Button from './Button.vue';
 
-/**
- * Names the exact consequence before it happens. The body is not optional
- * decoration: "Cancel and refund £10 to Priya Raman" is the whole point of the
- * dialog, and "Are you sure?" is not.
- */
 const props = withDefaults(
     defineProps<{
         show: boolean;

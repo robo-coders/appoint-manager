@@ -11,9 +11,6 @@ class ResolveTenant
 {
     public function __construct(private TenantContext $tenantContext) {}
 
-    /**
-     * @param  Closure(Request): Response  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

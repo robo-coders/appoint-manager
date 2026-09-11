@@ -5,38 +5,12 @@ import { computed } from 'vue';
 import type { DiaryBooking, Gap, Lane, StaffMember } from './diary';
 import { PX_PER_MIN, freedStart, laneFor, minutesOf, timeOf } from './diary';
 
-/**
- * The day, as staff columns.
- *
- * There is no approved mockup for this screen and the three that were built
- * were rejected, so nothing here is invented: every decision is taken from
- * `dashboard.html`'s timeline — which **is** approved — and extended to two
- * dimensions.
- *
- * | dashboard.html | here |
- * |---|---|
- * | past appointments muted, no detail | past blocks at `ink-2`, time and name only |
- * | 2px ink left border on the current one | 2px ink left border, the only medium weight in the grid |
- * | the freed slot is the only coloured row | the freed slot is the only coloured block |
- * | hairline rows | hairline gridlines, on the hour |
- * | mono times | mono times, in a `--col-time` gutter |
- *
- * Two things this screen has that the dashboard does not:
- *
- *   - **Gaps are elements.** See `ui/GapButton` — open time takes up the
- *     minutes it represents and booking into it is one press.
- *   - **Overlaps split the column.** Two appointments on one groomer at once is
- *     a mistake worth seeing, so `laneFor` divides the column between them
- *     rather than drawing one silently on top of the other.
- */
 const props = defineProps<{
     staff: StaffMember[];
     bookings: DiaryBooking[];
     gaps: Gap[];
-    /** Local `HH:MM`, the first and last edge of the drawn day. */
     dayStart: string;
     dayEnd: string;
-    /** Local `HH:MM`, or null when the day on screen is not today. */
     now: string | null;
 }>();
 
@@ -44,11 +18,6 @@ const emit = defineEmits<{ open: [DiaryBooking]; bookGap: [Gap] }>();
 
 const startMinutes = computed(() => minutesOf(props.dayStart));
 const endMinutes = computed(() => minutesOf(props.dayEnd));
-/*
- * Twelve extra pixels at the foot. Gutter labels are centred on their line, so
- * without them the last one — the hour the day ends on — is drawn half outside
- * the box and clipped.
- */
 const height = computed(() => (endMinutes.value - startMinutes.value) * PX_PER_MIN + 12);
 
 const hourMarks = computed(() => {
@@ -83,12 +52,6 @@ const lanes = computed(() => {
 
 const geometry = (booking: DiaryBooking) => {
     const lane = lanes.value.get(booking.id) ?? { index: 0, of: 1 };
-    /*
-     * A freed slot is drawn at the extent of what is genuinely still open, not
-     * at the extent of the cancellation. Marek's 15:30–17:00 cancellation has
-     * his own 16:30 appointment across its tail; the block that says "freed"
-     * must stop where the opportunity does, or it claims an hour that is gone.
-     */
     const start = minutesOf(freedStart(booking) ?? booking.starts_at_local.slice(11));
     const end = booking.is_freed
         ? start + (booking.minutes ?? 0)
@@ -96,9 +59,6 @@ const geometry = (booking: DiaryBooking) => {
 
     return {
         top: `${top(start)}px`,
-        // A 15-minute nail clip is 12px tall at this scale, which cannot hold a
-        // line of 12px text. Blocks have a floor and short ones overlap the
-        // gridline below them a little, which is the lesser of the two problems.
         height: `${Math.max((end - start) * PX_PER_MIN, 22)}px`,
         left: `calc(${(lane.index / lane.of) * 100}% + 2px)`,
         width: `calc(${(1 / lane.of) * 100}% - 4px)`,
@@ -132,13 +92,7 @@ const nameOf = (booking: DiaryBooking) => booking.subject_name ?? booking.custom
                 {{ member.name }}
             </div>
 
-            <!-- The time gutter, sticky. A fifth groomer forces a horizontal
-                 scroll, and a scrolled grid whose times have gone is a grid of
-                 unlabelled rectangles. -->
             <div class="sticky left-0 z-20 bg-white" :style="{ height: `${height}px`, position: 'relative' }">
-                <!-- The hour nearest `now` is dropped: two labels 9px apart in
-                     a 56px gutter is one unreadable label. Now wins — it is the
-                     one that moves. -->
                 <span
                     v-for="mark in hourMarks"
                     :key="mark"
@@ -200,7 +154,6 @@ const nameOf = (booking: DiaryBooking) => booking.subject_name ?? booking.custom
                     />
                 </div>
 
-                <!-- Now, across every column. -->
                 <div
                     v-if="nowMinutes !== null"
                     class="pointer-events-none absolute inset-x-0 border-t border-t-ink"

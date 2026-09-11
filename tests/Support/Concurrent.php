@@ -5,22 +5,9 @@ namespace Tests\Support;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-/**
- * Two (or more) PHP processes, one MySQL, started together.
- *
- * RefreshDatabase wraps each test in a transaction. A second connection cannot
- * see uncommitted rows, and a second request on the same connection is not
- * concurrent. This helper commits the wrapping transaction, forks real
- * processes (each with its own PDO), releases them from a barrier, and
- * re-opens a transaction so the trait's rollback still has something to roll
- * back. The fixtures stay committed; the next test's factory unique-ness is
- * what keeps them from colliding.
- */
 final class Concurrent
 {
     /**
-     * Run $body against committed rows that other connections can see.
-     *
      * @template T
      *
      * @param  callable(): T  $body
@@ -131,7 +118,6 @@ final class Concurrent
         }
     }
 
-    /** @param  callable(): bool  $predicate */
     private static function waitUntil(callable $predicate, int $seconds, string $message): void
     {
         $deadline = microtime(true) + $seconds;
@@ -146,11 +132,6 @@ final class Concurrent
         throw new RuntimeException('concurrent: '.$message);
     }
 
-    /**
-     * The concurrent workers committed past RefreshDatabase. A later test in
-     * the same process — TenantAccentTest's rollback, for one — would otherwise
-     * see leftover tenants. Call from `afterEach` in files that use `run()`.
-     */
     public static function afterEach(): void
     {
         $depth = DB::transactionLevel();
@@ -172,21 +153,6 @@ final class Concurrent
         $key = 'Tables_in_'.$database;
         $tables = array_map(fn (object $row) => $row->{$key}, DB::select('SHOW TABLES'));
 
-        /*
-         * `verticals` is skipped for the same reason `migrations` is: it is not
-         * application data. Its rows are inserted by
-         * `create_verticals_table` and are reference data every later test
-         * assumes is there — the groomer price list, the subject fields, the
-         * labels.
-         *
-         * This truncation runs **outside a transaction** and is therefore
-         * permanent for the worker's database, so wiping it left every test
-         * that ran afterwards in the same worker looking at an empty table.
-         * It surfaced as `ModelNotFoundException` in the onboarding tests and
-         * as "the groomer vertical has an empty price list" from the trade
-         * page, in whichever suites happened to be scheduled after this one —
-         * which is to say, differently on every run.
-         */
         $keep = ['migrations', 'verticals'];
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');

@@ -30,43 +30,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 
-/**
- * Fills ONE existing tenant with enough realistic data to stress the operator
- * app: a full staff list, a real price list, months of history and a genuinely
- * busy today.
- *
- * `DemoTenantSeeder` creates a tenant and two staff and stops, which leaves the
- * diary empty — you cannot judge a diary layout against nothing. It also
- * collides on `tenants.slug` the second time you run it. This one is the
- * opposite on both counts: it points at a tenant that already exists, and it
- * deletes its own previous output before writing new output, so running it
- * five times leaves the same tenant in the same state.
- *
- * Local only, and it throws rather than returning quietly if it finds itself
- * anywhere else — it deletes rows, and a seeder that deletes rows must never be
- * one `--force` away from doing it in production.
- *
- * Scope: every read and every delete is filtered by `tenant_id`. Nothing here
- * touches another tenant's rows, and the demo staff it creates are marked with
- * an `@demo.invalid` address so the wipe can tell its own users from real ones.
- */
 class DemoDataSeeder extends Seeder
 {
-    /** Demo-created staff carry this domain so the wipe can find exactly them. */
     private const STAFF_DOMAIN = '@demo.invalid';
 
-    /** What the owner is called when whatever they registered with is not a name. */
     private const OWNER_NAME = 'Rosa Adeyemi';
 
-    /** Demo-created failed jobs carry this uuid prefix, for the same reason. */
     private const JOB_UUID_PREFIX = 'demo-';
 
     private CarbonImmutable $today;
 
-    /**
-     * Entry point when run through `db:seed`. Prefer `php artisan demo:seed`,
-     * which takes the tenant as a real argument.
-     */
     public function run(): void
     {
         $ref = (string) env('DEMO_TENANT', '');
@@ -81,12 +54,6 @@ class DemoDataSeeder extends Seeder
         $this->forTenant(self::resolveTenant($ref));
     }
 
-    /**
-     * Find a tenant by numeric id or by slug.
-     *
-     * Not called `resolve()`: Illuminate\Database\Seeder already declares a
-     * non-static `resolve()`, and redeclaring it static is a fatal error.
-     */
     public static function resolveTenant(string $ref): Tenant
     {
         $query = Tenant::query()->withoutGlobalScopes();
@@ -102,20 +69,10 @@ class DemoDataSeeder extends Seeder
         return $tenant;
     }
 
-    /**
-     * @param  bool  $deposits  Present the tenant as Stripe-connected, so the
-     *                          booking page shows the deposit line and the
-     *                          deposit path. See `deposits()`.
-     */
     public function forTenant(Tenant $tenant, bool $deposits = true): void
     {
         $this->guardEnvironment();
 
-        /*
-         * Deterministic. Two runs against the same tenant produce the same
-         * hundred-odd bookings, which matters when you are comparing diary
-         * layouts against each other and need the day to be the same day.
-         */
         mt_srand(20260310 + $tenant->id);
 
         $this->today = CarbonImmutable::now($tenant->timezone)->startOfDay();
@@ -144,65 +101,12 @@ class DemoDataSeeder extends Seeder
             app(TenantContext::class)->clear();
         }
 
-        /*
-         * A demo tenant that renders read-only is not a demo.
-         *
-         * `Tenant::booted()` now gives every newly created tenant a trial, so a
-         * demo tenant made today arrives writable and this line is no longer
-         * the thing that saves it. It stays for the tenant that already exists:
-         * the hook only fires on create, and a machine that made its demo salon
-         * before the hook landed still has `trial_ends_at = NULL` in its local
-         * database. Reseeding is what people do when a demo looks wrong, so
-         * reseeding is where the repair belongs.
-         *
-         * `demo:seed --plan=` still has the last word —
-         * the command applies it after this returns — which is what keeps
-         * `--plan=expired` able to show the read-only state on purpose.
-         */
         self::billing($tenant, 'trial');
         self::deposits($tenant, $deposits);
 
         $this->report($tenant);
     }
 
-    // -----------------------------------------------------------------------
-    // Deposit presentation
-    // -----------------------------------------------------------------------
-    /**
-     * Make the tenant present as Stripe-connected, or not.
-     *
-     * Deposit capture is the thing this product sells, and the demo tenant had
-     * no connected account — so `Tenant::takesDeposits()` was false, the
-     * booking page fell back to "£35.00, pay on the day", and the feature was
-     * invisible on the one page a salon owner is actually shown.
-     *
-     * **This does not touch AUDIT C1 and does not need to.** `takesDeposits()`
-     * is two columns on the tenant, not a question about which gateway is
-     * bound: setting them changes what the page *says*, and it is the page that
-     * was lying about the product. `FakeStripeGateway` stays reachable in
-     * `testing` only.
-     *
-     * What that buys, and what it does not:
-     *
-     *   - The booking page shows "£35.00 total, £10.00 deposit due today", and
-     *     Reserve takes the deposit branch rather than confirming outright.
-     *     That is the demo.
-     *   - Actually *completing* a card needs Stripe test keys in `.env` and a
-     *     real test-mode connected account, because with a connected account id
-     *     Stripe has never heard of, `StripeConnectGateway` fails and the page
-     *     says so honestly (503, "nothing has been charged"). There is no third
-     *     option that does not involve making the fake gateway reachable
-     *     outside `testing`, which is exactly what C1 forbids.
-     *
-     * So `demo:seed` will not run with deposits on unless both are present —
-     * see `SeedDemoData::depositsCanComplete()`. The placeholder default below
-     * is now only reachable by calling this directly, which is what the test
-     * suite does: it asserts what the *page* says about deposits, and never
-     * reaches Stripe to say it.
-     *
-     * `$account` is deliberately not a realistic-looking default. An id that
-     * looks real is an id somebody eventually believes.
-     */
     public static function deposits(Tenant $tenant, bool $connected, ?string $account = null): void
     {
         $tenant->forceFill($connected
@@ -211,31 +115,11 @@ class DemoDataSeeder extends Seeder
                 'stripe_onboarding_complete' => true,
             ]
             : [
-                // Cleared, not left alone: the e2e suite books through this page
-                // against obvious fake keys, and a tenant that asks for a
-                // deposit there gets a 503 where the spec expects a 201.
                 'stripe_account_id' => null,
                 'stripe_onboarding_complete' => false,
             ])->save();
     }
 
-    /**
-     * Local development, and the test suite.
-     *
-     * `testing` was added deliberately, not as a loophole. The suggester and
-     * the dashboard both have to be judged against a *real* week — 72 clients,
-     * six weeks of history, a day with an overrun and a double-booking and a
-     * freed slot — and a hand-built four-booking fixture cannot tell you
-     * whether "your usual Tuesday" is true of anybody. Asserting against the
-     * same data the screens are looked at in is the more honest test.
-     *
-     * It is safe there for two reasons that do not apply anywhere else: the
-     * test database is `:memory:`, and `RefreshDatabase` throws the whole thing
-     * away between tests. There is nothing to delete that was not created by
-     * the same test.
-     *
-     * Every other environment — staging, production — still throws.
-     */
     private function guardEnvironment(): void
     {
         if (! app()->environment('local', 'testing')) {
@@ -246,10 +130,6 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Wipe — everything this seeder has ever written for THIS tenant, and
-    // nothing else. Order follows the foreign keys inwards.
-    // -----------------------------------------------------------------------
     private function wipe(Tenant $tenant): void
     {
         $id = $tenant->id;
@@ -263,25 +143,16 @@ class DemoDataSeeder extends Seeder
         DB::table('time_off')->where('tenant_id', $id)->delete();
         DB::table('availability_rules')->where('tenant_id', $id)->delete();
 
-        // service_user has no tenant_id of its own; it hangs off services.
         $serviceIds = DB::table('services')->where('tenant_id', $id)->pluck('id');
         DB::table('service_user')->whereIn('service_id', $serviceIds)->delete();
         DB::table('services')->where('tenant_id', $id)->delete();
 
-        /*
-         * Staff, but only the ones this seeder made. The owner is left alone
-         * on purpose — it is the account you log in with, and deleting it
-         * would lock you out of the tenant you are trying to look at.
-         */
         DB::table('users')
             ->where('tenant_id', $id)
             ->where('email', 'like', '%'.self::STAFF_DOMAIN)
             ->delete();
     }
 
-    // -----------------------------------------------------------------------
-    // Staff — the tenant's existing owner plus three.
-    // -----------------------------------------------------------------------
     /** @return list<User> */
     private function staff(Tenant $tenant): array
     {
@@ -296,19 +167,6 @@ class DemoDataSeeder extends Seeder
             );
         }
 
-        /*
-         * The owner gets a person's name.
-         *
-         * It is whatever the tenant was registered with, and on the local demo
-         * tenant that is the salon's own name — which put a groomer called
-         * "paw" in the diary and made the booking page propose "Soonest with
-         * paw". The email and the login are untouched; only the display name
-         * moves, and only when it is not already a person's name.
-         *
-         * Two words with a capital each is the test, which is crude and
-         * deliberately so: it leaves "Rosa Adeyemi" alone and replaces "paw",
-         * "Willow Street Grooming" and "test".
-         */
         $owner->forceFill([
             'name' => $this->looksLikeAPersonsName($owner->name) ? $owner->name : self::OWNER_NAME,
             'is_bookable' => true,
@@ -342,10 +200,6 @@ class DemoDataSeeder extends Seeder
         return $team;
     }
 
-    // -----------------------------------------------------------------------
-    // Services — nine, with durations and prices a real groomer would charge.
-    // Prices are pence.
-    // -----------------------------------------------------------------------
     /** @return list<Service> */
     private function services(): array
     {
@@ -379,14 +233,6 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * Who can do what.
-     *
-     * Not everyone does everything: hand strip and double coats are the two
-     * that take a trained pair of hands, so only two of the four are attached
-     * to them. Without this pivot the availability engine finds no eligible
-     * staff and the public booking page offers no slots at all — the diary
-     * would look fine and booking would be silently broken.
-     *
      * @param  list<User>  $staff
      * @param  list<Service>  $services
      */
@@ -407,8 +253,6 @@ class DemoDataSeeder extends Seeder
     /** @param  list<User>  $staff */
     private function availability(array $staff): void
     {
-        // Monday to Saturday. Saturday is a short day, which is what makes
-        // Saturday look different in a week view instead of being a copy.
         foreach ($staff as $user) {
             foreach ([Weekday::Monday, Weekday::Tuesday, Weekday::Wednesday,
                 Weekday::Thursday, Weekday::Friday, Weekday::Saturday] as $weekday) {
@@ -422,9 +266,6 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Customers and their dogs.
-    // -----------------------------------------------------------------------
     /** @return list<array{customer: Customer, subject: Subject}> */
     private function customers(): array
     {
@@ -470,8 +311,6 @@ class DemoDataSeeder extends Seeder
                 'notes' => mt_rand(0, 5) === 0 ? 'Prefers Saturday mornings.' : null,
             ]);
 
-            // Most clients have one dog; a few have two, which is where the
-            // "which dog is this booking for" question comes from.
             $petCount = mt_rand(0, 6) === 0 ? 2 : 1;
 
             for ($p = 0; $p < $petCount; $p++) {
@@ -493,9 +332,6 @@ class DemoDataSeeder extends Seeder
         return $pairs;
     }
 
-    // -----------------------------------------------------------------------
-    // Six weeks behind, three weeks ahead.
-    // -----------------------------------------------------------------------
     /**
      * @param  list<User>  $staff
      * @param  list<Service>  $services
@@ -507,7 +343,7 @@ class DemoDataSeeder extends Seeder
 
         for ($offset = -42; $offset <= 21; $offset++) {
             if ($offset === 0) {
-                continue;   // today is built by hand below
+                continue;
             }
 
             $day = $this->today->addDays($offset);
@@ -517,7 +353,6 @@ class DemoDataSeeder extends Seeder
             }
 
             $past = $offset < 0;
-            // Saturdays are busy and short; midweek is steady.
             $count = $day->isSaturday() ? mt_rand(4, 6) : mt_rand(2, 5);
 
             $taken = [];
@@ -536,7 +371,7 @@ class DemoDataSeeder extends Seeder
                 $pair = $pairs[mt_rand(0, count($pairs) - 1)];
 
                 if ($day->isSaturday() && $slot >= 14 * 60) {
-                    continue;   // closed Saturday afternoon
+                    continue;
                 }
 
                 $starts = $day->addMinutes($slot);
@@ -549,13 +384,7 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    /**
-     * The mix. Past days are mostly completed with a realistic tail of
-     * cancellations and no-shows; future days are confirmed with a few still
-     * pending a deposit.
-     *
-     * @return array{0: BookingStatus, 1: DepositStatus, 2: CarbonImmutable|null, 3: string|null}
-     */
+    /** @return array{0: BookingStatus, 1: DepositStatus, 2: CarbonImmutable|null, 3: string|null} */
     private function outcome(bool $past): array
     {
         $roll = mt_rand(1, 100);
@@ -612,9 +441,6 @@ class DemoDataSeeder extends Seeder
         ]);
     }
 
-    // -----------------------------------------------------------------------
-    // Today, built by hand. Everything the diary has to be able to draw.
-    // -----------------------------------------------------------------------
     /**
      * @param  list<User>  $staff
      * @param  list<Service>  $services
@@ -636,7 +462,6 @@ class DemoDataSeeder extends Seeder
         $at = fn (int $h, int $m = 0): CarbonImmutable => $this->today->addMinutes($h * 60 + $m);
         $p = fn (int $i): array => $pairs[$i % count($pairs)];
 
-        // --- morning, done -------------------------------------------------
         $this->booking($tenant, $ana, $full, $p(0), $at(9), $at(10, 30), BookingStatus::Completed, DepositStatus::Paid);
         $this->booking($tenant, $ana, $nails, $p(1), $at(10, 30), $at(10, 45), BookingStatus::Completed, DepositStatus::None);
         $this->booking($tenant, $ana, $bath, $p(2), $at(11), $at(11, 45), BookingStatus::Completed, DepositStatus::Paid);
@@ -646,35 +471,24 @@ class DemoDataSeeder extends Seeder
         $this->booking($tenant, $priya, $bath, $p(6), $at(9, 30), $at(10, 15), BookingStatus::Completed, DepositStatus::Paid);
         $this->booking($tenant, $priya, $nails, $p(7), $at(11, 15), $at(11, 30), BookingStatus::Completed, DepositStatus::None);
 
-        // --- in the chair around lunchtime ---------------------------------
         $this->booking($tenant, $ana, $puppy, $p(8), $at(12, 15), $at(13), BookingStatus::Confirmed, DepositStatus::Paid);
 
-        /*
-         * Runs long. The double coat is a 120-minute service and this one is
-         * holding 150 minutes of the day — `ends_at` past `starts_at +
-         * duration_minutes` is the only way an overrun exists in this schema,
-         * and it is what the diary has to be able to draw.
-         */
         $this->booking($tenant, $ana, $double, $p(9), $at(14), $at(16, 30), BookingStatus::Confirmed, DepositStatus::Paid);
 
-        // --- the overlapping pair, both on Priya ---------------------------
         $this->booking($tenant, $priya, $full, $p(10), $at(13, 30), $at(15), BookingStatus::Confirmed, DepositStatus::Paid);
         $this->booking($tenant, $priya, $nails, $p(11), $at(13, 45), $at(14), BookingStatus::Confirmed, DepositStatus::None);
 
-        // --- afternoon, still to come --------------------------------------
         $this->booking($tenant, $marek, $bath, $p(12), $at(13, 15), $at(14), BookingStatus::Confirmed, DepositStatus::Paid);
         $this->booking($tenant, $marek, $bath, $p(13), $at(16, 30), $at(17, 15), BookingStatus::Confirmed, DepositStatus::None);
         $this->booking($tenant, $owner, $full, $p(14), $at(15), $at(16, 30), BookingStatus::Confirmed, DepositStatus::Paid);
         $this->booking($tenant, $owner, $nails, $p(15), $at(17), $at(17, 15), BookingStatus::Pending, DepositStatus::Required);
 
-        // --- a plain cancellation, deposit kept ----------------------------
         $this->booking(
             $tenant, $priya, $full, $p(16), $at(15), $at(16, 30),
             BookingStatus::Cancelled, DepositStatus::Paid,
             CarbonImmutable::now()->subHours(2), 'Cancelled inside notice — deposit kept',
         );
 
-        // --- the freed slot, with three people waiting for it ---------------
         $freed = $this->booking(
             $tenant, $marek, $full, $p(17), $at(15, 30), $at(17),
             BookingStatus::Cancelled, DepositStatus::Refunded,
@@ -685,23 +499,6 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * Appointments that exist only because somebody claimed a waitlist offer.
-     *
-     * Without these the dashboard's headline figure — `Recovered from waitlist`,
-     * the number the whole product is sold on — reads £0.00 on the demo tenant,
-     * because nothing here had ever been *claimed*. Three live offers show the
-     * mechanic starting; these show it finishing.
-     *
-     * `bookings.waitlist_entry_id` is what the dashboard counts, and it is set
-     * on claim by `BookingService::claimOffer` — so a claimed offer is modelled
-     * here exactly the way a real one lands: an entry that is no longer active,
-     * a `Claimed` offer, and a booking pointing back at the entry.
-     *
-     * Spread across this calendar month so the figure is a month's recovery
-     * rather than one afternoon's, and one of them left deliberately pending —
-     * a refilled slot whose deposit has not arrived is money not yet recovered,
-     * and the dashboard says so.
-     *
      * @param  list<User>  $staff
      * @param  list<Service>  $services
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
@@ -715,8 +512,6 @@ class DemoDataSeeder extends Seeder
 
         $month = $this->today->startOfMonth();
 
-        // [day of the month, staff, service, status] — the last one is still
-        // waiting on its deposit.
         $plan = [
             [4, $ana, $full, BookingStatus::Completed, DepositStatus::Paid],
             [11, $marek, $bath, BookingStatus::Completed, DepositStatus::Paid],
@@ -735,7 +530,6 @@ class DemoDataSeeder extends Seeder
                 'service_id' => $service->id,
                 'preferred_days' => [],
                 'preferred_times' => PreferredTime::Any,
-                // Claimed, so it is no longer waiting for anything.
                 'is_active' => false,
                 'expires_at' => $starts,
             ]);
@@ -761,18 +555,9 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    /**
-     * Three active waitlist entries for the freed slot's service, each with a
-     * live offer pointing at that exact slot. That is what makes the freed row
-     * in the diary able to say "offer to 3 waiting" and mean it.
-     *
-     * @param  list<array{customer: Customer, subject: Subject}>  $pairs
-     */
+    /** @param  list<array{customer: Customer, subject: Subject}>  $pairs */
     private function waitlist(Tenant $tenant, User $staff, Service $service, Booking $freed, array $pairs): void
     {
-        // Distinct people, not distinct pairs: a client with two dogs appears
-        // in `$pairs` twice, and one active entry per customer per service is
-        // now `waitlist_entries_active_join_unique`.
         $waiting = $this->distinctCustomers($pairs, 20, 8);
 
         foreach (array_slice($waiting, 0, 3) as $n => $pair) {
@@ -799,8 +584,6 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
-        // Plus a handful of general waitlist entries so the Waitlist screen is
-        // not just the three attached to today's gap.
         foreach (array_slice($waiting, 3) as $pair) {
             WaitlistEntry::query()->create([
                 'customer_id' => $pair['customer']->id,
@@ -815,8 +598,6 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * The next `$count` pairs from `$from` that belong to different customers.
-     *
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
      * @return list<array{customer: Customer, subject: Subject}>
      */
@@ -839,13 +620,6 @@ class DemoDataSeeder extends Seeder
         return $picked;
     }
 
-    /**
-     * Does this read as a person rather than as a business?
-     *
-     * Two or more words, each starting with a capital. It is a heuristic and it
-     * will be wrong about somebody eventually — the cost of being wrong is that
-     * a demo tenant keeps a name it already had, which is the safe direction.
-     */
     private function looksLikeAPersonsName(?string $name): bool
     {
         $parts = preg_split('/\s+/', trim((string) $name)) ?: [];
@@ -914,13 +688,6 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    /**
-     * Failed jobs and webhook failures, so the super admin Failures screen has
-     * something in it. These two tables are GLOBAL — no tenant_id — so only
-     * this seeder's own rows are replaced, matched on a uuid prefix and on the
-     * event id. A real failure sitting in that table is evidence and must not
-     * be swept away by a demo seeder.
-     */
     private function failures(Tenant $tenant): void
     {
         DB::table('failed_jobs')->where('uuid', 'like', self::JOB_UUID_PREFIX.'%')->delete();
@@ -966,18 +733,6 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Billing state
-    // -----------------------------------------------------------------------
-    /**
-     * Put a tenant on one of three billing states.
-     *
-     * `active`  — a paid monthly plan. Writes allowed, no banner.
-     * `trial`   — 14 days of trial left. Writes allowed, trial banner shows.
-     * `expired` — past due, and past the dunning window. READ ONLY: this is the
-     *             state that produces "Admin is read-only until billing is up
-     *             to date", so it is the one to pick when you want to see it.
-     */
     public static function billing(Tenant $tenant, string $state): void
     {
         $base = [
@@ -1008,8 +763,6 @@ class DemoDataSeeder extends Seeder
                 'subscription_status' => 'past_due',
                 'plan' => 'monthly',
                 'trial_ends_at' => now()->subDays(60),
-                // Well outside config('billing.dunning_days'), so write access
-                // has genuinely lapsed rather than being inside the grace period.
                 'dunning_started_at' => now()->subDays(30),
                 'dunning_emails_sent' => 3,
             ],

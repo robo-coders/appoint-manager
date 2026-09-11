@@ -10,9 +10,7 @@ class ReceiptRecorder
 {
     public function __construct(private InvoiceNumber $numbers) {}
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     public function record(Tenant $tenant, array $invoice, string $status): BillingReceipt
     {
         $stripeId = (string) ($invoice['id'] ?? '');
@@ -43,9 +41,7 @@ class ReceiptRecorder
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     private function amount(array $invoice, string $status): int
     {
         if ($status === 'paid') {

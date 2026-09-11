@@ -9,10 +9,6 @@ use App\Support\SurfaceRoutes;
 use Illuminate\Http\Request;
 use Illuminate\Routing\RouteCollection;
 
-/**
- * These run with subdomain routing switched on, which is how production is
- * configured. The path-fallback mode is covered separately below.
- */
 function withSubdomains(): void
 {
     config([
@@ -24,12 +20,6 @@ function withSubdomains(): void
         'app.surfaces.admin' => 'http://admin.appoint-manager.test',
     ]);
 
-    // Rebuild the route table against the new hosts.
-    //
-    // Two things normally done by the framework have to be done by hand here,
-    // because this happens after boot rather than during it: the name and
-    // action lookups are refreshed on `booted`, and the URL generator holds its
-    // own reference to the route collection.
     app('router')->setRoutes(new RouteCollection);
     SurfaceRoutes::register();
 
@@ -61,7 +51,6 @@ it('does not serve the app from the marketing host', function () {
 it('does not serve the console from the app host', function () {
     withSubdomains();
 
-    // A 404, never a 403: a salon owner should not learn the console exists.
     $this->get('http://app.appoint-manager.test/')->assertNotFound();
     $this->get('http://app.appoint-manager.test/messages')->assertNotFound();
     $this->get('http://app.appoint-manager.test/failures')->assertNotFound();
@@ -91,9 +80,6 @@ it('serves the booking page from the booking host with no path prefix', function
 it('keeps the fixed booking prefixes reachable ahead of the slug wildcard', function () {
     withSubdomains();
 
-    // /b/{token} and /offer/{token} must resolve to their own controllers, not
-    // be swallowed by /{tenant_slug}. Both 404 on an unknown token, but the
-    // route that matched is what matters.
     $this->get('http://book.appoint-manager.test/b/not-a-real-token')->assertNotFound();
 
     $matched = app('router')->getRoutes()->match(
@@ -123,13 +109,6 @@ it('builds each surface URL on its own host', function () {
 it('will not read an app session on the console host', function () {
     withSubdomains();
 
-    // An app session cannot be presented to the console at all: the cookie is
-    // pinned to app.{domain} so a browser never sends it, and the console reads
-    // a differently named cookie so it would not look for it if one arrived.
-    //
-    // Only the server half of that is testable here — actingAs() bypasses
-    // cookies, so a test that "presents" one would be exercising the harness
-    // rather than the app.
     expect(Surface::App->cookie())->not->toBe(Surface::Admin->cookie())
         ->and(Surface::Admin->cookie())->toContain('admin');
 
@@ -159,8 +138,6 @@ it('shows the impersonation banner on every app screen while active', function (
     $this->flushSession();
     $this->get($handoff);
 
-    // The banner is driven by a shared Inertia prop, so it is present on every
-    // screen the layout renders rather than on one of them.
     foreach (['diary', 'bookings', 'customers'] as $screen) {
         $this->get("http://app.appoint-manager.test/{$screen}")
             ->assertOk()
@@ -178,8 +155,6 @@ it('puts every route on its surface group, and the group carries the limits', fu
     $route = collect(app('router')->getRoutes()->getRoutes())
         ->first(fn ($r) => $r->getName() === $routeName);
 
-    // The surface group is what the route carries; the limits live in the group
-    // so a new route on that surface inherits them without anyone adding them.
     expect($route->gatherMiddleware())->toContain($group)
         ->and(app('router')->getMiddlewareGroups()[$group])->toBe($expected);
 })->with([
@@ -280,15 +255,12 @@ it('hands impersonation across to the app surface and back again', function () {
     ]);
     $admin = User::factory()->create(['tenant_id' => null, 'is_super_admin' => true]);
 
-    // The console cannot set a cookie for the app host, so it hands off a
-    // signed link pointing at it.
     $response = $this->actingAs($admin)
         ->post("http://admin.appoint-manager.test/tenants/{$tenant->id}/impersonate");
 
     $handoff = $response->headers->get('Location');
     expect($handoff)->toStartWith('http://app.appoint-manager.test/impersonate/');
 
-    // Redeeming it issues a normal app session tagged with the impersonator.
     $this->flushSession();
     $this->get($handoff)->assertRedirect('http://app.appoint-manager.test/diary');
 
@@ -296,7 +268,6 @@ it('hands impersonation across to the app surface and back again', function () {
         ->and(auth()->id())->toBe($owner->id)
         ->and(AuditLog::query()->where('action', 'impersonate.start')->count())->toBe(1);
 
-    // Exiting drops the app session and returns to the console.
     $this->post('http://app.appoint-manager.test/impersonation/stop')
         ->assertRedirect('http://admin.appoint-manager.test');
 

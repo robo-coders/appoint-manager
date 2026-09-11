@@ -2,18 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { FROZEN_NOW } from '../../playwright.config';
 import { expectSurface } from './support';
 
-/**
- * The marketing surface, at the three widths.
- *
- * Signed out, in the `public` project, because everybody who reads these pages
- * is signed out — and because the masthead is asserted elsewhere to be byte
- * identical either way (`MarketingNavTest`), so a spec carrying an operator
- * session would be testing a page no visitor sees.
- *
- * Home and pricing are the two the brief singled out for baselines. The other
- * five pages are checked for the rules that do not need a picture — overflow,
- * focus, the skip link — in the assertions below.
- */
 const SHOT_PAGES = [
     ['home', '/'],
     ['pricing', '/pricing'],
@@ -32,21 +20,6 @@ const ALL_PAGES = [
 
 const WIDTHS = [375, 768, 1024, 1280, 1440] as const;
 
-/*
- * Scroll the whole document, then come back to the top.
- *
- * The home page reveals `.dd-r` on scroll, and a full-page screenshot does not
- * scroll: Chromium captures beyond the viewport in one pass, so no scroll event
- * is ever dispatched and every revealed section is photographed at `opacity: 0`.
- * The whole-week band came out as an empty gradient and the baseline would have
- * been written that way — a picture of nothing, which no later regression in
- * that section could fail against.
- *
- * So the page is scrolled through before it is photographed, which is also just
- * what a person does. `.dd-in` is never removed once set, so returning to the
- * top leaves everything revealed and the capture starts from the same offset it
- * always did. A page with no `.dd-r` waits on a condition that is already true.
- */
 async function revealed(page: Page): Promise<void> {
     await page.evaluate(async () => {
         const step = Math.max(1, Math.round(window.innerHeight * 0.8));
@@ -86,13 +59,6 @@ for (const [name, path] of SHOT_PAGES) {
     }
 }
 
-/*
- * Nothing scrolls sideways, at any width, on any page.
- *
- * This is the assertion a screenshot cannot make: `fullPage` captures the
- * document, so an element 40px past the right edge widens the image rather than
- * being clipped out of it, and the picture looks fine.
- */
 test('no marketing page scrolls sideways at any width', async ({ page }) => {
     for (const [name, path] of ALL_PAGES) {
         for (const width of WIDTHS) {
@@ -102,14 +68,6 @@ test('no marketing page scrolls sideways at any width', async ({ page }) => {
                 const vw = window.innerWidth;
                 const out: string[] = [];
 
-                /*
-                 * An element inside an `overflow: hidden` ancestor is not an
-                 * overflow — it is a clip, which is the whole point of the
-                 * hero's blurred orbs and of the comparison table's scroller.
-                 * `getBoundingClientRect` reports the unclipped box, so without
-                 * this every page with a decorative orb failed a test about
-                 * layout escaping the viewport.
-                 */
                 const clipped = (el: Element) => {
                     for (let p = el.parentElement; p; p = p.parentElement) {
                         const s = getComputedStyle(p);
@@ -141,32 +99,12 @@ test('no marketing page scrolls sideways at any width', async ({ page }) => {
     }
 });
 
-/*
- * A visible focus ring on every focusable element, walked by keyboard.
- *
- * Not `el.focus()` in a loop: the ring is on `:focus-visible`, and the question
- * is whether somebody tabbing through the page can see where they are. So this
- * presses Tab and reads back what the browser actually painted.
- *
- * The ring is `--focus-ring`, which is the only shadow in the product, so
- * "box-shadow is not none" is a sufficient and exact test — there is nothing
- * else it could be.
- */
 test('every focusable element on every marketing page shows the token focus ring', async ({ page }) => {
     const counts: Record<string, number> = {};
 
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);
 
-        /*
-         * Only what a person can actually reach with Tab.
-         *
-         * A bare `input` selector counted two things nobody can focus: the
-         * hidden CSRF field every form carries, and the contact form's
-         * honeypot, which is `tabindex="-1"` precisely so a person never lands
-         * on it. Both are correct, and counting them failed the page for having
-         * a ring on 26 of 28 elements when 26 was the right number.
-         */
         const focusable =
             'a[href], button:not([disabled]), input:not([type="hidden"]):not([tabindex="-1"]):not([disabled]), '
             + 'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -201,12 +139,9 @@ test('every focusable element on every marketing page shows the token focus ring
         counts[name] = ringed;
     }
 
-    // Printed so the count per page is in the run output rather than only in a
-    // failure message.
     console.log('focus rings per page:', JSON.stringify(counts));
 });
 
-/* The skip link is invisible until it is focused, and then it is not. */
 test('the skip link appears on focus and reaches the content', async ({ page }) => {
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);
@@ -214,30 +149,20 @@ test('the skip link appears on focus and reaches the content', async ({ page }) 
         const skip = page.locator('a.skip-link');
         await expect(skip).toHaveAttribute('href', '#main');
 
-        // Parked off screen: its bottom edge is above the top of the viewport.
         const before = await skip.boundingBox();
         expect(before, `${name}: skip link has no box`).not.toBeNull();
         expect(before!.y + before!.height, `${name}: skip link is visible before focus`).toBeLessThanOrEqual(0);
 
-        // First Tab from the top of the document lands on it.
         await page.keyboard.press('Tab');
         await expect(skip).toBeFocused();
 
         const after = await skip.boundingBox();
         expect(after!.y, `${name}: skip link did not come back on focus`).toBeGreaterThanOrEqual(0);
 
-        // And it goes somewhere.
         await expect(page.locator('#main')).toHaveCount(1);
     }
 });
 
-/*
- * Under `prefers-reduced-motion` nothing is running.
- *
- * `tokens.css` zeroes both durations and forces every animation and transition
- * to 0ms, so the correct number of running animations on a marketing page is
- * zero — not "a shorter one".
- */
 test('nothing animates under prefers-reduced-motion', async ({ browser }) => {
     const context = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await context.newPage();
@@ -255,7 +180,6 @@ test('nothing animates under prefers-reduced-motion', async ({ browser }) => {
 
         expect(running, `${name} has running animations under reduced motion`).toEqual([]);
 
-        // And the tokens themselves are zeroed, which is what the templates read.
         const durations = await page.evaluate(() => {
             const s = getComputedStyle(document.documentElement);
 
@@ -268,11 +192,6 @@ test('nothing animates under prefers-reduced-motion', async ({ browser }) => {
     await context.close();
 });
 
-/*
- * The surfaces, asserted rather than photographed — `--paper` and `--white` are
- * a YIQ delta of 8.3 apart and no usable snapshot threshold can tell them
- * apart. See `support.ts`.
- */
 test('every marketing page is on the editorial canvas', async ({ page }) => {
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);
@@ -280,24 +199,11 @@ test('every marketing page is on the editorial canvas', async ({ page }) => {
         await expectSurface(page.locator('body'), 'canvas', `the ${name} page`);
     }
 
-    /*
-     * The two quoted text messages on the trade page are the one place this
-     * surface uses --white, and the second of the pair is the sunk step. A
-     * screenshot cannot see either of them change: --canvas and --white are a
-     * YIQ delta of 8.3 and no usable threshold separates them. See support.ts.
-     */
     await open(page, '/dog-grooming', 1280);
     await expectSurface(page.locator('.thread .msg').first(), 'white', 'the waitlist offer message');
     await expectSurface(page.locator('.thread .msg-later').first(), 'canvasSunk', 'the slot-taken message');
 });
 
-/**
- * One header and one footer, drawn from one component, on every page.
- *
- * The feature suite compares the two regions byte for byte. This is the other
- * half of that: the rendered thing is the same size and in the same place, which
- * a string comparison cannot see.
- */
 test('the header and footer are the same component on every page', async ({ page }) => {
     const shapes: Record<string, string> = {};
 
@@ -312,8 +218,6 @@ test('the header and footer are the same component on every page', async ({ page
                 headerHeight: Math.round(head.height),
                 headerLinks: document.querySelectorAll('header a').length,
                 footerLinks: foot.querySelectorAll('a').length,
-                // The mark, which replaced the dashed placeholder slot. One
-                // image, and the slot itself gone rather than emptied.
                 logoSlot: foot.querySelectorAll('.logo-slot').length,
                 logoArt: foot.querySelectorAll('img, svg').length,
             });
@@ -332,7 +236,6 @@ test('the header and footer are the same component on every page', async ({ page
     expect(JSON.parse(first).logoArt).toBe(1);
 });
 
-/* The surface attribute every other layer keys off. */
 test('the marketing surface is named on the root of every page', async ({ page }) => {
     for (const [name, path] of ALL_PAGES) {
         await open(page, path, 1280);

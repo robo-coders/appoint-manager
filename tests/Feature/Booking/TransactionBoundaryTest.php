@@ -15,7 +15,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
-/** Records the open transaction depth at the moment it is asked to send. */
 class TransactionWatchingSms implements SmsGateway
 {
     /** @var list<int> */
@@ -35,7 +34,6 @@ class TransactionWatchingSms implements SmsGateway
     }
 }
 
-/** Records the open transaction depth at the moment it is asked to move money. */
 class TransactionWatchingStripe implements StripeGateway
 {
     /** @var list<int> */
@@ -104,8 +102,6 @@ class TransactionWatchingStripe implements StripeGateway
 
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
-    // RefreshDatabase wraps each test in a transaction, so "no transaction of our
-    // own is open" means the depth is back at this baseline, not literally zero.
     $this->baseline = DB::transactionLevel();
     $this->sms = new TransactionWatchingSms;
     $this->stripe = new TransactionWatchingStripe;
@@ -185,7 +181,6 @@ it('keeps the cancellation and the refund recorded when notifying afterwards fai
     try {
         app(BookingService::class)->cancel($booking, 'customer', false);
     } catch (Throwable) {
-        // The notification may fail; the money and the booking state must not.
     }
 
     $fresh = $booking->fresh();
@@ -197,8 +192,6 @@ it('keeps the cancellation and the refund recorded when notifying afterwards fai
 
 it('does not lose a booking when the SMS provider is down', function () {
     Mail::fake();
-    // Production runs a real queue; under the sync driver the job would execute
-    // inline and defeat the isolation this test is about.
     config(['queue.default' => 'database']);
     $salon = aSalon();
     $customer = Customer::factory()->create(['tenant_id' => $salon['tenant']->id, 'phone' => '+447700900000']);

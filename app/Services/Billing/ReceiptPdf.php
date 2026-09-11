@@ -48,9 +48,7 @@ class ReceiptPdf
         return $relative;
     }
 
-    /**
-     * @return array{legal_name: string, address: string, company_number: string, vat_number: string}
-     */
+    /** @return array{legal_name: string, address: string, company_number: string, vat_number: string} */
     private function seller(): array
     {
         $seller = config('billing.seller', []);

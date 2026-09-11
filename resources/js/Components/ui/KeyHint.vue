@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** A keyboard shortcut, shown in passing so the app teaches its own shortcuts. */
 defineProps<{ keys: string[] }>();
 </script>
 

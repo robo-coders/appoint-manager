@@ -22,7 +22,6 @@ use Inertia\Response;
 
 class StaffController extends Controller
 {
-    /** Short, and in the order a week runs. */
     private const DAY_NAMES = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'];
 
     public function index(): Response
@@ -60,23 +59,8 @@ class StaffController extends Controller
                 'role' => $user->role,
                 'is_bookable' => $user->is_bookable,
                 'is_active' => $user->is_active,
-                /*
-                 * The owner's own row always reads true and the control is not
-                 * offered for it — an owner cannot be locked out of their own
-                 * customer list, and a switch that silently does nothing is
-                 * worse than no switch.
-                 */
                 'can_see_customer_contacts' => $user->isOwner() || $user->can_see_customer_contacts,
                 'colour' => $user->colour,
-                /*
-                 * The row, rather than four more columns.
-                 *
-                 * A staff list is one row per person and the questions asked of
-                 * it are "who is this, when do they work, how busy are they" —
-                 * which is a name, a line of hours and one number, not a table
-                 * of booleans. `Bookable` and `Active` were two badges saying
-                 * almost the same thing; the role line says it once, in words.
-                 */
                 'initial' => Str::upper(Str::substr(trim($user->name), 0, 1)),
                 'role_label' => $this->roleLabel($user),
                 'hours' => $this->hoursSummary($rules->get($user->id) ?? collect()),
@@ -92,7 +76,6 @@ class StaffController extends Controller
         ]);
     }
 
-    /** "Owner · takes bookings", and the two states that are worth saying out loud. */
     private function roleLabel(User $user): string
     {
         $parts = [$user->role === UserRole::Owner ? 'Owner' : 'Staff'];
@@ -106,15 +89,7 @@ class StaffController extends Controller
         return implode(' · ', $parts);
     }
 
-    /**
-     * "Mon–Fri · 09:00–17:00", or the days spelt out when they are not one block.
-     *
-     * The run is collapsed only when every day in it keeps the same times, which
-     * is the case a summary is actually for. A week with a short Friday says so
-     * rather than being flattened into a claim that is not true.
-     *
-     * @param  Collection<int, AvailabilityRule>  $rules
-     */
+    /** @param  Collection<int, AvailabilityRule>  $rules */
     private function hoursSummary(Collection $rules): string
     {
         if ($rules->isEmpty()) {
@@ -170,12 +145,7 @@ class StaffController extends Controller
         return $days.' · '.$times;
     }
 
-    /**
-     * The week, as one figure. Rounded to the nearest half hour and rendered
-     * with its unit, because "37.5 h" is what somebody says out loud.
-     *
-     * @param  Collection<int, AvailabilityRule>  $rules
-     */
+    /** @param  Collection<int, AvailabilityRule>  $rules */
     private function weeklyHours(Collection $rules): ?string
     {
         if ($rules->isEmpty()) {
@@ -194,15 +164,7 @@ class StaffController extends Controller
         return (floor($hours) === $hours ? (string) (int) $hours : number_format($hours, 1)).' h';
     }
 
-    /**
-     * How many appointments each person has in the week this is being read in.
-     *
-     * Cancellations, declines and no-shows are not load — the chair is empty for
-     * all three — so `vacating()` is what decides, which is the same list the
-     * availability engine and the diary already agree on.
-     *
-     * @return array<int, int>
-     */
+    /** @return array<int, int> */
     private function bookedThisWeek(string $timezone): array
     {
         $now = CarbonImmutable::now($timezone);
@@ -226,8 +188,6 @@ class StaffController extends Controller
             'role' => UserRole::Staff,
             'is_bookable' => $request->boolean('is_bookable', true),
             'is_active' => true,
-            // Same default as the onboarding step and the migration: a new
-            // colleague can reach their customers unless somebody says not.
             'can_see_customer_contacts' => $request->boolean('can_see_customer_contacts', true),
             'colour' => $request->input('colour', '#71717A'),
         ]);

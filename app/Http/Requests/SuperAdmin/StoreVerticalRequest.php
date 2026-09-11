@@ -18,9 +18,7 @@ class StoreVerticalRequest extends FormRequest
         return $this->user()?->is_super_admin ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [
@@ -29,9 +27,7 @@ class StoreVerticalRequest extends FormRequest
         ];
     }
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     public function messages(): array
     {
         return [

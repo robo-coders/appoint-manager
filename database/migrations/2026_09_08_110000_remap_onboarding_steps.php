@@ -3,26 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Re-cuts saved onboarding progress onto the new five-step list.
- *
- * The steps were `business, services, staff, hours`. They are now
- * `basics, business, services, staff, link`: opening hours moved forward into
- * `basics` (which also owns the trading name, the booking-page slug and the
- * vertical, all three of which registration already collected), and `link` —
- * the booking-link screen — became the step that finishes the flow.
- *
- * Two populations to carry over, and only one of them can see the difference:
- *
- *   - **Mid-flow** (`onboarding_completed_at` null). A tenant that had saved
- *     `hours` has, by definition, also got a name, a slug and a vertical from
- *     registration — so `basics` is satisfied and is marked. Without this they
- *     would be sent back to step one to retype hours they had already given.
- *   - **Finished** (`onboarding_completed_at` set). The gate reads the
- *     timestamp, not the list, so these tenants are unaffected either way. The
- *     list is normalised anyway so nothing downstream has to special-case a
- *     completed tenant whose steps do not match the current step names.
- */
 return new class extends Migration
 {
     public function up(): void
@@ -55,9 +35,7 @@ return new class extends Migration
         });
     }
 
-    /**
-     * @param  callable(list<string>, bool): list<string>  $map
-     */
+    /** @param  callable(list<string>, bool): list<string>  $map */
     private function rewrite(callable $map): void
     {
         DB::table('tenants')

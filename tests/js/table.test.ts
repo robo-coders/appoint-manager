@@ -3,16 +3,6 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { h } from 'vue';
 
-/**
- * `ui/Table` is the load-bearing component: seven screens are it. Its contract
- * is `public/mockups/bookings-table.html` — sortable, sticky header, hairline
- * rows, no zebra, numbers right and mono, one actions menu per row, an empty
- * state, and a skeleton shaped to the real columns.
- *
- * These test the rendered table and the names a screen reader would hear, not
- * the sorting function. A sorted array is not the claim; a sorted *table* with
- * a correct `aria-sort` is.
- */
 const columns: Column[] = [
     { key: 'when', label: 'When', width: 'when', sortable: true },
     { key: 'customer', label: 'Customer', sortable: true },
@@ -33,8 +23,6 @@ describe('sorting', () => {
     it('sorts on the value, not on what the cell prints', () => {
         const wrapper = mount(Table, { props: { columns, rows, label: 'Bookings' } });
 
-        // "11 Mar" before "10 Mar" alphabetically; 2026-03-10 before 2026-03-11
-        // as a value. This is the difference the `when` column depends on.
         wrapper.findAll('thead button')[0].trigger('click');
 
         return wrapper.vm.$nextTick().then(() => {
@@ -68,9 +56,6 @@ describe('sorting', () => {
 
         await wrapper.findAll('thead button')[1].trigger('click');
 
-        // The click is emitted for the caller to act on; the table must not
-        // also re-sort locally, or the page shows one order and the server
-        // sends another.
         expect(wrapper.emitted('sort')).toBeTruthy();
         expect(bodyText(wrapper, 1)).toEqual(['Ruth Kowalczyk', 'Naomi Ellery', 'Dele Okonjo']);
     });
@@ -123,12 +108,6 @@ describe('structure the mockup asks for', () => {
 });
 
 describe('the row actions menu', () => {
-    /*
-     * The bug this guards: seven rows each announcing "Actions" is seven
-     * identical announcements, and a screen-reader user tabbing the column has
-     * no way to tell which row they are on. `bookings-table.html` labels each
-     * one with its row.
-     */
     it('names each menu after its own row', () => {
         const wrapper = mount(Table, {
             props: {
@@ -185,12 +164,6 @@ describe('empty', () => {
 });
 
 describe('loading', () => {
-    /*
-     * The mockup is explicit: one bar per column at that column's width, not
-     * three generic bars. A skeleton with the wrong column count is a visible
-     * gap where a column should be, and it is exactly the kind of thing that
-     * passes every other gate.
-     */
     it('draws one bar per column, in that column', () => {
         const wrapper = mount(Table, { props: { columns, rows: [], label: 'Bookings', loading: true, loadingRows: 4 } });
 
@@ -229,19 +202,6 @@ describe('loading', () => {
     });
 });
 
-/**
- * The narrow state — below md, where the table becomes a list.
- *
- * A table is a grid because comparing down a column is the point, and on a
- * 375px screen there is no column to compare down: the amount and the row menu
- * sat off the right-hand edge behind a horizontal scroll nobody discovers, and
- * names broke over two and three lines so the rows went ragged. What a salon
- * owner does on a phone is find one person and act on them, which is a list.
- *
- * jsdom has no viewport, so what is asserted here is the *structure* and the
- * classes that switch between the two — not which one a 375px browser paints.
- * The 375px painting is covered by `tests/e2e/screens.spec.ts`.
- */
 describe('the narrow state', () => {
     const narrow: Column[] = [
         { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'line' },
@@ -258,12 +218,6 @@ describe('the narrow state', () => {
         },
     ];
 
-    /*
-     * Opt-in, and this is the property that makes it safe to land on one screen
-     * at a time: a table whose columns say nothing about a narrow viewport is
-     * left exactly as it was rather than silently given a layout nobody
-     * designed.
-     */
     it('is not rendered at all unless a column asks for it', () => {
         const wrapper = mount(Table, { props: { columns, rows, label: 'Bookings' } });
 
@@ -278,12 +232,9 @@ describe('the narrow state', () => {
         expect(list.exists()).toBe(true);
         expect(list.attributes('aria-label')).toBe('Bookings');
 
-        // One list item per row, and the table is still there for a desk.
         expect(wrapper.findAll('ul > li')).toHaveLength(3);
         expect(wrapper.findAll('tbody tr')).toHaveLength(3);
 
-        // The switch is a class on each container, so there is one DOM and no
-        // JavaScript deciding which layout a viewport gets.
         expect(list.element.parentElement?.className).toContain('md:hidden');
         expect(wrapper.find('table').element.parentElement?.className).toContain('hidden');
         expect(wrapper.find('table').element.parentElement?.className).toContain('md:block');
@@ -297,21 +248,13 @@ describe('the narrow state', () => {
 
         const first = wrapper.findAll('ul > li')[0];
 
-        // The headline is the title column, on its own line.
         expect(first.find('p').text()).toBe('Ruth Kowalczyk');
-        // The line columns follow, as one sentence rather than as more columns.
         expect(first.findAll('p')[1].text()).toContain('2026-03-11 09:00');
         expect(first.findAll('p')[1].text()).toContain('Ana');
-        // And the meta value is in the same block as the menu.
         expect(first.text()).toContain('5200');
         expect(first.find('button[aria-haspopup="menu"]').exists()).toBe(true);
     });
 
-    /*
-     * `secondary` hides a column below md *in the table*. In the list it means
-     * nothing — a column that has asked to be part of the second line has said
-     * where it goes on a phone, which is the more specific instruction.
-     */
     it('shows a secondary column in the list even though the table hides it', () => {
         const wrapper = mount(Table, { props: { columns: narrow, rows, label: 'Bookings' } });
 
@@ -335,7 +278,6 @@ describe('the narrow state', () => {
         const empty = mount(Table, {
             props: { columns: narrow, rows: [], label: 'Bookings', emptyTitle: 'No bookings yet' },
         });
-        // Once in the list and once in the table, never neither.
         expect(empty.text()).toContain('No bookings yet');
         expect(empty.find('ul > li').exists()).toBe(false);
 

@@ -2,29 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { FROZEN_NOW } from '../../playwright.config';
 import { DEMO } from './support';
 
-/**
- * The public booking page tells three different stories, and until phase 16 it
- * told two of them with the same words.
- *
- * A salon that has not finished setting up has no services and nobody with
- * hours; a salon that is busy has both and no free slot. Both arrived at the
- * island as "no proposal", so a business that had never opened was announced to
- * its first customer as "fully booked — leave your number and we will text you
- * the moment something opens up". Nobody was going to text them.
- *
- * Signed out, in the `public` project, because that is who reads this page.
- *
- * Text rather than screenshots on purpose. The claim here is *which words* each
- * state uses, and the snapshot baselines in this suite are only valid against a
- * pristine seed (see `scripts/e2e-setup.sh`) — a new baseline for a state that
- * is about copy would be a pixel gate on a sentence.
- *
- * `bramble-co` and `clover-grooming` come from the console fixtures in the
- * setup script: live booking pages, no services, no hours. They were seeded to
- * give the super-admin list something to sort and they are, by accident, an
- * exact copy of the bug as reported.
- */
-
 const SETUP_INCOMPLETE_SLUG = 'bramble-co';
 
 async function open(page: Page, slug: string): Promise<void> {
@@ -52,7 +29,6 @@ test('a business that has not finished setting up is not called fully booked', a
     await expect(body).not.toContainText('fully booked');
     await expect(body).not.toContainText('nothing free in the diary');
 
-    // The waitlist is the busy-salon answer. It is not offered here.
     await expect(page.getByRole('button', { name: /text me when something opens/i })).toHaveCount(0);
     await expect(page.getByLabel('Mobile')).toHaveCount(0);
 });

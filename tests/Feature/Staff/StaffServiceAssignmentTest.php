@@ -9,26 +9,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 
-/**
- * Which services each member of staff performs.
- *
- * The link itself is not new — `service_user` has been the availability
- * engine's only answer to "who can do this" since the public booking page
- * shipped, and the Services screen has always been able to write it from the
- * service's side. What was missing was the other direction: an operator adding
- * a colleague had no way to say what that colleague does, so every new person
- * arrived attached to nothing and every service they should have covered was
- * silently unbookable online.
- *
- * Two rules in here are the ones worth breaking if they regress:
- *
- *   - **A new person gets everything.** The default is on the *creation*
- *     path, not only on the form, so a staff member added by any route is
- *     bookable at once.
- *   - **A sync only ever touches active services.** The checklist shows active
- *     services only, so a blind `sync()` of what it submits would quietly drop
- *     a link to a service that happened to be hidden that afternoon.
- */
 function aSalonWithThreeServices(): array
 {
     $owner = User::factory()->create(['name' => 'Ada Owner']);
@@ -43,7 +23,6 @@ function aSalonWithThreeServices(): array
     ];
 }
 
-/** The pivot, read without any scope at all — the table, not a relationship's opinion of it. */
 function linkedServiceIds(User $staff): array
 {
     return DB::table('service_user')
@@ -67,11 +46,6 @@ describe('a new staff member', function () {
         expect(linkedServiceIds($created))->toEqualCanonicalizing([$groom->id, $trim->id]);
     });
 
-    /*
-     * The default lives on the creation path rather than in the form's initial
-     * state, which is what this asserts: no `service_ids` in the payload at all
-     * and the links are still written.
-     */
     it('takes the default even when the request never mentions services', function () {
         ['owner' => $owner, 'groom' => $groom, 'trim' => $trim] = aSalonWithThreeServices();
 
@@ -144,11 +118,6 @@ describe('editing a staff member', function () {
         expect(linkedServiceIds($staff))->toBe([$groom->id]);
     });
 
-    /*
-     * The checklist only lists active services, so a straight `sync()` of what
-     * it submits would detach `hidden` — and nobody touched it. Hiding a service
-     * for a fortnight would quietly unpick every link it had.
-     */
     it('leaves a link to an inactive service alone', function () {
         ['owner' => $owner, 'tenant' => $tenant, 'groom' => $groom, 'trim' => $trim, 'hidden' => $hidden] = aSalonWithThreeServices();
         $staff = User::factory()->for($tenant)->staff()->create();
@@ -175,12 +144,6 @@ describe('editing a staff member', function () {
         expect(linkedServiceIds($staff))->toEqualCanonicalizing([$groom->id, $trim->id]);
     });
 
-    /*
-     * `patchJson`, not `patch`. An empty array does not survive form encoding —
-     * it vanishes from the payload, so the server would read "not submitted"
-     * rather than "submitted empty" and change nothing. Inertia's `useForm`
-     * sends JSON, which is what this reproduces.
-     */
     it('allows every service to be unchecked', function () {
         ['owner' => $owner, 'tenant' => $tenant, 'groom' => $groom, 'trim' => $trim] = aSalonWithThreeServices();
         $staff = User::factory()->for($tenant)->staff()->create();
@@ -297,11 +260,6 @@ describe('the services list count', function () {
 });
 
 describe('online availability', function () {
-    /*
-     * Two services, same salon, same hours, same staff member — and only one of
-     * them on `service_user`. One engine call each, so the per-tenant
-     * availability cache cannot be what makes the second answer empty.
-     */
     it('offers slots only for the service the staff member is linked to', function () {
         $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 
@@ -332,10 +290,6 @@ describe('online availability', function () {
         expect($slots->first()?->staffIds)->toBe([$salon['staff']->id]);
     });
 
-    /*
-     * The "not bookable online" check reads the same table, so a link written
-     * from the staff edit form is the one it answers from.
-     */
     it('answers the setup check from the same table the staff form writes', function () {
         ['owner' => $owner, 'tenant' => $tenant, 'groom' => $groom] = aSalonWithThreeServices();
         $staff = User::factory()->for($tenant)->staff()->create(['is_bookable' => true]);
@@ -355,11 +309,6 @@ describe('online availability', function () {
         expect(BookingReadiness::hasStaffForService($tenant, $groom))->toBeFalse();
     });
 
-    /*
-     * Unchecking a service is a statement about *new* availability. A booking
-     * already in the diary is an appointment somebody has been told about, and
-     * this screen does not get to cancel it.
-     */
     it('leaves an existing future booking untouched when the link is removed', function () {
         $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 

@@ -6,28 +6,6 @@ import Countdown from '@/Components/ui/Countdown.vue';
 import axios from 'axios';
 import { nextTick, ref } from 'vue';
 
-/**
- * A freed appointment, offered to somebody on the waitlist.
- *
- * The same page as the booking page, wearing a different hat: the same 34px
- * statement of one finished appointment, the same single column, the same
- * primary button. It used to be a 20px heading, a bare time and a black button
- * with no relationship to anything else the customer had seen.
- *
- * Two things are specific to this screen.
- *
- * **The countdown is live.** The offer expires, several people were texted, and
- * a static "expires at 15:40" gives a customer no reason to decide now — which
- * is the entire mechanic. `Countdown` ticks in mono so the digits do not
- * shuffle, and it is the second-most prominent thing here after the
- * appointment itself.
- *
- * **Taken is a designed state, not an error.** Somebody else was faster; that
- * is the system working, not a fault. So it is the same layout with the same
- * dominant type, showing the *next* appointment already proposed, and one
- * button. A red alert box would tell a customer they had done something wrong.
- */
-
 const props = defineProps<{
     offer: {
         token: string;
@@ -42,7 +20,6 @@ const props = defineProps<{
         context: string;
         cost_line: string;
     };
-    /** The suggester's answer for this customer, used only if the slot is taken. */
     fallback: {
         day_label: string;
         weekday: string;
@@ -125,7 +102,6 @@ const confirmPay = async () => {
     window.location.href = manageUrl.value;
 };
 
-/** The salon's own booking page, for a customer whose offer has gone. */
 const goBook = () => {
     window.location.href = props.urls.book;
 };
@@ -151,8 +127,6 @@ const claim = async () => {
     } catch (err: unknown) {
         const status = axios.isAxiosError(err) ? err.response?.status : 0;
 
-        // 409 someone else claimed it, 410 the offer ran out. Both are the same
-        // fact for a customer: this appointment is not available any more.
         if (status === 409 || status === 410) {
             taken.value = true;
         } else {
@@ -168,10 +142,6 @@ const claim = async () => {
     <div>
         <p v-if="error" class="mb-4 text-15 text-danger" role="alert">{{ error }}</p>
 
-        <!-- ============================================================
-             Taken. Designed, not an error: same layout, same 34px, and the
-             next appointment already proposed.
-             ============================================================ -->
         <section v-if="taken">
             <template v-if="fallback">
                 <ProposalHeading
@@ -213,9 +183,6 @@ const claim = async () => {
             </template>
         </section>
 
-        <!-- ============================================================
-             Pay the deposit — the last step before the slot is really held.
-             ============================================================ -->
         <section v-else-if="clientSecret" class="space-y-4">
             <h1 class="text-20 font-medium">Pay the deposit</h1>
             <p class="text-15 text-ink-2">{{ offer.cost_line }}. Confirmation happens once the payment succeeds.</p>
@@ -223,9 +190,6 @@ const claim = async () => {
             <Button variant="brand" block :loading="paying" @click="confirmPay">Pay now</Button>
         </section>
 
-        <!-- ============================================================
-             The offer.
-             ============================================================ -->
         <section v-else>
             <ProposalHeading
                 :context="offer.context"
@@ -235,8 +199,6 @@ const claim = async () => {
                 level="h1"
             />
 
-            <!-- The clock. Second only to the appointment itself, because the
-                 whole mechanic is that it runs out. -->
             <p v-if="offer.expires_at && !expired" class="mt-4 text-17">
                 Yours for
                 <Countdown :expires-at="offer.expires_at" class="text-17" @expired="expired = true" />
@@ -247,9 +209,6 @@ const claim = async () => {
             </p>
 
             <div class="mt-6">
-                <!-- Weekday and time, not the whole date: the date is in 34px
-                     three lines above, and a button that restates it is a button
-                     that has stopped naming an outcome and started narrating. -->
                 <Button variant="brand" block :loading="submitting" :disabled="expired" @click="claim">
                     Take {{ offer.weekday }} at <span class="font-mono">{{ offer.time }}</span>
                 </Button>

@@ -12,14 +12,6 @@ use App\Models\Message;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/**
- * The record page, grouped.
- *
- * The page reads its four sections straight off the server, so the thing worth
- * asserting is that the server puts the right fact under the right heading and
- * does the one sum on the page — the balance still owed on the day — rather
- * than leaving the owner to do it.
- */
 function aBookingRecord(array $overrides = []): array
 {
     test()->travelTo(CarbonImmutable::parse('2026-03-16 09:00:00', 'Europe/London'));
@@ -100,7 +92,6 @@ it('works out what is still owed on the day rather than leaving her to', functio
     $response = actingAsTenant($owner)->get(route('bookings.show', $booking));
     $payment = rowsOf($response->viewData('page')['props']['groups'], 'Payment');
 
-    // Nothing paid: the whole price is still due.
     expect($payment)->toMatchArray([
         'Service price' => '£35.00',
         'Deposit due' => '£10.00',
@@ -206,10 +197,6 @@ it('names a cancellation and its reason under status', function () {
     ]);
 });
 
-/*
- * Deposits are opt-in and most salons never turn them on. Three rows of £0.00
- * and a balance identical to the price is four lines to say one thing.
- */
 it('says nothing about a deposit for a salon that does not take one', function () {
     [$owner, $booking] = aBookingRecord([
         'status' => BookingStatus::Confirmed,

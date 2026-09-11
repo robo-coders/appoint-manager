@@ -16,9 +16,7 @@ class PaymentFailure extends Model
         'resolved_at',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -28,9 +26,7 @@ class PaymentFailure extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Tenant, $this>
-     */
+    /** @return BelongsTo<Tenant, $this> */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

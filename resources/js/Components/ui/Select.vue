@@ -11,7 +11,6 @@ const props = defineProps<{
     hint?: string;
     disabled?: boolean;
     required?: boolean;
-    /** Optional data-driven options; a default slot of <option> also works. */
     options?: Array<{ value: string | number; label: string }>;
 }>();
 

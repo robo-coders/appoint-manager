@@ -10,20 +10,6 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/**
- * The last step of setting up hands over a diary with something in it.
- *
- * An empty diary on day one is the moment a salon owner decides this was a
- * mistake: twenty minutes of typing, and then a blank week. Every salon signing
- * up has a paper book with tomorrow already in it, so the final step asks for
- * one line of it.
- *
- * Optional throughout. Skipping it is the same flow it has always been, and
- * that is asserted here rather than assumed — a required field wearing the word
- * "optional" is the failure this suite exists to catch.
- */
-
-/** A salon part-way through setup, with a service and a Monday. */
 function aSalonSettingUp(): array
 {
     $tenant = Tenant::factory()->onboardingIncomplete()->create(['timezone' => 'Europe/London']);
@@ -44,22 +30,12 @@ function aSalonSettingUp(): array
     return compact('tenant', 'owner', 'service');
 }
 
-/** Monday 09:00 next week, local, which is inside the hours posted below. */
 function aMondayMorning(): CarbonImmutable
 {
     return CarbonImmutable::parse('2026-09-07 09:00:00', 'Europe/London');
 }
 
-/**
- * Step one, then the last step — which is where the first appointment now lives.
- *
- * Opening hours moved to `basics` when the flow was re-cut, so finishing setup
- * is two requests rather than one: the week is written first, and the booking
- * is written against it on the final screen. The ordering is the same
- * constraint it always was, just spread over two steps instead of one.
- *
- * @param  array<string, mixed>|null  $first
- */
+/** @param  array<string, mixed>|null  $first */
 function finishSetup(array $salon, ?array $first)
 {
     $tenant = $salon['tenant'];
@@ -77,11 +53,7 @@ function finishSetup(array $salon, ?array $first)
     ]);
 }
 
-/**
- * Seven days, open 09:00-17:00 on the ones named and shut on the rest.
- *
- * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
- */
+/** @return list<array{weekday: int, open: bool, start_time: string, end_time: string}> */
 function aWeekOpenOn(int ...$weekdays): array
 {
     return collect(range(1, 7))
@@ -107,8 +79,6 @@ it('puts the first appointment in the diary and lands on its day', function () {
         'starts_at' => aMondayMorning()->format('Y-m-d\TH:i'),
     ]);
 
-    // The diary, on the day the appointment is on — not on today, where it
-    // would not be visible.
     $response->assertRedirect(route('diary.index', ['date' => '2026-09-07']));
 
     $booking = Booking::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
@@ -117,8 +87,6 @@ it('puts the first appointment in the diary and lands on its day', function () {
         ->and($booking->status)->toBe(BookingStatus::Confirmed)
         ->and($booking->starts_at->timezone('Europe/London')->format('H:i'))->toBe('09:00');
 
-    // A real customer, not a name on a row. The rest of the product can do
-    // something with a customer and nothing with a string.
     expect(Customer::withoutGlobalScopes()->where('id', $booking->customer_id)->value('name'))
         ->toBe('Naomi Ellery');
 });
@@ -132,13 +100,6 @@ it('finishes setup either way', function () {
         ->and(Booking::withoutGlobalScopes()->count())->toBe(0);
 });
 
-/*
- * The ordering that matters. `BookingService` checks the slot against the
- * availability rules, so the week has to be on the tenant before the booking is
- * attempted. Step one writes it and the final step reads it; written the other
- * way round, the first appointment is refused for every salon that has just
- * told us when it opens.
- */
 it('accepts an appointment inside the hours set on step one', function () {
     $salon = aSalonSettingUp();
 
@@ -156,7 +117,6 @@ it('accepts an appointment inside the hours set on step one', function () {
 it('says so when the time is outside the hours just set, rather than failing silently', function () {
     $salon = aSalonSettingUp();
 
-    // 21:00 on the Monday. The week saved on step one says 09:00-17:00.
     $response = finishSetup($salon, [
         'customer_name' => 'Naomi Ellery',
         'customer_email' => 'naomi@example.com',
@@ -170,11 +130,6 @@ it('says so when the time is outside the hours just set, rather than failing sil
     expect(Booking::withoutGlobalScopes()->count())->toBe(0);
 });
 
-/*
- * Half an appointment is a mistake, not a skip. Sending a name with no time has
- * to be rejected on the field rather than quietly dropped — otherwise the
- * person who typed a name and landed on an empty diary has no way to know why.
- */
 it('rejects a half-filled appointment instead of ignoring it', function () {
     $salon = aSalonSettingUp();
 
@@ -201,10 +156,6 @@ it('accepts a first appointment that is only a name', function () {
         ->toBeNull();
 });
 
-/*
- * Tenancy. `ExistsForTenant` rather than `exists`, so a service id belonging to
- * a different salon is a validation failure and not a cross-tenant booking.
- */
 it('refuses another salon’s service', function () {
     $salon = aSalonSettingUp();
     $other = aSalonSettingUp();

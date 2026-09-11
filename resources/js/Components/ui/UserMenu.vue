@@ -2,25 +2,12 @@
 import { Link, router } from '@inertiajs/vue3';
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
-/**
- * The signed-in person, and the two things they do from the top bar.
- *
- * `AppLayout` hand-rolled this: a bare `v-if` panel with no `aria-expanded`, no
- * Escape, no outside-click, no focus return, and no keyboard movement between
- * the items. It is a menu, so it behaves like one.
- *
- * Separate from `Menu` because this one is a labelled trigger rather than an
- * icon, and because logout has to be a POST — a `<Link method="post">`, never a
- * GET that a prefetcher or a scanner can fire on its own.
- */
 const props = withDefaults(
     defineProps<{
         name: string;
-        /** Shown under the name. The tenant, or the email. */
         detail?: string;
         profileHref: string;
         logoutHref: string;
-        /** Shown when a super admin is borrowing this session. */
         impersonating?: boolean;
         stopImpersonatingHref?: string;
     }>(),
@@ -47,8 +34,6 @@ const openMenu = async (focus: 'first' | 'last' = 'first') => {
 };
 
 const onTriggerKeydown = (event: KeyboardEvent) => {
-    // Arrow keys open the menu and land on an item, which is what a keyboard
-    // user expects from anything with aria-haspopup.
     if (event.key === 'ArrowDown') {
         event.preventDefault();
         return openMenu('first');
@@ -120,11 +105,6 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside));
                 Your profile
             </Link>
 
-            <!--
-                Stop impersonating sits above log out on purpose: a super admin
-                who is finished with a tenant wants their own session back, not
-                to be signed out of everything.
-            -->
             <button
                 v-if="impersonating && stopImpersonatingHref"
                 type="button"

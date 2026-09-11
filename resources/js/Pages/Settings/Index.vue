@@ -11,28 +11,6 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Business details.
- *
- * What this was: nine hand-rolled inputs with a hand-written label above each,
- * no `form.errors` binding anywhere, and a 400-option native select for the
- * timezone. The consequence of the missing error binding was not cosmetic — a
- * rejected value came back with *nothing* on screen to say so, so the form
- * silently discarded whatever had been typed.
- *
- * What it is now:
- *
- *   - every field is a library control, and every one of them takes its own
- *     error, which `ui/Field` renders below the input and links with
- *     `aria-describedby`
- *   - the timezone is `ui/Combobox` — typing "lon" finds Europe/London, which
- *     is not something a native select with four hundred options can do
- *   - `ui/SaveState` says whether there is anything unsaved, whether it is
- *     saving, and whether it saved. A form that succeeds silently is a form
- *     people press twice
- *   - Branding and Payments are tabs on this screen rather than two underlined
- *     words above it
- */
 const props = defineProps<{
     business: {
         name: string;
@@ -70,10 +48,6 @@ const form = useForm({
 
 const savedAt = ref<number | null>(null);
 
-/*
- * "Europe/London" reads better as "Europe · London", and the underscore in
- * "New_York" is a filename, not a place. The value on the wire is untouched.
- */
 const timezoneOptions = computed(() =>
     props.timezones.map((zone) => ({ value: zone, label: zone.replace(/_/g, ' ').replace('/', ' · ') })),
 );
@@ -109,11 +83,6 @@ const submit = () =>
                 required
             />
 
-            <!--
-                A searchable combobox, not four hundred options in a native
-                select. "lon" reaches Europe/London; scrolling reaches it in
-                about a minute.
-            -->
             <Combobox
                 v-model="form.timezone"
                 label="Timezone"

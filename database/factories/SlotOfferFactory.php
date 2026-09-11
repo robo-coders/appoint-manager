@@ -9,14 +9,10 @@ use App\Models\WaitlistEntry;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<SlotOffer>
- */
+/** @extends Factory<SlotOffer> */
 class SlotOfferFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         $starts = now()->utc()->addDay()->setTime(10, 0);

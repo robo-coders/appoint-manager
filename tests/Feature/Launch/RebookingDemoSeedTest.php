@@ -17,15 +17,6 @@ use App\Services\Rebooking\RebookMessenger;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/*
-| The seeder exists so the rebooking surface can be looked at and tested on a
-| real handset. These assert the two properties that make that possible: the
-| overdue list has variety in it, and running the command twice does not double
-| anything.
-|
-| `demo:rebooking` is local-only, so the environment is flipped for the call.
-*/
-
 function seedRebookingDemo(array $options = []): int
 {
     app()['env'] = 'local';
@@ -80,12 +71,9 @@ it('seeds a salon whose overdue list has genuine variety', function () {
     $rows = app(OverdueSubjects::class)->forTenant($tenant);
     $subjects = Subject::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
 
-    // Around twenty, with a real spread rather than everybody overdue.
     expect($subjects)->toBeGreaterThanOrEqual(20)
         ->and($rows->count())->toBeGreaterThan(8)
         ->and($rows->count())->toBeLessThan($subjects)
-        // A few just due and a few badly overdue, so the sort order means
-        // something when you open the page.
         ->and($rows->where('days_overdue', '<=', 5))->not->toBeEmpty()
         ->and($rows->where('days_overdue', '>=', 40))->not->toBeEmpty();
 });
@@ -118,8 +106,6 @@ it('seeds one subject with the number given on the command line', function () {
 
     expect($mine)->toHaveCount(1);
 
-    // Everybody else is on Ofcom's reserved drama range, so nothing seeded here
-    // can ring a stranger.
     $others = Customer::withoutGlobalScopes()
         ->where('tenant_id', $tenant->id)
         ->where('phone', '!=', '+447700900123')
@@ -141,8 +127,6 @@ it('seeds every state the list can show', function () {
         ->and($stopped)->toBe(1)
         ->and($optedOut)->toBe(1);
 
-    // And the opted-out one is visible on the list with its marker, rather than
-    // silently gone.
     $rows = app(OverdueSubjects::class)->forTenant($tenant);
     expect($rows->where('opted_out', true))->toHaveCount(1);
 });
@@ -237,7 +221,6 @@ it('refuses to run without a test phone number', function () {
     $code = test()->artisan('demo:rebooking', ['--slug' => 'no-phone', '--phone' => ''])->run();
     app()['env'] = 'testing';
 
-    // Anything else and the one subject that is supposed to be yours is not.
     expect($code)->toBe(1)
         ->and(Tenant::query()->withoutGlobalScopes()->where('slug', 'no-phone')->exists())->toBeFalse();
 });
@@ -257,8 +240,6 @@ it('sends one message to the named subject and none to the other twenty', functi
         ->where('name', 'Scout')
         ->firstOrFail();
 
-    // Sending is off, as it is for a real tenant until she confirms a dry run.
-    // --force is what makes a deliberate single test send possible anyway.
     expect(app(RebookMessenger::class)->isEnabled($tenant))->toBeFalse();
 
     test()->artisan('rebooking:send', [

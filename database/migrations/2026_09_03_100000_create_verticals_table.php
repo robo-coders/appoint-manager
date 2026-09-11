@@ -5,17 +5,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Verticals used to live in `config/verticals.php`, which meant a new business
- * type was a code deploy. The table is the source of truth now; the groomer
- * row below is that file, copied rather than required, so `migrate:fresh`
- * still has it after the config is gone.
- *
- * `customer_singular`, `appointment_singular` and `subject_fields` are not on
- * the create form. Callers already read them off `Tenant::vertical()` — the
- * public booking island maps `subject_fields`, marketing copy uses
- * `customer_singular` — so they are stored here rather than dropped.
- */
 return new class extends Migration
 {
     public function up(): void

@@ -19,25 +19,6 @@ import type { Money, Paginated } from '@/types/models';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
 
-/**
- * Bookings. `.design/mockups/backend/DiaryDesk operator redesign` is the
- * binding target, and the whole screen is `ui/Table` — sortable, sticky header,
- * hairline rows, no zebra, money right-aligned in mono, and one actions menu per
- * row rather than five inline links, which is what keeps a 34px row at 34px.
- *
- * The status filter was a `ui/Select` she had to open, read and apply. It is a
- * tab strip now, and the counts come from the server so it says what each one
- * holds before she presses it — which is the whole reason to have four of them
- * rather than a list of six. The tabs answer the same question the Select did
- * and they visit the same URL, so a bookmarked `?status=completed` still works;
- * a status with no tab of its own gets one appended rather than leaving the
- * strip with nothing selected.
- *
- * (Written that way on purpose: `check:components` reads raw text, so a comment
- * naming the tags it forbids trips it. Bluntness is the point of that check —
- * a rule with an exception for comments is a rule with an exception.)
- */
-
 type BookingRow = {
     id: number;
     customer_name: string;
@@ -74,11 +55,6 @@ const onSort = (next: { key: string; direction: 'asc' | 'desc' }) => {
     visit({ sort: next.key, direction: next.direction, page: 1 });
 };
 
-/*
- * The four she actually sorts by. Declined, completed and no-show are on All
- * and nowhere else: a tab per status is six tabs, and three of them would read
- * zero on almost every salon on almost every day.
- */
 const TABS = ['', 'confirmed', 'pending', 'cancelled'];
 
 const status = ref(props.filters.status);
@@ -114,25 +90,11 @@ const exportHref = computed(() =>
     }),
 );
 
-/*
- * `narrow` is the phone layout. At 375px this table put the amount and the row
- * menu off the right-hand edge behind a horizontal scroll — the "Amo…" and "£."
- * that a screenshot at that width shows — while "Sep 16 15:30" broke into three
- * lines in a 152px column. The row is a list item there instead: who it is on
- * top, the appointment underneath, the money hard right. See `ui/Table`.
- *
- * The second line takes the columns in the order they are declared here, which
- * is why `when` leads it: on a phone the question is "when is this", and the
- * customer is already the headline.
- */
 const columns: Column[] = [
     { key: 'when', label: 'When', width: 'when', sortable: true, narrow: 'lead' },
     { key: 'customer', label: 'Customer', sortable: true, narrow: 'title' },
     { key: 'service', label: 'Service', secondary: true, narrow: 'line' },
     { key: 'deposit', label: 'Deposit', narrowOnly: true, narrow: 'line' },
-    // Not in the narrow row. Four parts on the second line wrapped to three,
-    // and the groomer was the part that ended up alone on the last one. It is
-    // already `secondary`, so a phone never showed it in the table either.
     { key: 'staff', label: 'Staff', width: 'staff', secondary: true },
     { key: 'status', label: 'Status', width: 'status', narrow: 'meta' },
     {
@@ -146,11 +108,6 @@ const columns: Column[] = [
     },
 ];
 
-/*
- * The table no longer sorts these itself. `sort` is passed through so a click
- * asks the server for the next page of that order — the same contract as the
- * status and date filters above.
- */
 const rows = computed(() =>
     props.bookings.data.map((booking) => ({
         ...booking,
@@ -167,19 +124,8 @@ const rows = computed(() =>
 const rowLabel = (row: Record<string, unknown>) =>
     `Actions for ${row.customer_name}, ${whenLabel(String(row.starts_at_local))}`;
 
-/*
- * The row goes to the record. The redesign draws every bookings row as one
- * click target and this list is the reason `ui/Table` grew `rowHref` — it had
- * "Open" as the first item of the `⋯` menu, which is two clicks and a read to
- * do the only thing anybody comes to this screen for, on a row that already lit
- * up under the pointer and then did nothing when pressed.
- *
- * The menu keeps what the row cannot say: where else to look at this booking,
- * and the one destructive thing. Nothing in it duplicates the row any more.
- */
 const rowHref = (row: Record<string, unknown>) => route('bookings.show', Number(row.id));
 
-/** The row being cancelled, or null. Confirmed before it is sent — see `ConfirmDialog`. */
 const cancelling = ref<BookingRow | null>(null);
 
 const cancel = () => {
@@ -202,29 +148,8 @@ const cancel = () => {
             <Button @click="router.get(route('diary.index'), { new: 1 })">New booking</Button>
         </PageHeader>
 
-        <!--
-            The filter strip, and the dates on the same line as it. The redesign
-            draws one row of filters over the table with the date control pushed
-            hard right against the same rule; this screen had the row and then a
-            separate labelled form under it, which put 90px of chrome between the
-            heading and the first booking to hold two fields that are usually
-            empty. The labels move to `aria-label` — "From" and "To" either side
-            of an en dash is already the sentence, and a visible label per field
-            is what forced the second row.
-        -->
         <Tabs v-model="status" variant="filter" :tabs="tabs" label="Filter bookings by status">
             <template #end>
-                <!--
-                    `w-full … sm:w-auto` and `flex-wrap` are what keep a 375px
-                    phone off a horizontal scrollbar. Two 152px date fields, a
-                    separator and a button are about 416px of controls, and a
-                    375px viewport has 343px of room — put on one unshrinkable
-                    line they pushed the *document* wider than the window, which
-                    takes the header, the table and the footer sideways with it.
-                    `tests/e2e/screens.spec.ts` asserts exactly that and caught
-                    this. On a phone they stack; from 640 up they are the one line
-                    the redesign draws.
-                -->
                 <form class="flex w-full flex-wrap items-center gap-2 sm:w-auto" @submit.prevent="apply">
                     <TextInput
                         v-model="filters.from"
@@ -267,10 +192,6 @@ const cancel = () => {
                 </span>
             </template>
 
-            <!-- Who it is, then whose pet. The name is the thing being scanned
-                 down this column, so it carries the row's weight and the animal
-                 sits under it rather than beside it — a middot between two names
-                 makes one string of them and neither is found any faster. -->
             <template #cell:customer="{ row }">
                 <span class="block truncate font-medium text-ink">{{ row.customer_name }}</span>
                 <span v-if="row.subject_name" class="mt-px block truncate text-12 text-ink-2">
@@ -278,15 +199,10 @@ const cancel = () => {
                 </span>
             </template>
 
-            <!-- First names. `--col-staff` is 96px and "Marek Kowalski" wraps
-                 to two lines in it, which turns a 34px row into a 48px one;
-                 the mockup shows "Ana" and "Marek" for the same reason. -->
             <template #cell:staff="{ row }">
                 <span class="block truncate text-13 text-ink-2">{{ String(row.staff_name ?? '').split(' ')[0] }}</span>
             </template>
 
-            <!-- Status is text first: the fill is the mark, the label is the
-                 meaning, so it survives greyscale and a screen reader alike. -->
             <template #cell:status="{ row }">
                 <Badge variant="solid" :tone="toneFor(String(row.status))">
                     {{ STATUS_LABELS[String(row.status)] ?? row.status }}
@@ -299,12 +215,6 @@ const cancel = () => {
                 </span>
             </template>
 
-            <!--
-                Secondary actions only. "Open" is gone from here because the row
-                *is* open — see `rowHref` above — and a menu whose first item
-                repeats the control it sits inside teaches that the control does
-                not work.
-            -->
             <template #actions="{ row }">
                 <MenuItem @click="router.get(route('diary.index'), { date: String(row.starts_at_local).slice(0, 10) })">
                     Show in the diary
@@ -324,8 +234,6 @@ const cancel = () => {
                 of <span class="numeral">{{ bookings.total }}</span>
             </template>
 
-            <!-- Hard right on the table's own closing rule, which is where the
-                 redesign puts "Load more". -->
             <template v-if="bookings.last_page > 1" #footer-action>
                 <Button
                     variant="secondary"

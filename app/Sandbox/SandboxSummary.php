@@ -12,9 +12,7 @@ use App\Models\Tenant;
 
 final class SandboxSummary
 {
-    /**
-     * @return array{no_shows: int, pending_offers: int, expired_holds: int, outbox: int, last_action: array{label: string, at: string}|null}
-     */
+    /** @return array{no_shows: int, pending_offers: int, expired_holds: int, outbox: int, last_action: array{label: string, at: string}|null} */
     public static function for(Tenant $tenant): array
     {
         $cutoff = now()->subMinutes((int) config('booking.pending_hold_minutes'));

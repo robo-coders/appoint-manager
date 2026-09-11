@@ -21,8 +21,6 @@ class SearchController extends Controller
                 $query->where(function ($inner) use ($q, $contacts) {
                     $inner->where('name', 'like', '%'.$q.'%');
 
-                    // Matching on the address would confirm an address that the
-                    // result is then not allowed to print. See CustomerController.
                     if ($contacts->unrestricted()) {
                         $inner->orWhere('email', 'like', '%'.$q.'%');
                     }
@@ -32,11 +30,6 @@ class SearchController extends Controller
             ->limit(8)
             ->get(['id', 'name', 'email']);
 
-        /*
-         * The palette prints the address as each hit's second line. Stripped
-         * here rather than hidden there — a JSON endpoint is the easiest thing
-         * in the product to read directly.
-         */
         return response()->json([
             'customers' => $customers->map(fn (Customer $customer) => [
                 'id' => $customer->id,

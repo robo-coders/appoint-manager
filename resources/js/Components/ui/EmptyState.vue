@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** One sentence and one action. Never a shrug. */
 defineProps<{ title: string; description?: string; actionLabel?: string }>();
 
 const emit = defineEmits<{ action: [] }>();

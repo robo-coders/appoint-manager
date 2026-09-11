@@ -8,9 +8,7 @@ use Illuminate\Support\Collection;
 
 class StaffServices
 {
-    /**
-     * @return Collection<int, Service>
-     */
+    /** @return Collection<int, Service> */
     public static function active(): Collection
     {
         return Service::query()
@@ -20,9 +18,7 @@ class StaffServices
             ->get(['id', 'name']);
     }
 
-    /**
-     * @return list<int>
-     */
+    /** @return list<int> */
     public static function activeIds(): array
     {
         return self::active()->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
@@ -33,9 +29,7 @@ class StaffServices
         $staff->services()->syncWithoutDetaching(self::activeIds());
     }
 
-    /**
-     * @param  iterable<int|string>  $submitted
-     */
+    /** @param  iterable<int|string>  $submitted */
     public static function syncActive(User $staff, iterable $submitted): void
     {
         $active = collect(self::activeIds());

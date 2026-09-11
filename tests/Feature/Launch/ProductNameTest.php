@@ -9,14 +9,6 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\Route;
 
-/**
- * The name people read comes from `config('product.name')`, nowhere else.
- *
- * `app.name` is the machine identity. It slugs into cache prefixes and
- * session cookie names, so a wordmark must not be wired to it. These tests
- * set the two to different values and then ask every surface that renders
- * a name which one it used.
- */
 const DISPLAY = 'Northwind Desk';
 
 const MACHINE = 'Appoint Manager';

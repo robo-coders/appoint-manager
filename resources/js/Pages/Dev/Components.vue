@@ -56,14 +56,6 @@ import Toggle from '@/Components/ui/Toggle.vue';
 import UserMenu from '@/Components/ui/UserMenu.vue';
 import { toast } from '@/lib/toast';
 
-/*
- * Every component, every state. This page is the phase deliverable: if a state
- * is not on here it has not been designed, and if it looks wrong here it is
- * wrong everywhere, because there is exactly one implementation.
- *
- * The density switch sets `data-density` on this page's root, which is the only
- * mechanism any component has for sizing. No component takes a size prop.
- */
 const density = ref<'compact' | 'roomy' | 'console'>('compact');
 
 const text = ref('Willow Street Grooming');
@@ -80,18 +72,12 @@ const bookingModeOptions = [
 ];
 const tab = ref('upcoming');
 
-// ---- state for the components added in phases 5 to 7 --------------------
 const slotTime = ref('09:45');
 const pickedDay = ref('10');
-const staffColour = ref('#7B3448'); // design-tokens-ignore: per-user data, exactly as the real form stores it
+const staffColour = ref('#7B3448');
 const savedAt = ref<number | null>(Date.now() - 5_000);
 const railCollapsed = ref(false);
 
-/*
- * An hour out, so the countdown draws its `Nh MMm` form as well as `mm:ss`.
- * `Date.now()` at setup rather than a fixed instant: a gallery whose timer has
- * already expired is a gallery of one state.
- */
 const offerExpiry = computed(() => new Date(Date.now() + 62 * 60 * 1000).toISOString());
 
 const railLinks = [
@@ -125,11 +111,6 @@ const zones = [
     { value: 'Europe/Lisbon', label: 'Europe/Lisbon' },
 ];
 
-/*
- * The bookings table, which is the shape every other table in the product is a
- * subset of. Column widths are token names — `when`, `staff`, `status`,
- * `amount` — never a pixel value typed into a template.
- */
 const columns: Column[] = [
     { key: 'when', label: 'When', width: 'when', sortable: true, numeric: true },
     { key: 'customer', label: 'Customer', sortable: true },
@@ -211,7 +192,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             </nav>
 
             <div class="space-y-12">
-                <!-- ─────────────────────────────── controls ─────────────── -->
 
                 <Specimen name="Button" note="Five variants. Primary is ink on paper — at most one per screen. `brand` is primary repainted in the tenant's colour and belongs to the public booking page alone. Loading keeps full contrast because it is working, not unavailable; only a genuinely disabled control fades.">
                     <State name="Variants">
@@ -346,8 +326,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </div>
                 </Specimen>
 
-                <!-- ─────────────────────────────── data ─────────────────── -->
-
                 <Specimen name="Table" note="Sortable, sticky header, hairline rows, no zebra. Numbers right and mono. Row actions in one menu, not five inline links. The loading state is one bar per column at that column's width — not three bars and a gap.">
                     <State name="Controls">
                         <div class="flex flex-wrap items-center gap-3">
@@ -454,8 +432,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </State>
                 </Specimen>
 
-                <!-- ─────────────────────────────── overlays ─────────────── -->
-
                 <Specimen name="Modal" note="Traps focus, closes on Escape and on a click outside, and puts focus back on whatever opened it.">
                     <State name="Open it and press Tab, then Escape">
                         <Button variant="secondary" @click="modal = true">Open modal</Button>
@@ -523,8 +499,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     </State>
                 </Specimen>
 
-                <!-- ─────────────────────────────── states ───────────────── -->
-
                 <Specimen name="EmptyState" note="One sentence and one action. Never a shrug.">
                     <State name="With an action">
                         <EmptyState
@@ -569,8 +543,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                         </div>
                     </State>
                 </Specimen>
-
-                <!-- ─────────────────────────────── chrome ───────────────── -->
 
                 <Specimen name="PageHeader" note="Title, one line of context, and the screen's one primary action.">
                     <State name="With an action">
@@ -698,7 +670,6 @@ const anchor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                         </State>
                     </div>
                 </Specimen>
-
 
                 <Specimen
                     name="NavRail"

@@ -15,9 +15,7 @@ class CalendarFeedToken extends Model
 
     public const SCOPE_SALON = 'salon';
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'staff_id',
         'scope',
@@ -26,9 +24,7 @@ class CalendarFeedToken extends Model
         'revoked_at',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -37,17 +33,13 @@ class CalendarFeedToken extends Model
         ];
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public static function scopes(): array
     {
         return [self::SCOPE_STAFF, self::SCOPE_SALON];
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
+    /** @return BelongsTo<User, $this> */
     public function staff(): BelongsTo
     {
         return $this->belongsTo(User::class, 'staff_id');

@@ -3,27 +3,6 @@
 use App\Models\Tenant;
 use App\Models\User;
 
-/**
- * The billing read-only lock, and the one account it does not apply to.
- *
- * `EnsureSubscriptionWrite` turns every POST/PUT/PATCH/DELETE on the operator
- * app into a bounce with a toast once a tenant's trial has lapsed and nothing
- * has been paid. The public booking page keeps working; the diary goes
- * read-only.
- *
- * The agreed exception, and the reason it is written this narrowly: **a super
- * admin is not subject to a tenant's billing lock unless they are
- * impersonating.** Outside impersonation the lock is meaningless in our
- * direction — it exists to stop an unpaid salon writing to its own diary, and we
- * are not that salon. Inside impersonation it must hold, because "I want to see
- * exactly what she sees" is what impersonation is for, and a lock a support
- * session can walk through is a lock nobody can reproduce a ticket against.
- *
- * `impersonator_id` is the only thing that separates the two cases:
- * `ImpersonationController::start` logs in as the *owner*, so the authenticated
- * user's `is_super_admin` is false either way and the session key is the sole
- * evidence.
- */
 function aLockedTenant(): Tenant
 {
     $tenant = Tenant::factory()->create([
@@ -36,9 +15,7 @@ function aLockedTenant(): Tenant
     return $tenant;
 }
 
-/**
- * @return array<string, mixed>
- */
+/** @return array<string, mixed> */
 function aSettingsPatch(Tenant $tenant): array
 {
     return [
@@ -91,18 +68,6 @@ it('leaves the way out of an impersonated session open', function () {
     $owner = User::factory()->create(['tenant_id' => $tenant->id, 'is_super_admin' => false]);
     $admin = User::factory()->create(['tenant_id' => null, 'is_super_admin' => true]);
 
-    /*
-     * A lock that traps a support session inside somebody else's unpaid account
-     * is worse than no lock. `impersonation.stop` is named in the middleware's
-     * exemption list, and it also sits outside the `subscribed` group — belt and
-     * braces on the one route that has to keep working.
-     *
-     * 409 with `X-Inertia-Location` is the answer `Inertia::location` gives to
-     * an Inertia visit, which is what the control in the app actually sends; see
-     * `ImpersonationController::stop` for why it is not a 302. The header is on
-     * the request here for that reason — without it the same call is a plain
-     * redirect and the assertion would be testing the wrong path.
-     */
     $this->actingAs($owner)
         ->withSession(['impersonator_id' => $admin->id])
         ->withHeader('X-Inertia', 'true')

@@ -10,26 +10,6 @@ import { toast } from '@/lib/toast';
 import axios from 'axios';
 import { computed, ref } from 'vue';
 
-/**
- * Managing a booking, in the same language as making one.
- *
- * This page and `OfferIsland` used to share nothing with `BookingIsland` — not
- * the layout, not the components, not the type scale, not the words. A customer
- * who booked on Monday and came back on Thursday to move it arrived somewhere
- * that did not look like the same business.
- *
- * So: the same dominant 34px statement of the appointment, the same single
- * column, the same picker, the same primary button. The one thing that differs
- * is what the page is *for*, and that is carried by the actions underneath.
- *
- * **The consequence is stated before the confirm, not after.** "Cancel and
- * refund £10" and "Cancel — the £10 deposit is not refunded this close to the
- * appointment" are two different decisions, and which one a customer is making
- * has to be legible on the button they are about to press. A confirm dialog
- * that says "Are you sure?" moves that information to the wrong side of the
- * decision.
- */
-
 type Money = { amount: number; formatted: string; currency: string };
 
 const props = defineProps<{
@@ -58,7 +38,6 @@ const props = defineProps<{
     horizon_days: number;
     can_cancel: boolean;
     can_reschedule: boolean;
-    /** Already a sentence, and already the *consequence* rather than a policy. */
     cancel_consequence: string;
     urls: { cancel: string; reschedule: string; availability: string };
 }>();
@@ -206,10 +185,6 @@ const cancel = async () => {
     <div>
         <ToastContainer />
 
-        <!-- ============================================================
-             Cancelled. One statement, no controls: there is nothing left
-             to do here and a row of dead buttons says otherwise.
-             ============================================================ -->
         <section v-if="finished && !cancelled" class="space-y-3">
             <h1 class="text-34 font-medium">That appointment has been</h1>
             <p class="text-15 text-ink-2">
@@ -259,8 +234,6 @@ const cancel = async () => {
             </p>
 
             <template v-else>
-                <!-- The same 34px statement as the booking page. Same
-                     appointment, same salon, same product. -->
                 <ProposalHeading
                     :context="heading.context"
                     :day-label="heading.dayLabel"
@@ -278,12 +251,6 @@ const cancel = async () => {
                     Free to cancel or move until {{ booking.free_until }}
                 </p>
 
-                <!--
-                    Why the move button is not here. A page that simply omits a
-                    control leaves a customer wondering whether they missed it;
-                    the honest version says the appointment is too close and
-                    points at the thing that does still work.
-                -->
                 <p v-else-if="!can_reschedule" class="mt-6 text-15 text-ink-2">
                     This is too close to the appointment to move online.
                     <template v-if="tenant.phone">
@@ -302,13 +269,6 @@ const cancel = async () => {
 
                 <ul class="mt-2">
                     <li>
-                        <!--
-                            The row says what will happen, not what the button
-                            is called. "Cancel and refund £10" and "Cancel — the
-                            £10 deposit is not refunded this close to the
-                            appointment" are different decisions, and the
-                            difference belongs *here*, before the tap.
-                        -->
                         <ChoiceRow :label="cancel_consequence" @pick="confirming = true" />
                     </li>
                 </ul>

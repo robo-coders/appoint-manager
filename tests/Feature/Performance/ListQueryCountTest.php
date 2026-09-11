@@ -11,25 +11,6 @@ use App\Models\WaitlistEntry;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
-/**
- * The list pages, against a list long enough for an N+1 to show.
- *
- * A page that eager-loads correctly costs the same number of queries whether it
- * renders three rows or thirty. A page that does not costs one more per row, so
- * these seed two sizes and assert the count does not move. That is the property
- * worth guarding: a literal ceiling ("no more than 14 queries") fails on every
- * unrelated change and gets raised until it means nothing.
- */
-
-/**
- * Queries for one request, measured warm.
- *
- * The work runs twice and only the second is counted. A cold first request pays
- * for things that have nothing to do with the page — an availability cache
- * miss, a session row, a settings read — and measured cold the *bigger* list
- * came out two queries cheaper than the small one, which says nothing about
- * eager loading either way.
- */
 function countQueries(callable $work): int
 {
     $work();
@@ -156,7 +137,6 @@ it('costs the same to open a booking record whatever else is in the diary', func
     $boss = owner($salon);
 
     seedBookings($salon, 3);
-    // No tenant context in a test body, so the global scope would find nothing.
     $first = Booking::withoutGlobalScopes()
         ->where('tenant_id', $salon['tenant']->id)
         ->orderBy('id')

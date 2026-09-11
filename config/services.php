@@ -2,18 +2,6 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
-
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
@@ -40,28 +28,8 @@ return [
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
 
-        /*
-         * BetaSandbox — see BETA_SANDBOX.md.
-         *
-         * The test-mode key beta tenants are pinned to, whatever `secret` is.
-         * Unset on an installation whose `secret` is already an `sk_test_` key,
-         * which is every local and staging box; required on production, where a
-         * beta tenant with no test key is refused rather than quietly charged
-         * through the live one. See App\BetaSandbox\StripeTestMode.
-         */
         'test_secret' => env('STRIPE_TEST_SECRET'),
 
-        /*
-         * `STRIPE_FAKE` used to live here. It is gone — AUDIT C1.
-         *
-         * It opted a non-production environment into `FakeStripeGateway`, which
-         * accepts a literal `t=1,v1=test` webhook signature by design. That made
-         * "is this box production?" a security boundary, and `APP_ENV` is a
-         * string in a file. The fake now binds under `testing` and nowhere else;
-         * see App\Providers\AppServiceProvider::shouldUseFakeGateways().
-         *
-         * Local development uses Stripe *test* keys, the same ones staging uses.
-         */
     ],
 
     'sms' => [
@@ -73,12 +41,6 @@ return [
         'token' => env('TWILIO_TOKEN'),
         'from' => env('TWILIO_FROM'),
         'status_webhook_url' => env('TWILIO_STATUS_URL'),
-        /*
-         * `X-Twilio-Signature` verification on both Twilio webhooks. Skipped
-         * anyway when no token is set, which is every local and test
-         * environment; this key exists so a production incident can be
-         * diagnosed by turning it off deliberately rather than by editing code.
-         */
         'verify_signature' => env('TWILIO_VERIFY_SIGNATURE', true),
     ],
 

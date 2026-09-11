@@ -14,9 +14,7 @@ class StripeEvent extends Model
         'processed_at',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

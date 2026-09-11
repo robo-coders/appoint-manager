@@ -34,19 +34,6 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * The five signed-in screens between registering and a diary.
- *
- * One Inertia page, five steps, one endpoint each. Every step saves on
- * continue, so `show()` can rebuild the flow from the database on any request —
- * which is what makes closing the tab halfway through survivable, and what
- * makes Back a link rather than a piece of client state to be defended.
- *
- * Progress lives on the tenant (`settings.onboarding.completed_steps`) and the
- * gate is `EnsureOnboardingComplete`, reading `onboarding_completed_at`. That
- * timestamp is written by `Tenant::markOnboardingStep()` when the last step —
- * `SetupSteps::FINAL` — is saved, and nothing else sets it.
- */
 class OnboardingController extends Controller
 {
     public function show(Request $request): Response|RedirectResponse
@@ -69,26 +56,12 @@ class OnboardingController extends Controller
         $completed = $tenant->onboardingCompletedSteps();
         $step = $request->string('step')->toString();
 
-        /*
-         * A step is reachable if it is done or if it is the first one that is
-         * not. Asking for a step further ahead than that lands on the first
-         * incomplete one instead of on a form whose defaults depend on answers
-         * that have not been given — the same rule the progress rail uses to
-         * decide what it will link to.
-         */
         if (! in_array($step, $completed, true)) {
             $step = $this->firstIncompleteStep($completed);
         }
 
         return Inertia::render('Onboarding/Index', [
             'step' => $step,
-            /*
-             * `account` is complete by definition here: this screen is behind
-             * `auth`, so the person looking at it registered. Without it the
-             * rail would show step one as still to do while the person reading
-             * it is signed in — which is the sort of small lie that makes a
-             * progress indicator worth ignoring.
-             */
             'completedSteps' => array_values(array_unique(['account', ...$completed])),
             'steps' => SetupSteps::all(),
             'onboardingSteps' => SetupSteps::ONBOARDING,
@@ -106,9 +79,6 @@ class OnboardingController extends Controller
                 ->map(fn (Vertical $vertical) => [
                     'value' => $vertical->key,
                     'label' => $vertical->label,
-                    // The vertical's own vocabulary, from the model, because
-                    // `/register` offers the same list and must say the same
-                    // thing about each option. See `Vertical::note()`.
                     'note' => $vertical->note(),
                 ])
                 ->values()
@@ -136,12 +106,6 @@ class OnboardingController extends Controller
             ])->all(),
 
             'bookingUrl' => $tenant->publicBookingUrl(),
-            /*
-             * Tomorrow at nine, in the salon's own timezone, formatted the way
-             * `datetime-local` wants it. Built here rather than in the browser
-             * because the browser's clock is the person's clock and the salon's
-             * clock is the tenant's — and they are the same only by luck.
-             */
             'firstBookingDefault' => CarbonImmutable::now($tenant->timezone)
                 ->addDay()
                 ->setTime(9, 0)
@@ -149,15 +113,6 @@ class OnboardingController extends Controller
         ]);
     }
 
-    /**
-     * Is this slug free, as of right now?
-     *
-     * Called as you type on step one, so the answer arrives beside the field
-     * instead of on the far side of a failed submit. It is advisory and it does
-     * not reserve anything — `UpdateBasicsRequest` and
-     * `CompleteOnboardingRequest` both check again against the unique index,
-     * which is the only answer that is actually binding.
-     */
     public function checkSlug(Request $request): JsonResponse
     {
         $slug = Str::slug((string) $request->string('slug'));
@@ -190,13 +145,6 @@ class OnboardingController extends Controller
                 'type' => $request->validated('type'),
             ]);
 
-            /*
-             * The owner's week, rewritten wholesale. Only the owner's rules are
-             * touched: by the time anybody else has hours of their own this
-             * step is behind them, and deleting every rule in the tenant would
-             * quietly clear a colleague's week if somebody came back to edit
-             * step one.
-             */
             AvailabilityRule::query()->where('user_id', $owner->id)->delete();
 
             foreach ($request->openDays() as $day) {
@@ -279,20 +227,10 @@ class OnboardingController extends Controller
         return redirect()->route('onboarding.show', ['step' => 'link']);
     }
 
-    /**
-     * The last click. Confirms the slug is still free, optionally writes the
-     * first appointment, and stamps `onboarding_completed_at`.
-     */
     public function complete(CompleteOnboardingRequest $request): RedirectResponse
     {
         $tenant = current_tenant();
 
-        /*
-         * The slug was validated as free a line ago; this closes the last of
-         * the gap by taking the row before writing it. Two tenants racing for
-         * the same address now serialise here, and the loser is told on the
-         * field rather than by the unique index.
-         */
         $collision = DB::transaction(function () use ($request, $tenant): bool {
             $locked = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->first();
 
@@ -320,12 +258,6 @@ class OnboardingController extends Controller
             ]);
         }
 
-        /*
-         * The optional first appointment. It is written *after* the hours,
-         * which step one now owns — `BookingService` checks the slot against
-         * availability, so a booking written before a salon has stated its
-         * week would be refused for every salon.
-         */
         $first = $request->validated('first_booking');
         $booking = null;
 
@@ -348,21 +280,7 @@ class OnboardingController extends Controller
         return redirect()->route('diary.index')->with('toast', 'You’re open. This is your diary.');
     }
 
-    /**
-     * One line out of the paper book, so the diary is not empty on day one.
-     *
-     * A real `Customer` rather than a name on a booking: the person exists,
-     * they will come back, and a booking with no customer behind it is a row
-     * the rest of the product cannot do anything with.
-     *
-     * Email is optional. A walk-in is a name, and inventing an address so the
-     * row would save would put a confirmation on a mailbox nobody owns.
-     *
-     * `firstOrNew` is only used when there is an address. Two walk-ins with no
-     * email must be two customers; matching on null would fold them into one.
-     *
-     * @param  array{customer_name: string, customer_email?: string|null, service_id: int, staff_id: int, starts_at: string}  $first
-     */
+    /** @param  array{customer_name: string, customer_email?: string|null, service_id: int, staff_id: int, starts_at: string}  $first */
     private function createFirstBooking(Tenant $tenant, array $first)
     {
         $email = filled($first['customer_email'] ?? null) ? $first['customer_email'] : null;
@@ -388,9 +306,7 @@ class OnboardingController extends Controller
         return User::query()->where('role', UserRole::Owner)->first() ?? $request->user();
     }
 
-    /**
-     * @param  list<string>  $completed
-     */
+    /** @param  list<string>  $completed */
     private function firstIncompleteStep(array $completed): string
     {
         foreach (SetupSteps::ONBOARDING as $step) {
@@ -403,17 +319,6 @@ class OnboardingController extends Controller
     }
 
     /**
-     * Seven days, one row each, in the shape step one's toggles expect.
-     *
-     * Before the step has been saved this is the suggested week — Monday to
-     * Friday, nine to five, weekend shut — rather than a blank form. After it
-     * has, it is whatever is actually in `availability_rules`, so coming back
-     * to the step shows what you last said and not the suggestion again.
-     *
-     * A day holding several ranges collapses to its outer edges here. The full
-     * grid lives in Settings; this row cannot express a lunch break and should
-     * not pretend to, but it must not silently narrow one either.
-     *
      * @param  Collection<int, AvailabilityRule>  $rules
      * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
      */
@@ -450,13 +355,6 @@ class OnboardingController extends Controller
     }
 
     /**
-     * The one service step three edits.
-     *
-     * Prefilled from the vertical's first default until the step has been
-     * saved, so a groomer starts on "Full groom" at that trade's usual length
-     * and price rather than on an empty form. `id` is null for a suggestion and
-     * set for a real row, which is how `updateServices` tells them apart.
-     *
      * @param  Collection<int, Service>  $services
      * @return array{id: int|null, name: string, duration_minutes: int, price: int, deposit_amount: int}
      */

@@ -13,9 +13,7 @@ class DunningFailedPayment extends Notification
 
     public function __construct(public Tenant $tenant, public int $day) {}
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function via(object $notifiable): array
     {
         return ['mail'];

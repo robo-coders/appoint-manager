@@ -2,17 +2,11 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 
-/**
- * Absolute time, in the tenant's timezone, in mono tabular figures — with the
- * relative form *alongside* rather than instead of it, so "in 20 minutes" never
- * costs you the ability to read the actual time.
- */
 const props = withDefaults(
     defineProps<{
         value: string;
         dateOnly?: boolean;
         timeOnly?: boolean;
-        /** Append "in 20 minutes" / "2 days ago" when within a week. */
         relative?: boolean;
     }>(),
     { dateOnly: false, timeOnly: false, relative: false },
@@ -21,7 +15,6 @@ const props = withDefaults(
 const page = usePage();
 const timezone = computed(() => (page.props as { tenant?: { timezone?: string } }).tenant?.timezone ?? 'UTC');
 
-// The API sends both ISO instants and pre-formatted 'Y-m-d H:i' local strings.
 const parsed = computed(() => {
     const local = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(props.value);
     if (local && !props.value.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(props.value)) {

@@ -8,25 +8,6 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Money } from '@/types/models';
 
-/**
- * One appointment.
- *
- * It was a flat column of eight sentences in a white box — status, deposit,
- * total, who booked it — with nothing saying which of them belonged together.
- * Answering "has this been paid" meant reading all eight, and three of the
- * eight were labels typed into the middle of a sentence.
- *
- * Four groups, and inside each one a label on the left at a fixed width with
- * its value on the right. That is what makes the page scannable: the labels
- * line up, so the eye goes down the left edge to the row it wants and reads
- * across once. Numbers, dates, money and identifiers are mono, from the server,
- * because the server is what knows which of them is a number.
- *
- * Underneath, what has actually been sent about this appointment — read off the
- * message log rather than invented for the page. See
- * `BookingController::detailGroups`.
- */
-
 type DetailRow = { key: string; value: string; mono: boolean };
 
 const props = defineProps<{
@@ -65,7 +46,6 @@ const STATUS_LABELS: Record<string, string> = {
     no_show: 'No show',
 };
 
-/* The same pill the two lists wear. One status language across the product. */
 const tone = computed(() => {
     const status = props.booking.status;
 
@@ -76,15 +56,6 @@ const tone = computed(() => {
     return 'cancelled';
 });
 
-/*
- * "Full groom — small dog · Sat 26 Sept, 12:00 · ref BK-1042".
- *
- * It read "Hand strip · Dot" — the service and the pet, and nothing that says
- * *which* appointment this is. Two of the three facts somebody checks against a
- * phone call were missing: when it is, and the reference the customer is reading
- * off their confirmation email. Both are numbers, so both are mono, which is why
- * this is three parts in the template rather than one joined string.
- */
 const whenPart = computed(() => {
     const value = props.booking.starts_at_local;
     const date = new Date(`${value.replace(' ', 'T')}:00`);
@@ -102,14 +73,6 @@ const subtitle = computed(() => {
     return parts.join(' · ');
 });
 
-/*
- * "3 d left", beside the deposit prompt.
- *
- * The prompt said a deposit was outstanding and stopped there, which leaves the
- * only question it raises — *how long have I got* — for somebody to work out
- * from the Scheduling group further down. Days, not hours: a deposit chase is a
- * thing you do tomorrow morning, and "71 h" is precision nobody acts on.
- */
 const daysLeft = computed(() => {
     const starts = new Date(props.booking.starts_at).getTime();
     if (Number.isNaN(starts)) return null;
@@ -122,17 +85,6 @@ const daysLeft = computed(() => {
     return `${days} d left`;
 });
 
-/*
- * "Mark as done" and "Mark as no show" only where they mean something: a
- * confirmed appointment whose start time has passed. A pending request has not
- * been accepted, a cancellation did not happen, and an appointment on Thursday
- * has neither happened nor been missed yet — the server refuses all three for
- * both actions, and a button that is only ever refused is a button that should
- * not be drawn.
- *
- * One computed for both because the two are the same question with two answers:
- * the appointment is over, and the owner is saying which way it went.
- */
 const completable = computed(
     () => props.booking.status === 'confirmed' && new Date(props.booking.starts_at) <= new Date(),
 );
@@ -165,30 +117,9 @@ const cancel = (offerWaitlist: boolean) => {
     <AppLayout>
         <Head title="Booking" />
 
-        <!--
-            Capped, like the redesign's record page. Unbounded, the four detail
-            groups stretched to whatever the window was, so at 1600px a 96px label
-            sat 700px from the value on the other side of the page and the eye had
-            to travel the whole width to read one row.
-        -->
         <div class="max-w-record pb-16 md:pb-0">
         <QuietAction :href="route('bookings.index')">← Bookings</QuietAction>
 
-        <!--
-            The pill belongs beside the name, not hard right against the page
-            edge. `ui/PageHeader` puts its slot in the actions corner, which is
-            correct for a control and wrong for a label about the heading — at
-            1280 the status ended up 900px from the word it describes.
-        -->
-        <!--
-            **The actions are up here now.** They were four buttons in a row at
-            the very bottom of the page, under Activity — so on a booking with any
-            history at all, the two things you came to do were below the fold and
-            the page ended in a wall of controls. The redesign puts the ones that
-            act on the appointment in the header corner beside the name they act
-            on, and leaves the destructive one as a quiet underlined phrase at the
-            end, which is the register it belongs in.
-        -->
         <div class="mb-6 mt-1 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-3">
@@ -209,38 +140,13 @@ const cancel = (offerWaitlist: boolean) => {
                 >
                     Show in the diary
                 </Button>
-                <!--
-                    The only writer of `BookingStatus::NoShow`. The dashboard's
-                    no-show rate has read it since launch and nothing could set
-                    it, so the stat was structurally zero — see
-                    `BookingService::markNoShow`.
-                -->
                 <Button v-if="completable" variant="secondary" :loading="markingNoShow" @click="markNoShow">
                     Mark as no show
                 </Button>
-                <!--
-                    The only writer of `BookingStatus::Completed`. It was read in
-                    four places and set by nothing but the demo seeders — see
-                    `BookingService::complete`.
-                -->
                 <Button v-if="completable" :loading="completing" @click="complete">Mark as done</Button>
             </div>
         </div>
 
-        <!--
-            The deposit prompt, where the thing it is about lives. A booking
-            awaiting one is the only state on this page with an outstanding
-            question, and it is the page's one accent.
-        -->
-        <!--
-            **No accent on this box.** It carried a 2px accent left border, which
-            put the screen's one accent on a *statement of fact* — a deposit is
-            outstanding — on a page where the accent is already spent on the
-            status pill saying the same thing three inches above it. The redesign
-            draws it as a plain hairline box: the countdown is the new
-            information, and it is set in mono behind a divider because it is a
-            number, not a warning.
-        -->
         <div
             v-if="booking.deposit_status === 'required'"
             class="mb-8 flex flex-wrap items-center gap-3 rounded border border-rule px-3 py-2.5 text-13"
@@ -282,13 +188,6 @@ const cancel = (offerWaitlist: boolean) => {
             </ul>
         </section>
 
-        <!--
-            The last thing on the page, and the quietest control there is —
-            `ui/QuietAction`, which is what the redesign draws under Activity. A
-            filled danger button at the end of a record is a control the eye lands
-            on every time it reaches the bottom, for the one action nobody is here
-            to take.
-        -->
         <div v-if="booking.status !== 'cancelled'" class="hidden flex-wrap items-center gap-4 md:flex">
             <QuietAction @click="confirm = 'notify'">Cancel booking</QuietAction>
         </div>

@@ -1,6 +1,5 @@
 export type UserRole = 'owner' | 'staff';
 
-/** Laravel `paginate()` as Inertia receives it. */
 export type Paginated<T> = {
     data: T[];
     current_page: number;
@@ -25,7 +24,6 @@ export interface ServiceRecord {
     description: string | null;
     duration_minutes: number;
     buffer_minutes: number;
-    /** How long before this service is due again. Null means the product default. */
     suggested_interval_days: number | null;
     price: Money;
     deposit_amount: Money;
@@ -42,10 +40,6 @@ export interface StaffRecord {
     role: UserRole;
     is_bookable: boolean;
     is_active: boolean;
-    /**
-     * Whether this person may read customers' phone numbers and email
-     * addresses. Always true for an owner. See `App\Support\ContactVisibility`.
-     */
     can_see_customer_contacts: boolean;
     colour: string | null;
 }

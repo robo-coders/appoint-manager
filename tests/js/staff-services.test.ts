@@ -3,18 +3,6 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { forms, resetForms, setPageProps } from './setup';
 
-/**
- * The Services checklist in the staff edit sheet.
- *
- * Three things on this fieldset are logic rather than markup, and all three are
- * the ones an operator finds out about a fortnight later:
- *
- *   - a new person arrives with everything ticked, so they are bookable at once;
- *   - clearing every tick is allowed, and says so out loud, because "this
- *     person is now invisible to the booking page" is not a thing to discover
- *     from an empty diary;
- *   - a salon with nothing to assign gets a way forward rather than a blank box.
- */
 const SERVICES = [
     { id: 1, name: 'Full groom' },
     { id: 2, name: 'Puppy trim' },
@@ -38,11 +26,6 @@ const person = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-/*
- * `SlideOver` renders nothing until it is open, so it is stubbed to honour
- * `show` and nothing else — the sheet still has to be opened by pressing the
- * control that opens it, which is the half of this that could break.
- */
 const mountPage = (props: Record<string, unknown> = {}) =>
     mount(StaffPage, {
         props: { staff: [person()], services: SERVICES, ...props },
@@ -96,11 +79,6 @@ describe('opening the sheet', () => {
         expect(checkboxFor(page, 'Puppy trim').element.checked).toBe(false);
     });
 
-    /*
-     * The creation default. The server applies it too — see
-     * `StaffServiceAssignmentTest` — but the form has to show it, or the
-     * operator is looking at an empty list while the server writes a full one.
-     */
     it('ticks every service for somebody who does not exist yet', async () => {
         const page = mountPage();
         await press(page, 'Add staff');
@@ -130,7 +108,6 @@ describe('clearing the list', () => {
         expect(warning.text()).toContain("won't be bookable online");
         expect(forms[0].service_ids).toEqual([]);
 
-        // Still a save, not a dead end. Unchecking everything is allowed.
         expect(page.findAll('button').some((node) => node.text() === 'Save')).toBe(true);
     });
 
@@ -160,11 +137,6 @@ describe('a salon with nothing to assign', () => {
         expect(empty.find('a').attributes('href')).toContain('/services');
     });
 
-    /*
-     * No warning here. "Nobody can book this person" is true but useless when
-     * there is nothing on the booking page at all — the empty state above is
-     * the sentence that helps.
-     */
     it('does not also warn that nothing is selected', async () => {
         const page = mountPage({ services: [] });
         await press(page, 'Edit');

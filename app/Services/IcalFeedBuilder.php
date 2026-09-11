@@ -16,17 +16,13 @@ class IcalFeedBuilder
 
     private const CONTINUATION_LIMIT = 74;
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public static function modes(): array
     {
         return [self::MODE_FULL, self::MODE_BUSY_ONLY];
     }
 
-    /**
-     * @param  Collection<int, Booking>  $bookings
-     */
+    /** @param  Collection<int, Booking>  $bookings */
     public function build(string $calendarName, string $timezone, Collection $bookings, string $contentMode): string
     {
         $lines = [
@@ -50,9 +46,7 @@ class IcalFeedBuilder
         return implode("\r\n", array_map($this->fold(...), $lines))."\r\n";
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function event(Booking $booking, string $contentMode, string $stamp): array
     {
         $lines = [

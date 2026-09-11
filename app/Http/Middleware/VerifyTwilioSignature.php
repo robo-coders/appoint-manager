@@ -7,24 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Twilio's `X-Twilio-Signature`, checked the way the other two webhooks check
- * theirs.
- *
- * AUDIT H7 recorded `/twilio/status` as unverified, which was survivable while
- * the endpoint only moved a message row from `sent` to `delivered`. It stops
- * being survivable now that `/twilio/inbound` can set a consent flag: an
- * unauthenticated caller who knows a phone number could opt a salon's client
- * out of the messages that salon is paying for.
- *
- * The scheme is HMAC-SHA1 over the full request URL with the POST parameters
- * appended in key order, keyed on the account auth token — so it needs no
- * shared secret beyond the one already in `TWILIO_TOKEN`.
- *
- * Skipped when no token is configured, which is every local and test
- * environment and is what keeps this from being a wall in front of the suite.
- * Production has a token, so production verifies.
- */
 class VerifyTwilioSignature
 {
     public function handle(Request $request, Closure $next): Response

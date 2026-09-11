@@ -41,11 +41,6 @@ const money = reactive({
     deposit: '0.00',
 });
 
-/*
- * "Not set" and "zero" are different answers here, and an empty number input
- * gives back an empty string rather than null — so the field holds a string and
- * `submit` turns a blank one back into null on the way out.
- */
 const intervalField = ref<string>('');
 
 const openCreate = () => {
@@ -105,16 +100,6 @@ const confirmDelete = () => {
     });
 };
 
-/**
- * Reordering, by menu rather than by drag.
- *
- * WCAG 2.2 requires a single-pointer alternative to any author-controlled drag,
- * and the old row was `draggable` with no other way to reorder at all — which
- * meant the order of the service list, and therefore the order a customer sees
- * on the booking page, was unreachable by keyboard. Move up and move down live
- * in the row's actions menu, where they are also easier to hit than a 34px drag
- * target.
- */
 const move = (id: number, direction: -1 | 1) => {
     const ids = props.services.map((service) => service.id);
     const from = ids.indexOf(id);
@@ -127,23 +112,11 @@ const move = (id: number, direction: -1 | 1) => {
     router.patch(route('services.reorder'), { ids });
 };
 
-/*
- * `narrow` is the phone layout. At 375px six columns left the status badge
- * reading "On the boo…" and the row menu off the edge entirely, while a service
- * name broke over three lines. On a phone this is a price list: the name, what
- * it costs, and whether customers can book it. See `ui/Table`.
- *
- * `interval` is dropped from the narrow row rather than squeezed into it. "Due
- * again in 42 d" is a thing you set once at a desk, not something you check
- * between dogs, and the wide table still carries it.
- */
 const columns: Column[] = [
     { key: 'name', label: 'Name', narrow: 'title' },
     { key: 'duration_minutes', label: 'Duration', width: 'staff', align: 'right', numeric: true, narrow: 'line' },
     { key: 'interval', label: 'Due again', width: 'staff', align: 'right', numeric: true, secondary: true },
     { key: 'price_amount', label: 'Price', width: 'amount', align: 'right', numeric: true, narrow: 'meta' },
-    // Not in the narrow row. "60 min · £10.00" does not say which of the two
-    // numbers is the deposit, and the word that would say it does not fit.
     {
         key: 'deposit_amount_value',
         label: 'Deposit',
@@ -152,24 +125,10 @@ const columns: Column[] = [
         numeric: true,
         secondary: true,
     },
-    /*
-     * On the second line, not stacked on the right beside the price. "On the
-     * booking page" is a 145px badge, and as a right-hand meta it was the widest
-     * thing in the row — which left about 100px for the name and broke "Full
-     * groom — medium dog" over three lines. On the line after the duration it
-     * costs the row nothing and still reads as a sentence: "60 min · on the
-     * booking page".
-     */
     { key: 'state', label: 'Status', width: 'status', narrow: 'line' },
     { key: 'staff_count', label: 'Staff', width: 'staff', align: 'right', narrow: 'line' },
 ];
 
-/*
- * No `sortable` on this table, and that is the point: the order **is** the
- * data. It is the order a customer sees on the booking page, and a column
- * header that silently reorders it would be a control that looks like a view
- * and behaves like an edit.
- */
 const rows = computed(() =>
     props.services.map((service) => ({
         ...service,
@@ -205,8 +164,6 @@ const rows = computed(() =>
 
             <template #cell:duration_minutes="{ row }">{{ row.duration_minutes }} min</template>
 
-            <!-- What the suggester falls back to for a customer with no rhythm
-                 of their own. See `AppointmentSuggester`. -->
             <template #cell:interval="{ row }">
                 <span v-if="row.suggested_interval_days">{{ row.suggested_interval_days }} d</span>
                 <span v-else class="text-ink-2">—</span>
@@ -298,13 +255,6 @@ const rows = computed(() =>
                     />
                 </div>
 
-                <!--
-                    How long before this is due again. It is what
-                    `AppointmentSuggester` falls back to for a customer with no
-                    rhythm of their own — a nail clip comes round every three
-                    weeks and a double-coat groom every ten, and one number for
-                    both is wrong for both.
-                -->
                 <TextInput
                     v-model="intervalField"
                     type="number"
@@ -333,7 +283,6 @@ const rows = computed(() =>
                                 : form.staff_ids.filter((id) => id !== person.id)
                         "
                     />
-                    <!-- The rule from DECISIONS.md, stated where it bites. -->
                     <p v-if="form.staff_ids.length === 0" class="text-12 text-ink-2">
                         With nobody selected this service has no bookable slots at all.
                     </p>

@@ -10,25 +10,19 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerCsvImporter
 {
-    /**
-     * @return list<array{row: int, ok: bool, message: string}>
-     */
+    /** @return list<array{row: int, ok: bool, message: string}> */
     public function preview(Tenant $tenant, string $csv): array
     {
         return $this->walk($tenant, $csv, commit: false);
     }
 
-    /**
-     * @return list<array{row: int, ok: bool, message: string}>
-     */
+    /** @return list<array{row: int, ok: bool, message: string}> */
     public function import(Tenant $tenant, string $csv): array
     {
         return DB::transaction(fn () => $this->walk($tenant, $csv, commit: true));
     }
 
-    /**
-     * @return list<array{row: int, ok: bool, message: string}>
-     */
+    /** @return list<array{row: int, ok: bool, message: string}> */
     private function walk(Tenant $tenant, string $csv, bool $commit): array
     {
         $lines = preg_split("/\r\n|\n|\r/", trim($csv)) ?: [];

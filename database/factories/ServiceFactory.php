@@ -6,14 +6,10 @@ use App\Models\Service;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Service>
- */
+/** @extends Factory<Service> */
 class ServiceFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [

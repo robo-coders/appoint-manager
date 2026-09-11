@@ -5,14 +5,6 @@ namespace App\Services\Billing;
 use App\Exceptions\PaymentsNotConfiguredException;
 use App\Models\Tenant;
 
-/**
- * Local-only stand-in so the billing *screen* can be looked at without keys.
- *
- * It does not take money, does not invent invoices, and it is not the fake
- * used by the test suite — that one accepts forged webhook signatures. Checkout
- * and top-up still refuse; they need Stripe, and the keys are empty on this
- * machine on purpose.
- */
 class UnconfiguredBillingGateway implements BillingGateway
 {
     public function checkoutUrl(Tenant $tenant, string $interval): string

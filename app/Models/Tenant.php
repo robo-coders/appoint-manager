@@ -17,9 +17,7 @@ class Tenant extends Model
     /** @use HasFactory<TenantFactory> */
     use HasFactory, SoftDeletes;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'name',
         'slug',
@@ -58,7 +56,6 @@ class Tenant extends Model
         'cancelled_at',
         'cancellation_reason',
         'is_comped',
-        // BetaSandbox — see BETA_SANDBOX.md.
         'is_beta',
         'sandbox_state',
         'booking_page_live',
@@ -77,34 +74,6 @@ class Tenant extends Model
         'request_requires_deposit',
     ];
 
-    /**
-     * Every tenant is born on a trial, whichever door it came through.
-     *
-     * `subscription_status` defaults to `trial` in the schema and
-     * `trial_ends_at` defaults to NULL, and `hasAdminWriteAccess()` reads the
-     * *date* rather than the status. So a tenant created any way other than
-     * through `RegisteredUserController` — the demo seeder, a tinker
-     * `firstOrCreate`, a support script, an import — arrived with write access
-     * already lapsed, and its owner's first login was a read-only diary behind
-     * "Admin is read-only until billing is up to date". Not a hypothetical:
-     * `DemoTenantSeeder` and `scripts/e2e-setup.sh` both make tenants this way,
-     * and both were being repaired by hand afterwards.
-     *
-     * **Why here and not a column default.** The trial length is
-     * `config('billing.trial_days')`, and a database cannot read the config.
-     * MySQL will not accept an expression default on a `TIMESTAMP` beyond
-     * `CURRENT_TIMESTAMP` either, so a column default could say "now" but never
-     * "now plus thirty days" — and "now" is an expired trial, which is the bug.
-     * A `creating` hook is the one place that runs for every Eloquent write, in
-     * every environment, with the config loaded. It fills only when the caller
-     * has left the value null, so `TenantFactory`, the registration flow and
-     * `DemoDataSeeder::billing()` all keep the last word on a value they set on
-     * purpose.
-     *
-     * What this does not cover is a raw `DB::table('tenants')->insert()`.
-     * Nothing does one, and a raw insert also skips the slug, the uuid and
-     * every cast, so it is not a path anybody reaches by accident.
-     */
     protected static function booted(): void
     {
         static::creating(function (Tenant $tenant): void {
@@ -118,9 +87,7 @@ class Tenant extends Model
         });
     }
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -140,7 +107,6 @@ class Tenant extends Model
             'card_exp_year' => 'integer',
             'last_activity_at' => 'datetime',
             'is_comped' => 'boolean',
-            // BetaSandbox — see BETA_SANDBOX.md.
             'is_beta' => 'boolean',
             'sandbox_state' => 'array',
             'booking_page_live' => 'boolean',
@@ -159,15 +125,6 @@ class Tenant extends Model
         ];
     }
 
-    /**
-     * The CSS custom property this tenant's booking page paints with, or null
-     * when it has not chosen one and should inherit ink.
-     *
-     * Goes through BrandPalette so a value that is somehow no longer one of the
-     * six — a preset renamed in tokens.css, a row edited by hand — degrades to
-     * ink rather than emitting a `var(--brand-whatever)` that resolves to
-     * nothing and paints an invisible button.
-     */
     public function brandVariable(): ?string
     {
         return BrandPalette::variable($this->brand_colour);
@@ -178,9 +135,7 @@ class Tenant extends Model
         return $this->onboarding_completed_at !== null;
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function onboardingCompletedSteps(): array
     {
         $steps = $this->settings['onboarding']['completed_steps'] ?? [];
@@ -207,57 +162,43 @@ class Tenant extends Model
         $this->save();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function vertical(): array
     {
         return Vertical::definitionFor($this->type);
     }
 
-    /**
-     * @return HasMany<User, $this>
-     */
+    /** @return HasMany<User, $this> */
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * @return HasMany<Service, $this>
-     */
+    /** @return HasMany<Service, $this> */
     public function services(): HasMany
     {
         return $this->hasMany(Service::class);
     }
 
-    /**
-     * @return HasMany<AvailabilityRule, $this>
-     */
+    /** @return HasMany<AvailabilityRule, $this> */
     public function availabilityRules(): HasMany
     {
         return $this->hasMany(AvailabilityRule::class);
     }
 
-    /**
-     * @return HasMany<TimeOff, $this>
-     */
+    /** @return HasMany<TimeOff, $this> */
     public function timeOff(): HasMany
     {
         return $this->hasMany(TimeOff::class);
     }
 
-    /**
-     * @return HasMany<Customer, $this>
-     */
+    /** @return HasMany<Customer, $this> */
     public function customers(): HasMany
     {
         return $this->hasMany(Customer::class);
     }
 
-    /**
-     * @return HasMany<Booking, $this>
-     */
+    /** @return HasMany<Booking, $this> */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
@@ -394,9 +335,6 @@ class Tenant extends Model
         return $this->trial_ends_at === null || $this->trial_ends_at->isPast();
     }
 
-    /**
-     * @return 'trial_ended'|'unpaid'|'cancelled_ended'
-     */
     public function billingGateVariant(): string
     {
         if ($this->cancel_at_period_end && $this->subscription_ends_at?->isPast()) {

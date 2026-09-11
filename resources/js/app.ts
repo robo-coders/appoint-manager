@@ -33,8 +33,6 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue);
 
-        // ZiggyVue defaults `absolute` to true. Overwrite so every `route()`
-        // in script or template stays on this host. See lib/ziggyHost.ts.
         app.config.globalProperties.route = sameHostRoute;
         app.provide('route', sameHostRoute);
 
@@ -44,9 +42,6 @@ createInertiaApp({
         app.mount(el);
     },
     progress: {
-        // The bar is injected into the document, so it can resolve the variable
-        // itself. The literal fallback that used to sit here was an amber from
-        // the retired dark system — a colour that is no longer in the product.
         color: 'var(--accent)',
         delay: 250,
     },

@@ -9,9 +9,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureBillingAccess
 {
-    /**
-     * @param  Closure(Request): Response  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $tenant = current_tenant();

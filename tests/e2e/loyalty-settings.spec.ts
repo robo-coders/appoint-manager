@@ -2,21 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-/**
- * Settings → Loyalty.
- *
- * Three things here are worth a browser rather than a component test: the save
- * that actually round-trips through the FormRequest, the confirmation that
- * stands between an operator and pausing everybody's card, and the empty state
- * of a select whose options come from another screen entirely.
- *
- * The last two need page props the demo seed does not have — a salon with cards
- * already part-way through, and a salon with no services at all. Both are
- * produced by rewriting the Inertia payload on the way in rather than by
- * editing the seed: `tests/e2e/__screenshots__` is only valid against a
- * pristine database, and a spec that deletes the demo salon's services to prove
- * a hint appears would break every snapshot that runs after it.
- */
 const LOYALTY = "/settings/loyalty";
 const VISUAL_CHECK = ".design/mockups/Backend/visual-check";
 
@@ -31,15 +16,6 @@ const decode = (value: string): string =>
 const encode = (value: string): string =>
     value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
-/**
- * Open the tab, optionally rewriting the props it arrives with.
- *
- * Inertia carries the payload in `data-page` on the first document, so this
- * edits the document rather than a later JSON visit. That is deliberate: going
- * through the settings tab bar to make it a client-side visit made the props
- * easier to reach and the navigation itself a race, and a helper that
- * intermittently never arrives fails tests that have nothing wrong with them.
- */
 async function openLoyalty(
     page: Page,
     rewrite?: (props: Record<string, unknown>) => void,
@@ -209,18 +185,6 @@ test.describe("the loyalty settings tab", () => {
     });
 });
 
-/**
- * The comparison pair, written where this project's other visual checks live.
- *
- * The mockup half is the 4a artboard from `loyalty-final.dc.html` — the "date
- * stamp" treatment, which is the part of that file the card was built from. The
- * numbered exploration sections around it are not captured and are not the
- * reference for anything.
- *
- * The artboard is 392px wide, so this half is the artboard rather than 1280px
- * of a canvas document whose other sections are deliberately out of scope. The
- * app half is the real screen, full page, at 1280.
- */
 const MOCKUP = pathToFileURL(
     resolve(".design/mockups/settings/loyalty-final.dc.html"),
 ).href;
@@ -242,7 +206,6 @@ test.describe("visual check artefacts", () => {
         });
     });
 
-    /** The other half of the card: the closing stamp, in terracotta. */
     test("captures loyalty-settings-full-card-app.png", async ({ page }) => {
         await page.setViewportSize({ width: 1280, height: 1000 });
         await openLoyalty(page, (props) => {

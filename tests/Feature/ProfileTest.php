@@ -53,7 +53,6 @@ test('email verification status is unchanged when the email address is unchanged
 
 test('user can close their account', function () {
     $user = User::factory()->create();
-    // Every tenant must keep one owner, so give this one a colleague to hand over to.
     User::factory()->create(['tenant_id' => $user->tenant_id, 'role' => UserRole::Owner]);
 
     $response = $this
@@ -68,7 +67,6 @@ test('user can close their account', function () {
 
     $this->assertGuest();
 
-    // The row survives so past bookings keep their staff member, but the person is gone.
     $closed = User::withoutGlobalScopes()->find($user->id);
     expect($closed->name)->toBe('Former team member')
         ->and($closed->is_active)->toBeFalse();

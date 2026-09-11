@@ -7,21 +7,6 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
-/**
- * Error binding, on every field.
- *
- * This is the defect the phase 7 report describes on Settings: nine hand-rolled
- * inputs with no `form.errors` binding at all, so a rejected value came back
- * with **nothing on screen** to say so and the form silently discarded what had
- * been typed. The fix was to put every field on the library — which is only a
- * fix if the library actually wires the error to the control.
- *
- * "Wires it" means three things, and all three are tested here for each field:
- * the message is rendered, the input points at it with `aria-describedby`, and
- * the input says `aria-invalid`. A red border is none of those.
- */
-
-/** Every field in the library that takes an `error`, and how to reach its control. */
 const fields = [
     { name: 'TextInput', component: TextInput, control: 'input', props: { label: 'Business name' } },
     { name: 'Textarea', component: Textarea, control: 'textarea', props: { label: 'Notes' } },
@@ -89,8 +74,6 @@ describe.each(fields)('$name error binding', ({ component, control, props }) => 
         const withBoth = mount(component, {
             props: { ...props, hint: 'Customers see this.', error: 'Too long.', modelValue: '' },
         });
-        // Two lines of small grey text under one field is one line too many;
-        // the error is the one that has to be read.
         expect(withBoth.text()).toContain('Too long.');
         expect(withBoth.text()).not.toContain('Customers see this.');
     });
@@ -119,10 +102,6 @@ describe('Combobox', () => {
         expect(wrapper.find('button').text()).toContain('Europe · London');
     });
 
-    /*
-     * The reason this replaced a native select: four hundred options cannot be
-     * searched, only scrolled. "lon" has to reach London.
-     */
     it('filters as you type', async () => {
         const wrapper = mount(Combobox, { props: { label: 'Timezone', options, modelValue: '' } });
 
@@ -144,12 +123,6 @@ describe('Combobox', () => {
         expect(wrapper.findAll('[role="option"]').length).toBe(3);
     });
 
-    /*
-     * `mousedown`, not `click`. The option commits on mousedown *by design*:
-     * the filter input closes the list on blur, and a blur fires before a click
-     * completes — so a click handler would find the list already gone. Driving
-     * it the way a mouse does is the point.
-     */
     it('emits the value, not the label', async () => {
         const wrapper = mount(Combobox, { props: { label: 'Timezone', options, modelValue: '' } });
 

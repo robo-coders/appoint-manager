@@ -17,29 +17,10 @@ use App\Services\Loyalty\LoyaltyStampService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 
-/**
- * The stamping engine.
- *
- * `Loyalty` decides what the scheme *is*; this decides when a stamp is written
- * and what it says. The two paths — the booking-completion hook and the
- * operator's own hand — share one private method, so every test here that names
- * a rule is really testing both.
- *
- * The whole suite runs on MySQL 8.4 (see phpunit.xml), which matters for two of
- * these: the unique index that makes re-processing a completion harmless, and
- * the row lock that makes two of them arriving together harmless.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
 
-/**
- * The salon, its scheme, and a customer already enrolled on it.
- *
- * Self-contained rather than reaching for the helpers in `LoyaltyPackagesTest`:
- * those are file-local to Pest, and a shared fixture that only exists when both
- * files happen to run together is a test that passes for the wrong reason.
- */
 function aStampingSalon(array $package = [], int $sessions = 5): array
 {
     $salon = aSalon();
@@ -69,7 +50,6 @@ function aStampingSalon(array $package = [], int $sessions = 5): array
     return [...$salon, 'tenant' => $tenant->fresh(), 'package' => $scheme->fresh(), 'customer' => $customer];
 }
 
-/** One appointment, booked the way the salon would book it. */
 function bookVisit(array $salon, Customer $customer, string $when = '2026-03-10 09:00:00'): Booking
 {
     return app(BookingService::class)->create(
@@ -92,12 +72,6 @@ function cardFor(Customer $customer): LoyaltyEnrolment
     return LoyaltyEnrolment::withoutGlobalScopes()->where('customer_id', $customer->id)->sole();
 }
 
-/*
-|--------------------------------------------------------------------------
-| Automatic stamping
-|--------------------------------------------------------------------------
-*/
-
 it('writes one stamp carrying the visit date when an appointment is completed', function () {
     $salon = aStampingSalon();
     $booking = bookVisit($salon, $salon['customer']);
@@ -112,13 +86,6 @@ it('writes one stamp carrying the visit date when an appointment is completed', 
         ->and(cardFor($salon['customer'])->stamps_used)->toBe(1);
 });
 
-/**
- * The one that matters for webhook retries.
- *
- * A payment provider that delivers the same completion twice must not hand out
- * a stamp twice, and the guard is not a flag in memory — it is the unique index
- * on `(tenant_id, booking_id)`, so two workers racing get the same answer.
- */
 it('stamps once however many times the same completion is processed', function () {
     $salon = aStampingSalon();
     $booking = bookVisit($salon, $salon['customer']);
@@ -134,14 +101,6 @@ it('stamps once however many times the same completion is processed', function (
         ->and(cardFor($salon['customer'])->stamps_used)->toBe(1);
 });
 
-/**
- * The same guard, asserted at the level it actually lives at.
- *
- * The service checks before it writes and again inside the lock, but neither
- * check is what makes this safe under concurrency — the index is. This test
- * goes around the service to prove the database refuses the second row on its
- * own, which is what two simultaneous transactions would each be relying on.
- */
 it('refuses a second stamp row for one appointment at the database', function () {
     $salon = aStampingSalon();
     $booking = bookVisit($salon, $salon['customer']);
@@ -161,15 +120,6 @@ it('refuses a second stamp row for one appointment at the database', function ()
         ->and(LoyaltyStamp::withoutGlobalScopes()->count())->toBe(1);
 });
 
-/**
- * Concurrency, at the level a single-process test can reach it.
- *
- * Every test in this suite runs inside one transaction, so a genuinely parallel
- * second connection could not see these rows to contend for them. What is
- * asserted instead is the invariant that the `lockForUpdate` in
- * `recordStamp()` exists to protect: a card never holds more stamps than the
- * scheme asks for, however many completions arrive for it.
- */
 it('never fills a card past the count the scheme asks for', function () {
     $salon = aStampingSalon(sessions: 3);
     $customer = $salon['customer'];
@@ -204,13 +154,6 @@ it('marks the card stamped out and dates it when the last stamp lands', function
         ->and($card->rewardDue())->toBeTrue();
 });
 
-/**
- * The reward, applied.
- *
- * It is spent at booking rather than at completion — see the note on `Loyalty`
- * — so "the reward was applied" is asserted where the customer would feel it:
- * the next appointment costs nothing and asks for no deposit.
- */
 it('makes the next appointment free once the card is stamped out', function () {
     $salon = aStampingSalon(sessions: 2);
     $customer = $salon['customer'];
@@ -329,17 +272,6 @@ it('adds no stamp for the free appointment itself', function () {
         ->and(stampService()->stampAutomatically($reward))->toBeNull();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Stamping by hand
-|--------------------------------------------------------------------------
-*/
-
-/**
- * A stamp with no appointment behind it is the operator's word for it, and the
- * note is the only record of why. Refusing it is the point: an unexplained
- * stamp is indistinguishable from a mistake a month later.
- */
 it('refuses a stamp with neither an appointment nor a note', function () {
     $salon = aStampingSalon();
     $card = cardFor($salon['customer']);
@@ -378,14 +310,6 @@ it('accepts a stamp with an appointment behind it and no note', function () {
         ->and($stamp->visit_date->toDateString())->toBe('2026-03-10');
 });
 
-/**
- * The distinction the `method` column exists for.
- *
- * A booking pushed through this entry point was completed by a person rather
- * than by the completion hook, and the history has to be able to say so — which
- * is why `method` is decided by which method was called, never by whether a
- * booking happens to be attached.
- */
 it('records a stamp as by-hand even when an appointment is attached', function () {
     $salon = aStampingSalon();
     $card = cardFor($salon['customer']);
@@ -419,12 +343,6 @@ it('refuses a by-hand stamp on a card that is already full', function () {
     expect(fn () => stampService()->stampManually(cardFor($customer), null, $salon['staff'], 'One more'))
         ->toThrow(LoyaltyCardFullException::class);
 });
-
-/*
-|--------------------------------------------------------------------------
-| The completion hook
-|--------------------------------------------------------------------------
-*/
 
 it('stamps from the booking-completion hook rather than from any one route', function () {
     $salon = aStampingSalon();

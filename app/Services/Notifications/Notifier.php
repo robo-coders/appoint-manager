@@ -49,19 +49,6 @@ final class Notifier
         $when = $booking->starts_at->timezone($tenant->timezone)->format('j M H:i');
         $url = book_url(null, 'b/'.$booking->public_token);
 
-        /*
-         * The loyalty stamps, on the confirmation.
-         *
-         * There is no customer portal, so this message and the owner's customer
-         * screen are the only two places the count is ever visible — which makes
-         * this the feature's whole customer-facing surface rather than a nicety.
-         * Null for every tenant that has the feature off, and for a customer who
-         * is not enrolled, so the message is byte-identical to what it was.
-         *
-         * Inside `fitSms`, so the progress line competes with the salon's name
-         * for the segment budget and the *name* is what gives way — never the
-         * link, and never the date. See `SmsSegments::fit`.
-         */
         $progress = app(Loyalty::class)->progressLine($booking);
 
         $sms = $this->fitSms($tenant->name, fn (string $salon) => $salon.': confirmed '.$when.'. '.$url
@@ -135,8 +122,6 @@ final class Notifier
         $this->emailCustomer($tenant, $booking, $booking->customer, new BookingRescheduledMail($booking, $tenant), MessageType::Rescheduled, 'Your booking was moved.');
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::Rescheduled);
 
-        // The reminder queued for the old time is retired by the reschedule; queue
-        // a fresh one against the new time or the customer is reminded on the wrong day.
         $this->scheduleReminder($booking);
     }
 
@@ -151,9 +136,7 @@ final class Notifier
         $this->smsCustomer($tenant, $booking, $booking->customer, $sms, MessageType::Reminder);
     }
 
-    /**
-     * @param  Collection<int, Booking>  $bookings
-     */
+    /** @param  Collection<int, Booking>  $bookings */
     public function dailyAgenda(Tenant $tenant, Collection $bookings): void
     {
         if (! $tenant->email) {
@@ -179,15 +162,8 @@ final class Notifier
         $this->smsCustomer($tenant, null, $customer, $sms, MessageType::WaitlistGone);
     }
 
-    /**
-     * @return Message|null The queued SMS, so the caller can tie a rebooking
-     *                      claim to it and hear about a later failure.
-     */
     public function rebookDue(Tenant $tenant, Customer $customer, Subject $subject, string $body): ?Message
     {
-        // The body arrives already composed and already carrying its opt-out
-        // notice, because the dry run showed the operator that exact string and
-        // reshaping it here would make the preview a lie.
         $this->emailCustomer($tenant, null, $customer, new RebookDueMail($tenant, $subject, $body), MessageType::RebookDue, $body, $subject);
 
         return $this->smsCustomer($tenant, null, $customer, $body, MessageType::RebookDue, $subject);
@@ -202,9 +178,7 @@ final class Notifier
         }
     }
 
-    /**
-     * @return array{0: Booking, 1: Tenant}
-     */
+    /** @return array{0: Booking, 1: Tenant} */
     private function hydrate(Booking $booking): array
     {
         $tenant = Tenant::query()->findOrFail($booking->tenant_id);
@@ -223,24 +197,6 @@ final class Notifier
         return (bool) data_get($tenant->settings, 'notifications.sms_enabled', true);
     }
 
-    /**
-     * **BetaSandbox integration point.** See BETA_SANDBOX.md.
-     *
-     * True only while a beta tenant's sandbox action is running, and false for
-     * every other request this class has ever served. When it is true, this
-     * file still records the message — the send log is part of what an owner is
-     * testing — but hands nothing to `SendSms` and queues no mailable, because
-     * the recipients are invented people with invented phone numbers.
-     *
-     * It is asked here rather than at the call sites in `BetaSandbox\FastForward`
-     * because the sending decision is made in this file and nowhere else: a
-     * caller that remembered to check would only be checking on behalf of the
-     * five places below that actually dispatch.
-     *
-     * Removing the beta sandbox means deleting this method, the five `if`s that
-     * call it, and restoring `MessageStatus::Queued` unconditionally in the two
-     * SMS helpers.
-     */
     private function sandboxMuted(): bool
     {
         return SandboxMute::isMuted();
@@ -299,22 +255,12 @@ final class Notifier
         }
     }
 
-    /**
-     * Records the message, then hands delivery to a queued job.
-     *
-     * Nothing here talks to Twilio inline. A provider outage must not be able to
-     * roll back the booking or the refund that caused the message.
-     */
     private function smsCustomer(Tenant $tenant, ?Booking $booking, Customer $customer, string $body, MessageType $type, ?Subject $subject = null): ?Message
     {
         if (! $this->smsEnabled($tenant) || ! $customer->phone) {
             return null;
         }
 
-        // The opt-out gate, and the only place it lives. A customer who replied
-        // STOP is suppressed from marketing and nothing else: a confirmation, a
-        // reminder and a waitlist offer are about an appointment they made and
-        // withholding them would put somebody outside a locked salon door.
         if ($type->isMarketing() && app(SmsConsent::class)->isOptedOut($customer)) {
             return null;
         }
@@ -373,16 +319,6 @@ final class Notifier
         return $message;
     }
 
-    /**
-     * Keep a transactional SMS inside the segment budget without cutting the
-     * link off the end of it.
-     *
-     * The salon's name is the only unbounded string in any of these bodies, so
-     * it is the one that gives way. See `SmsSegments::fit` for what this
-     * replaced and why it mattered.
-     *
-     * @param  callable(string): string  $render
-     */
     private function fitSms(string $salon, callable $render): string
     {
         return SmsSegments::fit($salon, $render, (int) config('rebooking.message.max_segments', 3));

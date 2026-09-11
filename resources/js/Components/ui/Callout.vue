@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * An inline prompt where the thing it is about lives — "Stripe isn't connected"
- * on the payments screen, not a banner following her around the app.
- */
 withDefaults(defineProps<{ tone?: 'neutral' | 'accent' | 'danger'; title?: string }>(), { tone: 'neutral' });
 </script>
 

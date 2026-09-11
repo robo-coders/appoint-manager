@@ -19,13 +19,6 @@ use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * The overview: recovered, overdue, deposits, no-shows, and today.
- *
- * The band is deliberately not four equal cards. Recovered and overdue take
- * the weight (sunk, 34px); deposits and no-shows stay 20px. See
- * `public/mockups/dashboard.html`.
- */
 class DashboardController extends Controller
 {
     public function __invoke(FreedSlots $freed, OverdueSubjects $overdue): Response
@@ -45,15 +38,6 @@ class DashboardController extends Controller
                 'date' => $now->format('l j F'),
                 'tenant' => $tenant->name,
                 'staff_today' => $this->staffInToday($todayStart, $tz),
-                /*
-                 * The zone every time on this screen is in, said once.
-                 *
-                 * The redesign puts it under the heading — "Saturday 26
-                 * September · Europe/London" — and it is not decoration: a salon
-                 * owner reading "15:00" on a laptop that travelled has no other
-                 * way to know whose three o'clock it is, and every figure on the
-                 * page below is bucketed by this zone on the server.
-                 */
                 'timezone' => $tz,
             ],
             'band' => [
@@ -69,21 +53,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Whether the salon is open today, and when it is next.
-     *
-     * Read off the opening hours rather than off the diary: "nothing booked" and
-     * "closed" are different facts and the empty panel has to say which one it
-     * is looking at. A Saturday with no appointments on a salon that never works
-     * Saturdays is not a quiet day, and telling her to go and fill it is the
-     * kind of advice that gets a product closed.
-     *
-     * Hours only, deliberately. Time off is per-person and this is the shop's
-     * pattern; a day everybody happens to be away still reads as an open day
-     * with nobody in, which is what the diary itself will say when she opens it.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function diaryDay(CarbonImmutable $now): array
     {
         $open = AvailabilityRule::query()
@@ -115,15 +85,7 @@ class DashboardController extends Controller
         ];
     }
 
-    /**
-     * The things waiting on somebody, in one place.
-     *
-     * Everything here is a number she can act on and a screen it opens. The
-     * email row is decided in the shell, from the signed-in user rather than
-     * from the tenant, so it is not built here.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function attention(Tenant $tenant, CarbonImmutable $now): array
     {
         $unpaid = Booking::query()
@@ -153,27 +115,7 @@ class DashboardController extends Controller
         ];
     }
 
-    /**
-     * **The sales pitch, so it has to be exact.**
-     *
-     * Counts `bookings` rows whose `waitlist_entry_id` is not null — set once,
-     * on claim, by `BookingService::claimOffer`, and never denormalised — that
-     * start inside the current calendar month in the tenant's timezone and are
-     * not cancelled. The figure is the sum of `price_at_booking`: the money on
-     * the books this month from appointments that exist only because somebody
-     * claimed a waitlist offer for an hour that had been given up.
-     *
-     * `starts_at`, not `created_at`: the question is how much of this month's
-     * revenue was recovered, not how much clicking happened this month. A slot
-     * offered in July for an August appointment is August's recovery.
-     *
-     * Cancelled rows are excluded because a refilled slot that was then
-     * cancelled again recovered nothing. Pending rows are included — the hour
-     * is held and the appointment is real — but counted separately in the
-     * sub-line, because a deposit that never lands is money not yet recovered.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function recovered(string $currency, CarbonImmutable $from, CarbonImmutable $to): array
     {
         $rows = Booking::query()
@@ -194,17 +136,7 @@ class DashboardController extends Controller
         ];
     }
 
-    /**
-     * Money the salon is holding right now against appointments that have not
-     * happened: `deposit_status = paid`, not cancelled, starting in the future.
-     *
-     * The previous version summed deposits *taken this week*, which is a
-     * different quantity wearing the same label — it counts a deposit for an
-     * appointment that has already been and gone, and misses one taken last
-     * month for next Tuesday.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function depositsHeld(string $currency): array
     {
         $rows = Booking::query()
@@ -219,14 +151,7 @@ class DashboardController extends Controller
         ];
     }
 
-    /**
-     * No-shows as a share of appointments that actually finished — completed
-     * plus no-show. Pending and confirmed are excluded: an appointment that has
-     * not happened yet cannot have been missed, and counting it flatters the
-     * rate every time the diary fills up.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function noShowRate(CarbonImmutable $from, CarbonImmutable $to, CarbonImmutable $previous): array
     {
         $rate = function (CarbonImmutable $start, CarbonImmutable $end): ?float {
@@ -251,18 +176,12 @@ class DashboardController extends Controller
             'previous' => $before === null ? null : number_format($before, 1).'%',
             'previous_month' => $previous->format('F'),
             'direction' => $current === null || $before === null ? null : ($current <= $before ? 'down' : 'up'),
-            /*
-             * The movement, signed, in percentage points. The headline needs a
-             * figure beside the arrow and "6.2% (up from 3.1%)" makes a reader
-             * do the subtraction; this is the answer they were going to work out.
-             */
             'change' => $current === null || $before === null
                 ? null
                 : sprintf('%+.1f', round($current - $before, 1)),
         ];
     }
 
-    /** Who is actually working today, for the sub-line under the date. */
     private function staffInToday(CarbonImmutable $todayStart, string $tz): string
     {
         $names = Booking::query()
@@ -273,7 +192,6 @@ class DashboardController extends Controller
             ->get()
             ->map(fn (Booking $booking) => $booking->staff?->name)
             ->filter()
-            // First names: this is a sub-line, not a staff list.
             ->map(fn (string $name) => explode(' ', $name)[0])
             ->unique()
             ->values()
@@ -292,16 +210,7 @@ class DashboardController extends Controller
         return implode(', ', $names).' and '.$last.' in today';
     }
 
-    /**
-     * Today as a timeline: past appointments muted with no detail, the current
-     * one carrying an extra line, and freed slots as the rows that need doing
-     * something about.
-     *
-     * Cancelled bookings are loaded here rather than filtered out — the same
-     * fix as the diary, and for the same reason. See `FreedSlots`.
-     *
-     * @return list<array<string, mixed>>
-     */
+    /** @return list<array<string, mixed>> */
     private function today(Tenant $tenant, FreedSlots $freed, CarbonImmutable $todayStart, CarbonImmutable $now): array
     {
         $tz = $tenant->timezone;
@@ -316,7 +225,6 @@ class DashboardController extends Controller
         $annotations = $freed->annotate($tenant, $rows);
         $nowUtc = $now->utc();
 
-        // One customer-notes lookup for the whole day rather than one per row.
         $notes = Customer::query()
             ->whereIn('id', $rows->pluck('customer_id')->filter()->unique())
             ->pluck('notes', 'id');
@@ -340,8 +248,6 @@ class DashboardController extends Controller
                     'status' => $booking->status->value,
                     'past' => $ends->lte($nowUtc),
                     'current' => $current,
-                    // Only the current appointment earns the extra line, so
-                    // only the current appointment pays for building it.
                     'detail' => $current ? $this->detailLine($booking, $starts, $nowUtc, $notes) : null,
                     'freed' => $annotation && $annotation['is_freed'] ? [
                         'minutes' => $annotation['minutes'],
@@ -355,11 +261,7 @@ class DashboardController extends Controller
             ->all();
     }
 
-    /**
-     * "In the chair 14 min · deposit paid · first visit, nervous with clippers"
-     *
-     * @param  Collection<int, string|null>  $notes
-     */
+    /** @param  Collection<int, string|null>  $notes */
     private function detailLine(Booking $booking, CarbonImmutable $starts, CarbonImmutable $now, Collection $notes): string
     {
         $parts = ['In the chair '.(int) round($starts->diffInMinutes($now)).' min'];

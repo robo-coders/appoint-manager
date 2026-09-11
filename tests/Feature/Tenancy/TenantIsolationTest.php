@@ -37,14 +37,6 @@ it('returns no tenant-owned rows when tenant context is missing, even outside th
     Service::factory()->create();
     app(TenantContext::class)->clear();
 
-    /*
-     * AUDIT.md said this passed only because `runningUnitTests()` was true.
-     * That exemption is gone — `TenantScope` fail-closes everywhere, and
-     * `ScopeFailClosedTest` already proves it by flipping `env` to `local`.
-     * This test does the same flip so a regression that re-opens the console
-     * exemption cannot hide behind APP_ENV=testing. It cannot fail-first on
-     * current code: the code is already right.
-     */
     $previous = app()['env'];
     app()['env'] = 'local';
 

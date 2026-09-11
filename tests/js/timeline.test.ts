@@ -4,17 +4,6 @@ import { PX_PER_MIN, gapsIn, type DiaryBooking } from '@/Components/Diary/diary'
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
-/**
- * `ui/TimelineRow` is `dashboard.html`'s row, and the dashboard and the diary's
- * 375px agenda are both built from it. Its five tones are the five things a row
- * in a day can be, and each one is a rule from the approved mockup:
- *
- *   - past: muted, and **no detail** — history does not need reading
- *   - current: a 2px ink left border, a fill, and the one extra line
- *   - freed: the only coloured row, with its action inline
- *   - gap: open time, drawn as space
- *   - default: a hairline row
- */
 describe('TimelineRow tones', () => {
     it('mutes a past row and drops its detail', () => {
         const wrapper = mount(TimelineRow, {
@@ -23,7 +12,6 @@ describe('TimelineRow tones', () => {
 
         expect(wrapper.find('div').classes()).toContain('text-ink-2');
         expect(wrapper.text()).not.toContain('deposit paid');
-        // It is still a row of a day, so it still says when and what.
         expect(wrapper.text()).toContain('09:00');
         expect(wrapper.text()).toContain('Bramble');
     });
@@ -68,11 +56,6 @@ describe('TimelineRow tones', () => {
         expect(li.classes()).not.toContain('bg-paper-sunk');
     });
 
-    /*
-     * The rule this guards is the one the diary bent on purpose: a past row
-     * carries no *routine* detail, but a double-booking is not routine and it
-     * does not stop mattering because the appointment has been and gone.
-     */
     it('keeps the problem line on a past row even though it drops the detail', () => {
         const wrapper = mount(TimelineRow, {
             props: { time: '13:30', title: 'Alfie — full groom', tone: 'past', detail: 'deposit paid' },
@@ -104,16 +87,11 @@ describe('TimelineRow tones', () => {
     });
 });
 
-/**
- * `ui/GapButton` is the answer to "gap-finding is the daily job". A statistic
- * tells you a hole exists; this *is* the hole, at the size the hole is.
- */
 describe('GapButton', () => {
     it('labels itself only once there is room for the label', () => {
         const short = mount(GapButton, { props: { minutes: 15, ariaLabel: '15 minutes free' } });
         const long = mount(GapButton, { props: { minutes: 90, ariaLabel: '90 minutes free' } });
 
-        // A 15-minute gap labelled "15 min" is a label, not a gap.
         expect(short.text()).toBe('');
         expect(long.text()).toContain('90 min');
     });
@@ -135,11 +113,6 @@ describe('GapButton', () => {
     });
 });
 
-/**
- * The geometry behind the drawing. `gapsIn` decides which minutes are a gap and
- * `PX_PER_MIN` decides how tall it is — together they are the claim that a
- * 90-minute hole looks three times a 30-minute one.
- */
 describe('gap geometry', () => {
     const booking = (start: string, end: string, over: Partial<DiaryBooking> = {}): DiaryBooking => ({
         id: Math.random(),
@@ -182,11 +155,6 @@ describe('gap geometry', () => {
         expect(gaps).toEqual([]);
     });
 
-    /*
-     * A freed slot is drawn as an accent block *and* is open time. Counting it
-     * as a plain grey gap as well would report the same hour twice — once as a
-     * hole and once as a thing to act on.
-     */
     it('does not draw a grey gap underneath a freed slot', () => {
         const gaps = gapsIn(1, [{ start: '09:00', end: '17:00' }], [
             booking('09:00', '15:00'),

@@ -29,10 +29,6 @@ const connect = () => form.post(route('settings.payments.connect'));
         <SettingsNav current="payments" />
 
         <div class="mt-6 max-w-xl space-y-4">
-            <!--
-                The unreachable state. It is an error the owner did not cause and
-                cannot fix, so it says what still works rather than what failed.
-            -->
             <Callout v-if="unreachable" tone="danger" title="Stripe is not reachable">
                 {{ unreachable }}
             </Callout>

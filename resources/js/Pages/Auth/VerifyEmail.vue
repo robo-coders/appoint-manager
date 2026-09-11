@@ -5,16 +5,6 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-/**
- * Verify the email address.
- *
- * The address is on screen. The previous version said "the link we just emailed
- * you" without saying where — which is the exact question a person has when the
- * email has not arrived, and the exact typo they need to see to answer it.
- *
- * `quiet` for the same reason as Confirm password: this person has already
- * signed up. They do not need to be told what the product is.
- */
 const props = defineProps<{ status?: string; email: string }>();
 
 const form = useForm({});

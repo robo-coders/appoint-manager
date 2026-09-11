@@ -5,24 +5,6 @@ import Skeleton from '@/Components/ui/Skeleton.vue';
 import SlotButton from '@/Components/ui/SlotButton.vue';
 import { computed } from 'vue';
 
-/**
- * The fallback picker, for the customer whose answer is none of the four
- * appointments already on the page.
- *
- * It reveals **inline**, with no navigation: the proposal stays above it, and
- * choosing anything collapses this again with the proposal rewritten. That is
- * the difference between a disclosure and a wizard — nothing is lost by opening
- * it and nothing has to be re-entered by closing it.
- *
- * A borderless week rail where only the selected day takes a fill, then times
- * grouped under Morning and Afternoon. Unavailable days and times keep their
- * place: see `SlotButton` for why removing them is worse than striking them
- * through.
- *
- * `Earlier` / `Later` are not in the approved mockup, which draws one week and
- * stops. Without them the picker can only reach seven days, so they are here as
- * the quietest control the library has — see DECISIONS.md.
- */
 export type Slot = {
     starts_at: string;
     starts_at_local: string;
@@ -32,21 +14,17 @@ export type Slot = {
 };
 
 const props = defineProps<{
-    /** ISO dates, in order. Seven of them.  */
     week: string[];
-    /** Keyed by ISO date. A date with no entry has not loaded yet. */
     days: Record<string, Slot[]>;
     selectedDate: string | null;
     selectedStartsAt: string | null;
     loading?: boolean;
-    /** The context line for the picker's own heading. */
     context: string;
 }>();
 
 const emit = defineEmits<{
     pickDay: [string];
     pickSlot: [Slot];
-    /** Move the week window. `-1` back, `1` forward. */
     shiftWeek: [number];
 }>();
 
@@ -66,13 +44,6 @@ const morning = computed(() => slotsFor(props.selectedDate).filter((slot) => slo
 const afternoon = computed(() => slotsFor(props.selectedDate).filter((slot) => slot.half === 'pm'));
 const nothingAtAll = computed(() => morning.value.length === 0 && afternoon.value.length === 0);
 
-/*
- * A day the salon is shut is not the same fact as a day that is full, and
- * saying "no times" about a Sunday a salon never opens reads as bad luck rather
- * than as opening hours. The grid endpoint only emits candidate starts for days
- * the salon actually works, so an empty array means closed and an array with no
- * free entry means full.
- */
 const dayState = (iso: string) => {
     const slots = props.days[iso];
 
@@ -121,8 +92,6 @@ const weekLabel = computed(() => {
             />
         </div>
 
-        <!-- Loading: bars where the times will be, so nothing jumps when they
-             arrive. Three columns, nine bars — the shape of a real morning. -->
         <div v-if="loading" class="mt-6" aria-busy="true">
             <p class="sr-only">Loading times</p>
             <div class="grid grid-cols-3 gap-2" aria-hidden="true">
@@ -159,8 +128,6 @@ const weekLabel = computed(() => {
                 </div>
             </template>
 
-            <!-- Closed, not empty. One sentence, and the week rail above is
-                 still there to move on from. -->
             <p v-if="nothingAtAll" class="mt-6 text-15 text-ink-2">
                 Closed this day. Try another, or join the waitlist below.
             </p>

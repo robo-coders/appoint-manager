@@ -10,19 +10,6 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Who is waiting, for what, and for how long.
- *
- * The add form was five hand-rolled inputs sitting permanently above the table,
- * taking up the top of the screen for something a salon does a few times a
- * week. It is a `SlideOver` now, behind one button, on the shared components
- * with real error binding.
- *
- * The queue is ordered, so it says so. A position column and a wait measured in
- * days and hours are what turn a list into a queue, and the person at the top of
- * it wears the same filled pill Bookings uses — one status language across the
- * two lists, and the accent spent on the one row that is next.
- */
 const props = defineProps<{
     entries: Array<{
         id: number;
@@ -67,13 +54,6 @@ const submit = () =>
         },
     });
 
-/*
- * `narrow` is the phone layout. At 375px "Full groom — medium dog" broke into
- * four lines in the service column, which made every row four lines tall, and
- * the status badge and the row menu were off the right-hand edge. See
- * `ui/Table`. The name and its phone number stay the headline: this is the one
- * list whose whole purpose is ringing somebody up.
- */
 const columns: Column[] = [
     { key: 'rank', label: '#', width: 'time', numeric: true, narrow: 'lead' },
     { key: 'customer_name', label: 'Customer', sortable: true, narrow: 'title' },
@@ -102,25 +82,14 @@ const preference = (entry: (typeof props.entries)[number]) => {
     return [days.length ? days.join(', ') : 'Any day', time ?? 'any time'].join(' · ');
 };
 
-/** Hours waited. A number, so it sorts — the column renders it with its units. */
 const hoursWaiting = (since: string | null) => {
     if (!since) return 0;
 
     return Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 3_600_000));
 };
 
-/*
- * "9 d 04 h". Days alone is the wrong precision at both ends of this list: on
- * the first morning every entry reads "0 d", and after a week the difference
- * between two of them is the whole question of who gets rung first.
- */
 const waitLabel = (hours: number) => `${Math.floor(hours / 24)} d ${String(hours % 24).padStart(2, '0')} h`;
 
-/*
- * Position, over the people actually waiting. A finished entry keeps its place
- * in the table — it is history, and removing it would make the list jump — but
- * it is not in the queue, so it is not numbered.
- */
 const rows = computed(() => {
     let place = 0;
 
@@ -198,9 +167,6 @@ const longest = computed(() =>
                 <span v-if="subtitle(row)" class="mt-0.5 block truncate text-12 text-ink-2">{{ subtitle(row) }}</span>
             </template>
 
-            <!-- The queue position, and the one row that is next wears the
-                 accent. A finished entry has no place in the queue, so it
-                 shows nothing rather than a number that means nothing. -->
             <template #cell:rank="{ row }">
                 <span v-if="row.rank" :class="row.rank === 1 ? 'font-medium text-accent-strong' : 'text-ink-2'">
                     #{{ row.rank }}

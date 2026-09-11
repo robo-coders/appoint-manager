@@ -6,14 +6,6 @@ use App\Models\Customer;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/**
- * The status tabs and the export beside them.
- *
- * The counts are the reason the tabs exist rather than the Select they replace,
- * so the thing worth asserting is that a tab counts the same question its table
- * answers: the date window, without the status filter. A tab reading
- * "Confirmed 34" over six rows would be worse than no count at all.
- */
 function aFilteredList(): array
 {
     test()->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
@@ -43,7 +35,6 @@ function aFilteredList(): array
     $make('2026-03-12', BookingStatus::Pending);
     $make('2026-03-13', BookingStatus::Cancelled);
     $make('2026-03-14', BookingStatus::Completed);
-    // Outside the window every assertion below uses.
     $make('2026-04-02', BookingStatus::Confirmed);
 
     app(TenantContext::class)->clear();
@@ -68,7 +59,6 @@ it('counts every status in the window, whichever tab is selected', function () {
             ->where('counts.completed', 1)
             ->where('counts.no_show', 0));
 
-    // Selecting a tab narrows the table and leaves every count where it was.
     actingAsTenant($owner)
         ->get(route('bookings.index', [...$window, 'status' => 'pending']))
         ->assertOk()

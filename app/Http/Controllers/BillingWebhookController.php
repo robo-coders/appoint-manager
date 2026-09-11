@@ -49,7 +49,6 @@ class BillingWebhookController extends Controller
                     'message' => $exception->getMessage(),
                 ]);
             } catch (Throwable) {
-                // Storage is the failure. The 500 is the signal.
             }
 
             return response('could not store event', 500);

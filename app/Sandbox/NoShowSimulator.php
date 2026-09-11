@@ -16,9 +16,7 @@ final class NoShowSimulator
 {
     public function __construct(private BookingService $bookings) {}
 
-    /**
-     * @return list<array{id: int, label: string}>
-     */
+    /** @return list<array{id: int, label: string}> */
     public static function candidates(Tenant $tenant): array
     {
         $tz = $tenant->timezone;

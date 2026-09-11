@@ -3,15 +3,6 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { forms, resetForms, router, setPageProps } from './setup';
 
-/**
- * The loyalty settings tab.
- *
- * Three things on this screen are logic rather than markup, and all three are
- * the kind that look right in a screenshot and are wrong in use: the preview
- * that has to follow the form rather than the saved record, the counter that
- * has to warn before the server refuses, and the guard that has to stop a
- * half-typed scheme leaving with the tab.
- */
 const props = (overrides: Record<string, unknown> = {}) => ({
     loyalty: {
         enabled: true,
@@ -84,10 +75,6 @@ describe('the live preview', () => {
         expect(page.text()).toContain('card stamped out');
     });
 
-    /*
-     * The whole point of the 4a treatment: the date is inside the impression.
-     * Switching it off has to leave the stamp there and take only the date.
-     */
     it('drops the visit date from the impression when that switch is off', async () => {
         const page = mountPage();
 

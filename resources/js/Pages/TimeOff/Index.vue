@@ -11,14 +11,6 @@ import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Time off, on the shared table.
- *
- * The form was eight hand-rolled controls in a permanent panel above the list —
- * a two-column grid taking half the screen for something a salon does a handful
- * of times a year. It is behind one button now, on the component library, with
- * every error bound to its own field.
- */
 const props = defineProps<{
     entries: Array<{
         id: number;
@@ -124,9 +116,6 @@ const rows = computed(() =>
 
                 <Checkbox v-model="form.is_all_day" label="All day" hint="Blocks the whole of every day in the range." />
 
-                <!-- Times only exist when it is not all day. Showing them
-                     disabled would be two controls arguing about which one
-                     matters. -->
                 <template v-if="!form.is_all_day">
                     <TextInput v-model="form.start_time" type="time" label="From" :error="form.errors.start_time" />
                     <TextInput v-model="form.end_time" type="time" label="Until" :error="form.errors.end_time" />

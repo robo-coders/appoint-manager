@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import Label from './Label.vue';
 
-/**
- * A single figure: a 13px caption, the number in mono at 34px, and an optional
- * hint beneath. The instrument reading, not a card with a number in it.
- *
- * The rule is on the left only, so its colour is scoped to the left only.
- * `border-ink` would paint all four sides and the emphasised variant would
- * become a box.
- */
 withDefaults(
     defineProps<{ label: string; value: string; hint?: string; emphasis?: boolean }>(),
     { emphasis: false },

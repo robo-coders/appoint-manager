@@ -88,9 +88,7 @@ final class BookingQr
         return $png;
     }
 
-    /**
-     * @return list<list<int>>
-     */
+    /** @return list<list<int>> */
     public static function matrix(string $url): array
     {
         $bytes = array_values(unpack('C*', $url) ?: []);
@@ -251,9 +249,7 @@ final class BookingQr
         return $ecc;
     }
 
-    /**
-     * @return array{0: list<int>, 1: array<int, int>}
-     */
+    /** @return array{0: list<int>, 1: array<int, int>} */
     private static function gf(): array
     {
         $exp = array_fill(0, 512, 0);
@@ -290,9 +286,7 @@ final class BookingQr
         return $exp[$log[$a] + $log[$b]];
     }
 
-    /**
-     * @return list<list<int>>
-     */
+    /** @return list<list<int>> */
     private static function blank(int $n): array
     {
         return array_fill(0, $n, array_fill(0, $n, 0));
@@ -478,9 +472,7 @@ final class BookingQr
         };
     }
 
-    /**
-     * @param  list<list<int>>  $matrix
-     */
+    /** @param  list<list<int>>  $matrix */
     private static function drawFormat(array &$matrix, int $mask): void
     {
         $n = count($matrix);
@@ -507,9 +499,7 @@ final class BookingQr
         }
     }
 
-    /**
-     * @param  list<list<int>>  $matrix
-     */
+    /** @param  list<list<int>>  $matrix */
     private static function penalty(array $matrix): int
     {
         $n = count($matrix);
@@ -564,9 +554,7 @@ final class BookingQr
         return $score;
     }
 
-    /**
-     * @param  list<int>  $line
-     */
+    /** @param  list<int>  $line */
     private static function runPenalty(array $line): int
     {
         $score = 0;

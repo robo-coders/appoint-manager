@@ -97,7 +97,6 @@ it('does not consume allowance when the provider fails', function () {
     try {
         SendSms::dispatchSync($message->id);
     } catch (Throwable) {
-        // the job is allowed to throw; the point is the count
     }
 
     expect($salon->fresh()->sms_cycle_used)->toBe(0);

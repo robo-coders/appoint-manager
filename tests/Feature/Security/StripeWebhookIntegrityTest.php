@@ -73,7 +73,6 @@ it('refuses to confirm another tenant booking named in attacker-controlled metad
     $attacker = aConnectedSalon(1000, 'acct_attacker');
     $booking = pendingBooking($victim, 'pi_victim', 1000);
 
-    // The attacker controls their own connected account and can put any metadata on an intent.
     postWebhook(paymentEvent([
         'id' => 'pi_attacker',
         'amount_received' => 1,
@@ -85,15 +84,6 @@ it('refuses to confirm another tenant booking named in attacker-controlled metad
         ->and($booking->fresh()->deposit_status)->toBe(DepositStatus::Required);
 });
 
-/*
- * The case above is blocked by two guards at once — wrong account *and* a
- * one-penny amount — so on its own it cannot tell you which one is doing the
- * work. This is the attack with the amount check taken out of the argument: the
- * attacker pays the full deposit, correctly, in the right currency, on their
- * own connected account, and names a competitor's booking in metadata. Ten
- * pounds to confirm somebody else's appointment is a price an attacker will
- * pay, so the account check has to be the thing that stops it.
- */
 it('refuses a correctly paid event that names a booking on another account', function () {
     $victim = aConnectedSalon(1000, 'acct_victim2');
     aConnectedSalon(1000, 'acct_attacker2');
@@ -110,11 +100,6 @@ it('refuses a correctly paid event that names a booking on another account', fun
         ->and($booking->fresh()->deposit_status)->toBe(DepositStatus::Required);
 });
 
-/*
- * And a platform event — one with no `account` at all — can never speak for a
- * tenant's booking. Direct charges always carry the connected account, so an
- * event without one either is not a Connect event or has been made up.
- */
 it('refuses an event that names no connected account', function () {
     $salon = aConnectedSalon(1000, 'acct_none');
     $booking = pendingBooking($salon, 'pi_none', 1000);
@@ -224,12 +209,6 @@ it('still acknowledges a duplicate event without dispatching twice', function ()
     expect(StripeEvent::query()->where('event_id', 'evt_dup2')->count())->toBe(1);
 });
 
-/*
- * AUDIT C2, the part the cases above do not reach: `account.updated` is the
- * event that flips `stripe_onboarding_complete`, which is what decides whether
- * a salon can take deposits at all. A connected account may only ever speak for
- * itself.
- */
 it('refuses an account.updated that speaks for a different connected account', function () {
     $salon = aConnectedSalon(1000, 'acct_victim');
     $salon['tenant']->forceFill(['stripe_onboarding_complete' => false])->save();
@@ -247,11 +226,6 @@ it('refuses an account.updated that speaks for a different connected account', f
     expect(WebhookFailure::query()->where('event_id', 'evt_account_forged')->exists())->toBeTrue();
 });
 
-/*
- * Everything that gets written is re-derived from our own rows by id. The
- * payload is a claim: a metadata block naming a tenant, an amount and a status
- * of its own must change none of them.
- */
 it('ignores every field in metadata except the booking id it has to verify', function () {
     $salon = aConnectedSalon(1000, 'acct_good');
     $other = aConnectedSalon(1000, 'acct_other');
@@ -263,7 +237,6 @@ it('ignores every field in metadata except the booking id it has to verify', fun
         'currency' => 'gbp',
         'metadata' => [
             'booking_id' => (string) $booking->id,
-            // All of this is attacker-controlled and none of it may be believed.
             'tenant_id' => (string) $other['tenant']->id,
             'deposit_at_booking' => '1',
             'status' => 'completed',
@@ -281,10 +254,6 @@ it('ignores every field in metadata except the booking id it has to verify', fun
         ->and($booking->price_at_booking->amount)->toBeGreaterThan(1);
 });
 
-/*
- * The event is stored with the account that sent it, so an attribution can be
- * checked after the fact rather than argued about.
- */
 it('records which connected account sent each event', function () {
     $salon = aConnectedSalon(1000, 'acct_good');
     pendingBooking($salon, 'pi_good', 1000);

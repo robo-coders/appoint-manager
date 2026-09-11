@@ -7,21 +7,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vertical;
 
-/**
- * Setting up a business: five steps, saved one at a time.
- *
- * The flow is `basics → business → services → staff → link`, and the shape of
- * this suite follows from one property: **the server, not the browser, knows
- * where you are.** Every step writes to the tenant on continue and
- * `OnboardingController::show()` rebuilds from that, which is what makes a
- * closed tab, a fresh login and a Back button all survivable in the same way.
- */
-
-/**
- * Seven days, open 09:00-17:00 on the ones named and shut on the rest.
- *
- * @return list<array{weekday: int, open: bool, start_time: string, end_time: string}>
- */
+/** @return list<array{weekday: int, open: bool, start_time: string, end_time: string}> */
 function aWeek(int ...$open): array
 {
     return collect(range(1, 7))
@@ -114,11 +100,6 @@ it('saves each onboarding step and can resume', function () {
     $this->get(route('diary.index'))->assertOk();
 });
 
-/*
- * Resume. The one property the whole flow rests on, tested the way it actually
- * fails in the wild — not by re-reading the page in the same session, but by
- * leaving entirely and coming back to a new one.
- */
 it('resumes at the first unfinished step after logging out and back in', function () {
     $user = User::factory()
         ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
@@ -140,14 +121,12 @@ it('resumes at the first unfinished step after logging out and back in', functio
 
     $this->post('/login', ['email' => $user->email, 'password' => 'password']);
 
-    // Not step one, and not the diary: the first step that has not been saved.
     $this->get(route('dashboard'))->assertRedirect(route('onboarding.show'));
 
     $this->get(route('onboarding.show'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('step', 'services')
-            // And what was saved comes back with it, rather than as defaults.
             ->where('basics.slug', 'paws-and-whiskers')
             ->where('basics.name', 'Paws & Whiskers Grooming'));
 });
@@ -180,8 +159,6 @@ it('will not open a step that is further ahead than the first unfinished one', f
         ->get(route('onboarding.show', ['step' => 'link']))
         ->assertInertia(fn ($page) => $page->where('step', 'basics'));
 });
-
-/* ------------------------------------------------------------------ slugs -- */
 
 it('rejects a slug another salon already has, and says which field', function () {
     Tenant::factory()->create(['slug' => 'paws-and-whiskers']);
@@ -231,18 +208,10 @@ it('answers whether a slug is free, and suggests one that is', function () {
         ->assertOk()
         ->assertJson(['available' => true, 'suggestion' => null]);
 
-    // Its own slug is not a collision with itself.
     $this->getJson(route('onboarding.slug', ['slug' => $user->tenant->slug]))
         ->assertJson(['available' => true]);
 });
 
-/*
- * The race the final step exists to catch: the slug was free on step one, and
- * somebody else took it while this salon was filling in the middle three. The
- * unique index would make that a 500 on the last click of setup; it has to be a
- * named error on a field instead, so the screen can carry the person back to
- * the step where that field lives.
- */
 it('catches a slug taken between step one and the last step', function () {
     $user = User::factory()
         ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
@@ -264,11 +233,6 @@ it('catches a slug taken between step one and the last step', function () {
     ]);
     $this->patch(route('onboarding.staff'), ['staff' => null]);
 
-    /*
-     * Another salon takes the address in the meantime. Our tenant has to let go
-     * of it first — it is holding the slug from step one, and the unique index
-     * is what this test is about not hitting.
-     */
     $user->tenant->forceFill(['slug' => 'paws-and-whiskers-mine'])->save();
     Tenant::factory()->create(['slug' => 'paws-and-whiskers']);
 
@@ -277,11 +241,8 @@ it('catches a slug taken between step one and the last step', function () {
 
     expect($user->tenant->fresh()->hasCompletedOnboarding())->toBeFalse();
 
-    // And the app is still gated, rather than half-open.
     $this->get(route('diary.index'))->assertRedirect(route('onboarding.show'));
 });
-
-/* ------------------------------------------------------------------ steps -- */
 
 it('blocks a week with every day closed', function () {
     $user = User::factory()
@@ -410,14 +371,6 @@ it('prefills the first service from the vertical rather than an empty form', fun
             ->where('service.deposit_amount', $default['deposit_amount']));
 });
 
-/* ------------------------------------------------------------- the cutover -- */
-
-/*
- * Registration is still the front door — it is where an account comes from —
- * but it is no longer allowed to be an exit. The two facts that make onboarding
- * the flow rather than a flow: signing up lands here, and the app stays shut
- * until the last step is saved.
- */
 it('lands a new signup in onboarding, not in the app', function () {
     $this->post(route('register'), [
         'business_name' => 'Paws & Whiskers Grooming',
@@ -433,7 +386,6 @@ it('lands a new signup in onboarding, not in the app', function () {
     expect($tenant->hasCompletedOnboarding())->toBeFalse()
         ->and($tenant->slug)->toBe('paws-whiskers-grooming');
 
-    // Every app route is behind the gate, not just the dashboard.
     foreach (['dashboard', 'diary.index', 'bookings.index', 'customers.index'] as $name) {
         $this->get(route($name))->assertRedirect(route('onboarding.show'));
     }
@@ -452,8 +404,6 @@ it('no longer answers on the retired hours endpoint', function () {
         ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
         ->create(['role' => UserRole::Owner]);
 
-    // The step it belonged to is part of `basics` now. The route is gone, and
-    // a route that is gone must 404 rather than quietly resolving to something.
     actingAsTenant($user)
         ->patch('/onboarding/hours', [
             'rules' => [

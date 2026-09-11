@@ -223,9 +223,6 @@ it('releases the hold instead of leaving an unpayable pending booking', function
     $gateway = app(StripeGateway::class);
     $gateway->throwOnCreate = true;
 
-    // The booking row is committed before Stripe is called — that ordering is what
-    // keeps the row lock off the network — but a booking nobody can pay for is not
-    // left behind pretending to be a live hold.
     expect(fn () => app(BookingService::class)->create(
         $tenant, $service, $staff, $customer, $startsAt, BookingSource::Online,
     ))->toThrow(PaymentSetupFailedException::class);

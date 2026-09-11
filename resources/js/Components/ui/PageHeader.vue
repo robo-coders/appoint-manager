@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * Inline with the content, not in a separate chrome band — the operator app has
- * no vertical space to spare.
- */
 defineProps<{ title: string; description?: string }>();
 </script>
 

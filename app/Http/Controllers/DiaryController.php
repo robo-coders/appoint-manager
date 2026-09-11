@@ -35,14 +35,6 @@ class DiaryController extends Controller
         $from = $view === 'week' ? $focus->startOfWeek(CarbonImmutable::MONDAY) : $focus->startOfDay();
         $to = $view === 'week' ? $from->addWeek() : $from->addDay();
 
-        /*
-         * Cancelled bookings are loaded, not filtered out. The filter that used
-         * to sit here — `where('status', '!=', 'cancelled')` — made the freed
-         * slot invisible on the one screen whose whole job is finding holes in
-         * the day. `FreedSlots` decides which cancellations are real gaps and
-         * which have already been refilled; see that class for why the filter
-         * could not simply be deleted.
-         */
         $rows = Booking::query()
             ->with(['staff', 'service', 'customer', 'subject'])
             ->where('starts_at', '<', $to->utc())
@@ -53,15 +45,10 @@ class DiaryController extends Controller
         $annotations = $freed->annotate($tenant, $rows);
 
         $bookings = $rows
-            // A refilled cancellation is drawn by its replacement, which is
-            // already in this list. Two rows for one hour is a lie about the day.
             ->reject(fn (Booking $booking) => ($annotations[$booking->id]['is_refilled'] ?? false))
             ->map(function (Booking $booking) use ($tenant, $annotations) {
                 $extra = $annotations[$booking->id] ?? [];
 
-                // The grid works in local wall-clock strings throughout, so the
-                // one UTC instant in the annotation is converted here rather
-                // than in the browser, where the salon's timezone is not known.
                 if (! empty($extra['gap_starts_at'])) {
                     $extra['gap_starts_at'] = CarbonImmutable::parse($extra['gap_starts_at'])
                         ->timezone($tenant->timezone)
@@ -89,20 +76,7 @@ class DiaryController extends Controller
             'range_start' => $from->toDateString(),
             'timezone' => $tenant->timezone,
             'staff' => $staff,
-            /*
-             * When each person is actually at work, for the focused day.
-             *
-             * The diary cannot show open time as *space* without knowing where
-             * the day begins and ends for each groomer — without it, a column
-             * with one appointment in it is indistinguishable from a column for
-             * somebody who is not in at all, and every gap runs from 00:00.
-             */
             'working' => $working,
-            /*
-             * A closed day with no hours is not an empty diary. The grid would
-             * invent 09:00–17:00 bounds and look broken. The page says so, and
-             * names the next day anybody actually works.
-             */
             'closed' => $closed,
             'next_open' => $closed ? $this->nextOpenDay($staff, $from) : null,
             'now' => CarbonImmutable::now($tenant->timezone)->format('H:i'),
@@ -125,14 +99,6 @@ class DiaryController extends Controller
     }
 
     /**
-     * Each staff member's working windows on one local day, as `HH:MM` pairs.
-     *
-     * Availability rules for that weekday, with any time off cut out of them.
-     * Deliberately *not* routed through `AvailabilityEngine`: that answers a
-     * different question — where a particular service could start, given its
-     * duration and buffers — and the diary needs the shape of the day itself,
-     * which is a shorter question with a shorter answer.
-     *
      * @param  Collection<int, User>  $staff
      * @return array<int, list<array{start: string, end: string}>>
      */
@@ -207,11 +173,7 @@ class DiaryController extends Controller
         return $out;
     }
 
-    /**
-     * The next local date, after `$from`, on which anybody in `$staff` has hours.
-     *
-     * @param  Collection<int, User>  $staff
-     */
+    /** @param  Collection<int, User>  $staff */
     private function nextOpenDay(Collection $staff, CarbonImmutable $from): ?string
     {
         $ids = $staff->pluck('id');

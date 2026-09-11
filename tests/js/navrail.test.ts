@@ -3,15 +3,6 @@ import { NAV_ICONS, iconKeyFor, navIconFor } from '@/lib/navIcons';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
-/**
- * The rail, at the widths it has.
- *
- * The 56px version is why these exist. Deriving its glyph from the first letter
- * gave Services, Staff and Settings all `S` — three items indistinguishable in
- * the one mode where the label is gone — and that was invisible until the two
- * widths were drawn side by side. Icons replace the letters; the same test that
- * caught the letters catches an icon collision.
- */
 const links: NavLink[] = [
     { href: 'http://localhost/diary', label: 'Diary', glyph: 'Di' },
     { href: 'http://localhost/bookings', label: 'Bookings', glyph: 'Bk', count: 12 },
@@ -47,11 +38,6 @@ describe('the icon set', () => {
         }
     });
 
-    /*
-     * The letter collision, in a different medium. Two rail items sharing one
-     * icon is exactly the bug the letters had, and it would be just as invisible
-     * — so it is asserted rather than looked at.
-     */
     it('never gives two items the same icon', () => {
         const used = links.map((link) => navIconFor(link.label));
 
@@ -70,8 +56,6 @@ describe('the icon set', () => {
     });
 
     it('is small and fixed, because every entry is a deep import somebody wrote', () => {
-        // A number that only moves when a person adds a line to `lib/navIcons`.
-        // 15 -> 16: `more`, for the phone tab bar's fifth destination.
         expect(Object.keys(NAV_ICONS)).toHaveLength(16);
     });
 });
@@ -83,12 +67,6 @@ describe('at 148px', () => {
         expect(wrapper.text()).toContain('Diary');
         expect(wrapper.text()).toContain('Time off');
 
-        /*
-         * Text only, deliberately. The mockup draws it that way, the label is
-         * already the fastest thing on screen to read, and an icon beside a word
-         * it duplicates is decoration with a width — in a rail where the
-         * wordmark already had to go to two lines for want of 8px.
-         */
         expect(wrapper.findAll('nav svg')).toHaveLength(0);
     });
 
@@ -107,13 +85,6 @@ describe('at 148px', () => {
         expect(current[0].text()).toContain('Diary');
         expect(current[0].classes()).toContain('bg-accent-tint');
 
-        /*
-         * The marker is an inset element, not the item's left border. As
-         * `border-l-2` it ran the item's full height and butted into the items
-         * above and below, so a run of them drew one continuous rule; it hangs
-         * in the nav's left padding now and is absent entirely from an item that
-         * is not current, which is what keeps the label from shifting.
-         */
         const marker = current[0].find('span[aria-hidden="true"].bg-accent');
 
         expect(marker.exists()).toBe(true);
@@ -128,10 +99,6 @@ describe('at 56px', () => {
         expect(wrapper.findAll('nav a svg')).toHaveLength(links.length);
     });
 
-    /*
-     * An icon-only control needs a name and a tooltip, and the icon itself must
-     * be hidden — otherwise a screen reader is offered a graphic and no words.
-     */
     it('gives every icon-only link an accessible name and a tooltip', () => {
         const wrapper = rail({ collapsed: true });
 
@@ -148,16 +115,10 @@ describe('at 56px', () => {
             expect(holder.attributes('aria-hidden')).toBe('true');
         }
 
-        // Every svg is inside one of those.
         expect(wrapper.findAll('nav a svg').length).toBeGreaterThan(0);
         expect(wrapper.findAll('nav a svg[aria-hidden="false"]')).toHaveLength(0);
     });
 
-    /*
-     * Search sits in the rail's footer block beside the account control, below
-     * the rule — not as the last item of `nav`, where it scrolled away with the
-     * destinations and read as a thirteenth one.
-     */
     it('names the search control too, since its label is gone as well', () => {
         const wrapper = rail({ collapsed: true });
         const search = wrapper.findAll('button').filter((b) => b.attributes('aria-label') === 'Search');
@@ -166,11 +127,6 @@ describe('at 56px', () => {
         expect(wrapper.find('nav button').exists()).toBe(false);
     });
 
-    /*
-     * The fallback the letters left behind. An item the icon map does not name
-     * must still draw *something* — a rail of empty boxes is worse than a rail
-     * of letters.
-     */
     it('falls back to letters for an item with no icon', () => {
         const wrapper = mount(NavRail, {
             props: {
@@ -216,11 +172,6 @@ describe('the groups', () => {
         expect(headings.map((h) => h.text())).toEqual(['Day-to-day', 'Setup', 'Account']);
     });
 
-    /*
-     * Small caps, never `text-transform`. The system bans ALL CAPS and the check
-     * that enforces it reads class names, so a heading that shouts would pass
-     * every test in this file and fail the build.
-     */
     it('sets the headings in small caps rather than shouting them', () => {
         const heading = groupedRail().find('nav .eyebrow');
 
@@ -228,11 +179,6 @@ describe('the groups', () => {
         expect(heading.classes()).not.toContain('uppercase');
     });
 
-    /*
-     * A run breaks where the caller broke it. Gathering two items declared eight
-     * apart into one block would turn a typo into a reordered nav that looks
-     * deliberate.
-     */
     it('never gathers items that are not next to each other', () => {
         const wrapper = groupedRail({
             links: [

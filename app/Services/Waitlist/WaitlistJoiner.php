@@ -19,9 +19,7 @@ final class WaitlistJoiner
 {
     private const ATTEMPTS = 2;
 
-    /**
-     * @param  array<int, int|string>  $preferredDays
-     */
+    /** @param  array<int, int|string>  $preferredDays */
     public function join(
         Tenant $tenant,
         Customer $customer,
@@ -84,9 +82,7 @@ final class WaitlistJoiner
             ->orderBy('id');
     }
 
-    /**
-     * @param  array<int, int|string>  $preferredDays
-     */
+    /** @param  array<int, int|string>  $preferredDays */
     private function create(
         Tenant $tenant,
         Customer $customer,

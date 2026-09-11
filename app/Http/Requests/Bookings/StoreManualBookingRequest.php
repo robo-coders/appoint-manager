@@ -12,9 +12,7 @@ class StoreManualBookingRequest extends FormRequest
         return $this->user()?->can('create', Booking::class) ?? false;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         $rules = [

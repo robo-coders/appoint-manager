@@ -38,12 +38,7 @@ class BookingController extends Controller
 {
     private const PAGE_SIZE = 25;
 
-    /**
-     * The words a salon owner uses, once. `pending` is "awaiting deposit" on
-     * every screen that shows it, and it is spelt out here rather than in each.
-     *
-     * @var array<string, string>
-     */
+    /** @var array<string, string> */
     private const STATUS_LABELS = [
         'pending' => 'Awaiting deposit',
         'confirmed' => 'Confirmed',
@@ -123,15 +118,7 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * The list's date window, without the status filter.
-     *
-     * Both the page and its counts need it, and they have to agree: a tab
-     * reading "Confirmed 34" over a table showing six rows is a tab that is
-     * counting a different question from the one the table answered.
-     *
-     * @return Builder<Booking>
-     */
+    /** @return Builder<Booking> */
     private function filtered(string $timezone, string $from, string $to): Builder
     {
         $query = Booking::query();
@@ -147,16 +134,7 @@ class BookingController extends Controller
         return $query;
     }
 
-    /**
-     * What each status filter would show, so the tabs can say it before she
-     * presses one.
-     *
-     * `total` is every status in the window rather than the sum of the four
-     * tabs: declined, completed and no-show rows are real bookings and are on
-     * the All tab, they simply have no tab of their own.
-     *
-     * @return array<string, int>
-     */
+    /** @return array<string, int> */
     private function statusCounts(string $timezone, string $from, string $to): array
     {
         $counts = $this->filtered($timezone, $from, $to)
@@ -175,14 +153,6 @@ class BookingController extends Controller
         ];
     }
 
-    /**
-     * The list as a spreadsheet.
-     *
-     * Same filters, same order, no pagination — an export that only covered the
-     * page she happened to be on would be a trap rather than a feature. Streamed
-     * rather than built in memory: a busy salon's whole history is a bigger
-     * array than a request should hold.
-     */
     public function export(Request $request): StreamedResponse
     {
         $this->authorize('viewAny', Booking::class);
@@ -237,9 +207,7 @@ class BookingController extends Controller
         }, $filename, ['Content-Type' => 'text/csv']);
     }
 
-    /**
-     * @param  Builder<Booking>  $query
-     */
+    /** @param  Builder<Booking>  $query */
     private function applySort(Builder $query, string $sort, string $direction): void
     {
         match ($sort) {
@@ -258,17 +226,6 @@ class BookingController extends Controller
             default => $query->orderBy(self::SORTS[$sort], $direction),
         };
 
-        /*
-         * A tiebreaker, so the list has one order rather than whichever order
-         * the engine happens to return.
-         *
-         * Every sort here has ties by construction: two appointments at 09:00,
-         * two customers called Oyelaran, four bookings all `confirmed`. Without
-         * a final key, MySQL is free to order tied rows differently between
-         * identical queries — so pagination could show a row twice and skip
-         * another, and the 768px snapshot of this table failed with two pairs of
-         * same-minute rows swapped.
-         */
         $query->orderBy('bookings.id', 'desc');
     }
 
@@ -289,35 +246,11 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * The record, grouped.
-     *
-     * It was a flat column of eight sentences — status, deposit, total, who
-     * booked it — with nothing saying which of them belonged together, so
-     * answering "has this been paid" meant reading all eight. Four headings,
-     * label on the left and value on the right, and the question is answered by
-     * looking in one place.
-     *
-     * Every row is a column that exists. There is no "reminder scheduled" here
-     * and no auto-release countdown, because this product does not store either
-     * as a fact about a booking — the reminder is a queued job and the release
-     * is a scheduled sweep. A field on a record page that is computed from a
-     * guess is worse than a field that is not there.
-     *
-     * `mono` marks the values that are numbers, dates or identifiers, which is
-     * the same rule the rest of the product follows.
-     *
-     * @return list<array<string, mixed>>
-     */
+    /** @return list<array<string, mixed>> */
     private function detailGroups(Booking $booking, string $timezone): array
     {
         $customer = $booking->customer;
 
-        /*
-         * Whether the two contact rows carry a value or a mask. Resolved here
-         * and not in the Vue: a `v-if` would still have put the number in the
-         * Inertia payload, which is a page of JSON anybody can read in devtools.
-         */
         $showContact = request()->user()?->can('viewContact', $booking) ?? false;
         $starts = $booking->starts_at?->timezone($timezone);
         $ends = $booking->ends_at?->timezone($timezone);
@@ -372,12 +305,6 @@ class BookingController extends Controller
             ],
             [
                 'label' => 'Payment',
-                /*
-                 * A salon that takes no deposits gets three rows of £0.00 and a
-                 * balance identical to the price, which is four lines to say one
-                 * thing. Deposits are opt-in and most salons never turn them on,
-                 * so the rows exist only where there is a deposit to talk about.
-                 */
                 'rows' => array_values(array_filter([
                     $row('Service price', $price->formatted(), true),
                     $deposit->amount === 0 ? null : $row('Deposit due', $deposit->formatted(), true),
@@ -410,15 +337,7 @@ class BookingController extends Controller
         return $groups;
     }
 
-    /**
-     * What has actually been sent about this appointment.
-     *
-     * `messages` is the send log the product already keeps, so this is a read of
-     * something true rather than a timeline invented for the page. A booking
-     * nobody has been written to about shows nothing, which is the honest state.
-     *
-     * @return list<array<string, string>>
-     */
+    /** @return list<array<string, string>> */
     private function activity(Booking $booking, string $timezone): array
     {
         return Message::query()
@@ -474,13 +393,6 @@ class BookingController extends Controller
         return back()->with('toast', 'Request declined.');
     }
 
-    /**
-     * Mark an appointment as having happened.
-     *
-     * The loyalty stamp is not applied here — it hangs off `Booking`'s `updated`
-     * hook, so this route and an import and a support script all agree. See
-     * `BookingService::complete`.
-     */
     public function complete(Booking $booking, Request $request, BookingService $bookings): RedirectResponse
     {
         $this->authorize('update', $booking);
@@ -494,13 +406,6 @@ class BookingController extends Controller
         return back()->with('toast', 'Marked as done.');
     }
 
-    /**
-     * Mark an appointment as missed.
-     *
-     * The only writer of `BookingStatus::NoShow` in the app — the dashboard's
-     * no-show rate read a status nothing could set. See
-     * `BookingService::markNoShow`.
-     */
     public function noShow(Booking $booking, Request $request, BookingService $bookings): RedirectResponse
     {
         $this->authorize('update', $booking);
@@ -514,9 +419,7 @@ class BookingController extends Controller
         return back()->with('toast', 'Marked as a no show.');
     }
 
-    /**
-     * @return array{count: int}
-     */
+    /** @return array{count: int} */
     private function waitlistPreview(Booking $booking): array
     {
         $matches = app(WaitlistOfferer::class)->rankedMatches(

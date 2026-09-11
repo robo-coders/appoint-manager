@@ -225,21 +225,6 @@ it('triggers exactly one waitlist blast when a booking is cancelled', function (
     expect(SlotOffer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(3);
 });
 
-/*
-|--------------------------------------------------------------------------
-| A no-show frees the hour too
-|--------------------------------------------------------------------------
-|
-| A missed appointment leaves the same hole in the day as a cancellation, and
-| for a while it was the only way of leaving one that told nobody: the status
-| changed, the diary showed a gap, and the three people waiting for that exact
-| Tuesday morning were never asked. `markNoShow()` now hands the window to the
-| same `WaitlistOfferer::offerForBooking()` every other freed-slot path uses, so
-| these assertions are deliberately the mirror of the cancellation one above —
-| same fixture, same count, same wording.
-*/
-
-/** The salon, three people waiting, and one appointment that gets missed. */
 function aMissedAppointment(array $salon, CarbonImmutable $starts): Booking
 {
     return app(BookingService::class)->create(
@@ -262,7 +247,6 @@ it('triggers the same waitlist blast when a booking is marked a no show', functi
 
     $booking = aMissedAppointment($salon, $starts);
 
-    // The customer is a quarter of an hour late and the owner gives up on them.
     $this->travelTo(CarbonImmutable::parse('2026-03-10 09:15:00', 'Europe/London'));
     app(BookingService::class)->markNoShow($booking);
 
@@ -291,8 +275,6 @@ it('sends the freed-slot wording and never says the slot was missed', function (
         ->where('type', MessageType::WaitlistOffer->value)
         ->sole();
 
-    // The exact template `Notifier::waitlistOffer` composes for every other
-    // freed slot — nothing about this one is written here.
     expect($sms->body)->toContain('a slot is free. Claim:')
         ->and($sms->body)->not->toContain('no show')
         ->and($sms->body)->not->toContain('no-show')
@@ -304,7 +286,6 @@ it('does nothing when nobody is waiting for that slot', function () {
     ['tenant' => $tenant, 'service' => $service] = $salon;
     $starts = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
 
-    // Waiting, but for Thursdays. The blast runs and matches nobody.
     waiting($tenant, $service, ['preferred_days' => [4]]);
 
     $booking = aMissedAppointment($salon, $starts);
@@ -342,8 +323,6 @@ it('does not blast again for an entry that already holds a live offer', function
     $starts = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
     $entry = waiting($tenant, $service);
 
-    // The salon already offered this exact hour by hand before giving up on the
-    // customer who did not turn up for it.
     SlotOffer::factory()->create([
         'tenant_id' => $tenant->id,
         'waitlist_entry_id' => $entry->id,
@@ -363,24 +342,6 @@ it('does not blast again for an entry that already holds a live offer', function
     expect(SlotOffer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count())->toBe(1);
 });
 
-/*
-|--------------------------------------------------------------------------
-| The offer can actually be taken
-|--------------------------------------------------------------------------
-|
-| Creating the offer was never the hard part. `markNoShow()` handed the hour to
-| the waitlist, three people got a text, and every one of them hit "Sorry, that
-| slot was just taken" — because the missed booking still occupied the slot it
-| was advertising. `BookingStatus::NoShow` joining `BookingStatus::vacating()`
-| is what makes the claim go through.
-|
-| Read the clock in this test carefully, because it is doing real work. The
-| no-show is marked at the appointment's own start time, on a salon that asks
-| for no notice, and that is the *only* arrangement in which the claim can
-| currently succeed: `markNoShow()` refuses a booking that has not started, and
-| the engine refuses a start that is already behind `now + min_notice_hours`.
-| Those two rules leave exactly one instant. See the note on the following test.
-*/
 it('lets a waitlisted customer actually claim the hour a no show freed', function () {
     $tenant = Tenant::factory()->create([
         'timezone' => 'Europe/London',
@@ -412,14 +373,11 @@ it('lets a waitlisted customer actually claim the hour a no show freed', functio
         $starts, BookingSource::Manual,
     );
 
-    // Nine o'clock, and the chair is empty.
     $this->travelTo(CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London'));
     app(BookingService::class)->markNoShow($booking);
 
     $offer = SlotOffer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->sole();
 
-    // The assertion the whole fix exists for: this used to throw
-    // OfferUnavailableException("Sorry, that slot was just taken.").
     $claimed = app(BookingService::class)->claimOffer($offer);
 
     expect($claimed->id)->not->toBe($booking->id)
@@ -429,32 +387,9 @@ it('lets a waitlisted customer actually claim the hour a no show freed', functio
         ->and($claimed->waitlist_entry_id)->toBe($entry->id)
         ->and($offer->fresh()->status)->toBe(SlotOfferStatus::Claimed)
         ->and($entry->fresh()->is_active)->toBeFalse()
-        // The missed booking is untouched: it still happened, and the no-show
-        // rate still counts it.
         ->and($booking->fresh()->status)->toBe(BookingStatus::NoShow);
 });
 
-/*
- * The half of this that occupancy cannot fix, recorded so nobody has to
- * rediscover it from a support ticket.
- *
- * A no-show is only markable once the appointment has started, and the engine
- * will not sell a start that is already behind `now + min_notice_hours`. So the
- * moment the owner takes to notice nobody came — a minute, ten, an hour — is
- * time the offered slot spends drifting into the past, and the offer goes out
- * anyway and cannot be taken. The test above passes because it marks the
- * no-show on the stroke of the hour with notice set to zero; this one is the
- * same salon fifteen minutes later.
- *
- * Fixing it properly means offering the *recoverable remainder* of the window
- * rather than its original start — the interval `FreedSlots::largestGap()`
- * already computes for the diary — and not offering at all when what is left is
- * shorter than the service. That is a change to what a slot offer means, so it
- * is not made here.
- *
- * When somebody does make it, this test should start failing. That is the
- * point of it.
- */
 it('still cannot be claimed once the freed start has slipped into the past', function () {
     $salon = waitlistSalon();
     ['tenant' => $tenant, 'service' => $service] = $salon;
@@ -467,13 +402,11 @@ it('still cannot be claimed once the freed start has slipped into the past', fun
         $starts, BookingSource::Manual,
     );
 
-    // A quarter of an hour late — the ordinary case, and the broken one.
     $this->travelTo(CarbonImmutable::parse('2026-03-10 09:15:00', 'Europe/London'));
     app(BookingService::class)->markNoShow($booking);
 
     $offer = SlotOffer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->sole();
 
-    // The offer is sent — the customer gets a text — and then bounces.
     expect($offer->status)->toBe(SlotOfferStatus::Sent);
     expect(fn () => app(BookingService::class)->claimOffer($offer))
         ->toThrow(OfferUnavailableException::class);

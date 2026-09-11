@@ -5,15 +5,6 @@ use App\Models\Tenant;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 
-/**
- * Putting a salon into the beta, from the console. See BETA_SANDBOX.md.
- *
- * The flag is what pins a salon to Stripe test mode and hands it three buttons
- * that delete its own data, so who may set it is not a detail. It lives on the
- * admin surface behind `super-admin`, it is audited like every other write
- * there, and an owner cannot reach it — the console is a different host with a
- * different session, and this asserts that rather than trusting the routing.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-09-08 09:00:00', 'Europe/London'));
 });

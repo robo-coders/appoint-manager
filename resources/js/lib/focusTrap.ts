@@ -3,11 +3,6 @@ import { nextTick, onBeforeUnmount, watch, type Ref } from 'vue';
 const SELECTOR =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/**
- * Traps Tab inside a panel while it is open, and returns focus to whatever was
- * focused before it opened. Shared by Modal, SlideOver and ConfirmDialog so all
- * three behave identically.
- */
 export function useFocusTrap(panel: Ref<HTMLElement | null>, open: Ref<boolean>, onEscape: () => void) {
     let previous: HTMLElement | null = null;
 

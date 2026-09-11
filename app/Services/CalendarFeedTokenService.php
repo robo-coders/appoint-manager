@@ -61,9 +61,7 @@ class CalendarFeedTokenService
         Tenant::query()->withTrashed()->whereKey($tenant->getKey())->lockForUpdate()->first();
     }
 
-    /**
-     * @return Builder<CalendarFeedToken>
-     */
+    /** @return Builder<CalendarFeedToken> */
     private function active(Tenant $tenant, string $scope, ?int $staffId): Builder
     {
         return CalendarFeedToken::query()

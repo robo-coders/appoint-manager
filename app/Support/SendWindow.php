@@ -5,23 +5,9 @@ namespace App\Support;
 use App\Models\Tenant;
 use Carbon\CarbonImmutable;
 
-/**
- * The hours a rebooking chase may go out in.
- *
- * Evaluated in the tenant's own timezone, which is the only timezone that
- * means anything here: a groomer in Sydney does not want her clients texted at
- * whatever hour our server thinks is nine in the morning. `tenants.timezone`
- * already exists and every other time in this product is rendered through it.
- *
- * A subject who becomes due outside the window is not dropped. Nothing is
- * claimed and nothing is sent, so the next run inside the window sends it —
- * which is why `rebooking:send` is scheduled hourly rather than daily.
- */
 final class SendWindow
 {
-    /**
-     * @return array{start: string, end: string, days: list<int>}
-     */
+    /** @return array{start: string, end: string, days: list<int>} */
     public static function forTenant(Tenant $tenant): array
     {
         $default = (array) config('rebooking.send_window');
@@ -39,9 +25,6 @@ final class SendWindow
         ];
     }
 
-    /**
-     * Is it a reasonable hour, where this salon is?
-     */
     public static function isOpen(Tenant $tenant, ?CarbonImmutable $at = null): bool
     {
         $window = self::forTenant($tenant);
@@ -57,10 +40,6 @@ final class SendWindow
             && $minutes < self::minutes($window['end']);
     }
 
-    /**
-     * Human copy for the operator, in her own timezone, so the screen and the
-     * behaviour cannot disagree.
-     */
     public static function describe(Tenant $tenant): string
     {
         $window = self::forTenant($tenant);

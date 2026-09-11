@@ -12,24 +12,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
-/*
-|--------------------------------------------------------------------------
-| Joining the waitlist twice
-|--------------------------------------------------------------------------
-|
-| These tests were written as verification only — they asserted the bug the
-| audit described, where neither join path looked for an existing entry and
-| `waitlist_entries` carried no unique index to stop a second one. They now
-| assert the fix: one active entry per customer per service, both paths going
-| through `WaitlistJoiner`, and a unique index underneath so it cannot regress.
-|
-| The uniqueness key deliberately ignores `preferred_days` and
-| `preferred_times`. See `DECISIONS.md` — an "any time" entry and a "mornings"
-| entry both match a 9am slot, so a preference cannot separate two legitimate
-| requests from the same person, and the whole point is that one person never
-| takes two places in one offer batch.
-*/
-
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 });
@@ -95,11 +77,6 @@ it('keeps one entry when the public page is used twice by one person', function 
         ->and($entries->sole()->customer_id)->toBe($customers->sole()->id);
 });
 
-/*
- * A second add with a different "Prefers" value is the same standing request,
- * not a new one, and the first one's preference is left alone — nothing on this
- * screen edits an entry, and a repeat add is not the way to do it.
- */
 it('treats a different time preference as the same standing request', function () {
     $salon = aSalon();
     $owner = User::factory()->for($salon['tenant'])->owner()->create();
@@ -125,12 +102,6 @@ it('treats a different time preference as the same standing request', function (
         ->and($entries->sole()->preferred_times)->toBe(PreferredTime::Morning);
 });
 
-/*
- * The downstream half of the claim, flipped. The batch is two, three distinct
- * people want the slot, and the first of them joined twice — which used to take
- * both places. Both places now go to two different people, and the third stays
- * at the front of the queue for the next gap.
- */
 it('spreads the offer batch over distinct customers', function () {
     $salon = aSalon();
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = $salon;
@@ -163,8 +134,6 @@ it('spreads the offer batch over distinct customers', function () {
 
     $starts = CarbonImmutable::parse('2026-03-10 09:00:00', 'Europe/London')->utc();
 
-    // All three entries match the slot, so the two who are served are the two
-    // longest waiting rather than anybody filtered away on day or time.
     $ranked = app(WaitlistOfferer::class)->rankedMatches($tenant, $service, $starts);
 
     $sent = app(WaitlistOfferer::class)->offer($tenant, $service, $staff, $starts, $starts->addHour());
@@ -191,13 +160,6 @@ it('spreads the offer batch over distinct customers', function () {
         ->and($offers->pluck('waitlist_entry_id')->contains($others->last()->id))->toBeFalse();
 });
 
-/*
- * Defence in depth, the same reasoning as `customers_tenant_id_email_unique`:
- * the insert goes straight at the table, past the controllers and past
- * `WaitlistJoiner`, and the database still refuses it. The preference differs,
- * which is the uniqueness key's decision made enforceable rather than a
- * convention the next writer could miss.
- */
 it('refuses a duplicate active entry at the database', function () {
     $salon = aSalon();
     $customer = Customer::factory()->create(['tenant_id' => $salon['tenant']->id]);
@@ -224,18 +186,11 @@ it('refuses a duplicate active entry at the database', function () {
     expect(fn () => DB::table('waitlist_entries')->insert($row))
         ->toThrow(UniqueConstraintViolationException::class);
 
-    // The index only constrains the active rows, so the closed history of the
-    // same customer and service is not caught by it.
     DB::table('waitlist_entries')->insert(['is_active' => false] + $row);
 
     expect(WaitlistEntry::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->count())->toBe(2);
 });
 
-/*
- * The other side of that. `BookingService` deactivates an entry when its offer
- * is claimed, so the constraint must not be what stops the same person joining
- * again for the same service next month.
- */
 it('lets a customer rejoin once their entry has been claimed', function () {
     $salon = aSalon();
 

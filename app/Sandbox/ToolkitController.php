@@ -119,9 +119,7 @@ class ToolkitController extends Controller
             : 'Flaky network is off. Diary actions run normally again.');
     }
 
-    /**
-     * @param  array{shifted: int, released: int, declined: int, offers: int, reminders: int}  $result
-     */
+    /** @param  array{shifted: int, released: int, declined: int, offers: int, reminders: int}  $result */
     private function moved(array $result, string $where): string
     {
         $message = 'Your shop moved forward '.$where.'.';

@@ -9,22 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * A loyalty package: a count, and what happens when it is reached.
- *
- * One per tenant in v1, and the settings screen only offers one — but this is a
- * row rather than a column on `tenants` so a second tier is a second row rather
- * than a migration with a backfill. `is_active` is how "the current package"
- * becomes a query.
- */
 class LoyaltyPackage extends Model
 {
     /** @use HasFactory<LoyaltyPackageFactory> */
     use BelongsToTenant, HasFactory;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'name',
         'sessions_required',
@@ -37,9 +27,7 @@ class LoyaltyPackage extends Model
         'show_visit_date',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -58,17 +46,13 @@ class LoyaltyPackage extends Model
             || (int) $this->eligible_service_id === (int) $serviceId;
     }
 
-    /**
-     * @return BelongsTo<Service, $this>
-     */
+    /** @return BelongsTo<Service, $this> */
     public function eligibleService(): BelongsTo
     {
         return $this->belongsTo(Service::class, 'eligible_service_id');
     }
 
-    /**
-     * @return HasMany<LoyaltyEnrolment, $this>
-     */
+    /** @return HasMany<LoyaltyEnrolment, $this> */
     public function enrolments(): HasMany
     {
         return $this->hasMany(LoyaltyEnrolment::class);

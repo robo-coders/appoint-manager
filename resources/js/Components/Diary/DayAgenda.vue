@@ -5,37 +5,12 @@ import { computed } from 'vue';
 import type { DiaryBooking, Gap, StaffMember } from './diary';
 import { minutesOf } from './diary';
 
-/**
- * The day at 375px.
- *
- * **Four staff columns do not fit on a phone**, and the three ways out are a
- * staff selector, a horizontally-scrolled grid with a sticky gutter, or a
- * single-column agenda. This is the agenda, built out of `ui/TimelineRow` —
- * which *is* the dashboard's row. The reason is consistency: the dashboard's
- * `Today` list is already a single-column timeline, it is already approved, and
- * it already reads correctly at 375px. Building a second answer here would be
- * inventing a third visual language for the one screen the brief says must not
- * have one.
- *
- * The two rejected options, and why:
- *
- *   - **Horizontal scroll with a sticky time gutter.** It keeps the grid, but a
- *     phone shows about one and a half columns at a time, so comparing
- *     groomers — the only thing columns are *for* — still needs dragging. The
- *     desktop grid keeps its horizontal scroll for a fifth groomer; that is a
- *     different problem at a different size.
- *   - **A staff selector alone.** The same as this minus the ability to read
- *     the day in order. The selector is here as a *filter* instead, so "just
- *     Priya" is one tap without being the only way to look.
- */
 const props = defineProps<{
     staff: StaffMember[];
     bookings: DiaryBooking[];
     gaps: Gap[];
-    /** Null for everyone. */
     filterStaffId: number | null;
     now: string | null;
-    /** Quiet line when the list is genuinely empty. Not an EmptyState card. */
     emptyCopy?: string;
 }>();
 
@@ -73,17 +48,6 @@ const toneOf = (booking: DiaryBooking): 'default' | 'past' | 'current' | 'freed'
     return 'default';
 };
 
-/**
- * The problems, on the sub-line.
- *
- * Rendered through the row's `problem` slot rather than its `detail` prop, so
- * it survives on a past row: an appointment that has been and gone having
- * clashed with another one is still something somebody has to deal with, and
- * "past rows carry no detail" is a rule about routine detail.
- *
- * `Double-booked` is the only `--danger` word in the agenda, which is why it is
- * split out rather than joined into one string.
- */
 const problemRest = (booking: DiaryBooking) => {
     const parts: string[] = [];
 

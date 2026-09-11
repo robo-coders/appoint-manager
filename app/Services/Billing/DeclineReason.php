@@ -4,9 +4,7 @@ namespace App\Services\Billing;
 
 class DeclineReason
 {
-    /**
-     * @var array<string, string>
-     */
+    /** @var array<string, string> */
     private const MAP = [
         'insufficient_funds' => 'the bank reported insufficient funds',
         'card_declined' => 'your bank declined the charge',
@@ -16,9 +14,7 @@ class DeclineReason
         'generic_decline' => 'your bank declined the charge',
     ];
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     public function fromInvoice(array $invoice, BillingGateway $billing): string
     {
         $code = $this->code($invoice, $billing);
@@ -26,9 +22,7 @@ class DeclineReason
         return self::MAP[$code] ?? 'your bank declined the payment';
     }
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     private function code(array $invoice, BillingGateway $billing): string
     {
         foreach ($this->embeddedCodes($invoice) as $code) {

@@ -16,28 +16,6 @@ import type { Money } from '@/types/models';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
-/**
- * The diary.
- *
- * There is no approved mockup for this screen and the three that were built
- * were rejected, so nothing here is invented: it is `dashboard.html`'s timeline
- * language extended to a full day with staff as columns. The row component the
- * dashboard uses — `ui/TimelineRow` — is the same one the 375px agenda is built
- * from, and the grid's blocks (`ui/TimeBlock`) restate the same three rules:
- * muted past with no detail, a 2px ink left border on the current appointment,
- * and the freed slot as the only coloured thing on screen.
- *
- * The two questions the brief said must be answered here:
- *
- * **Gap-finding.** Open time is drawn as space, not counted as a statistic —
- * `ui/GapButton` occupies the minutes it represents and books into itself. See
- * that component for the argument.
- *
- * **375px.** Staff columns do not fit, so below `md` the grid is replaced by a
- * single-column agenda built from the dashboard's own row, plus a staff filter.
- * `DayAgenda` documents the two options that were rejected and why.
- */
-
 const props = defineProps<{
     view: 'day' | 'week';
     date: string;
@@ -52,11 +30,9 @@ const props = defineProps<{
         suggested_interval_days: number | null;
     }>;
     bookings: DiaryBooking[];
-    /** Keyed by staff id. Day view only. */
     working: Record<number, Array<{ start: string; end: string }>>;
     now: string;
     is_today: boolean;
-    /** True when nobody has hours on this day. The grid is not drawn. */
     closed: boolean;
     next_open: string | null;
     pending_requests: PendingRequest[];
@@ -70,11 +46,6 @@ const optimistic = ref<DiaryBooking[]>([]);
 const filterStaffId = ref<number | null>(null);
 const narrow = ref(false);
 
-/*
- * The current-time hairline is live. A diary that draws "now" once, at page
- * load, is a diary that is wrong for the rest of the shift — and this is a
- * screen that stays open all day.
- */
 const nowLocal = ref(props.now);
 let clock: ReturnType<typeof setInterval> | undefined;
 
@@ -135,14 +106,6 @@ const gaps = computed<Gap[]>(() => {
     return props.staff.flatMap((member) => gapsIn(member.id, props.working[member.id] ?? [], shown.value));
 });
 
-/**
- * The drawn day: the earliest start and the latest end anybody has, whether
- * that is a working window or an appointment that runs past one.
- *
- * Not a fixed 08:00–20:00. A salon that opens at 09:00 does not want an hour of
- * empty grid above its first appointment, and a groomer who is still going at
- * 19:30 must not have that appointment drawn off the bottom of the screen.
- */
 const bounds = computed(() => {
     const edges: number[] = [];
 
@@ -158,23 +121,14 @@ const bounds = computed(() => {
 
     if (edges.length === 0) return { start: '09:00', end: '17:00' };
 
-    // Rounded out to the hour, so the gridlines land where the labels are.
     const start = Math.floor(Math.min(...edges) / 60) * 60;
     const end = Math.ceil(Math.max(...edges) / 60) * 60;
 
     return { start: timeOf(start), end: timeOf(Math.max(end, start + 120)) };
 });
 
-/** Everything on today that is a gap somebody can still be offered. */
 const freed = computed(() => shown.value.filter((booking) => booking.is_freed));
 
-/**
- * The one number, scoped to what is actually on screen.
- *
- * At 375px with `Everyone` selected the agenda draws no gaps at all — see
- * `DayAgenda` — so an aggregate over gaps nobody can see is a claim the screen
- * cannot back up. It follows the filter.
- */
 const visibleGaps = computed(() =>
     filterStaffId.value === null ? gaps.value : gaps.value.filter((gap) => gap.staff_id === filterStaffId.value),
 );
@@ -209,7 +163,6 @@ const heading = computed(() => formatDay(props.date));
 
 const closedCopy = computed(() => (props.is_today ? 'Closed today.' : 'Closed this day.'));
 
-/** Booking into a gap: the staff member and the minute are already decided. */
 const bookGap = (gap: Gap) => {
     form.staff_id = gap.staff_id;
     form.starts_at = `${props.date}T${gap.starts_at}`;
@@ -226,8 +179,6 @@ const submit = () => {
     const [hour, minute] = (time ?? '09:00').split(':').map(Number);
     const end = hour * 60 + minute + (service?.duration_minutes ?? 60);
 
-    // Optimistic until `bookings.store` answers, then swapped in place by
-    // `correlation_id` so the row never disappears between temp and real id.
     const correlationId = crypto.randomUUID();
     form.correlation_id = correlationId;
 
@@ -330,11 +281,6 @@ watch(
             <Button :variant="view === 'day' ? 'primary' : 'secondary'" @click="go(date, 'day')">Day</Button>
             <Button :variant="view === 'week' ? 'primary' : 'secondary'" @click="go(date, 'week')">Week</Button>
 
-            <!--
-                The one number, and it earns its place only because the space it
-                describes is right underneath it. On its own — which is how it
-                used to be shown — "3 h 45 min idle" is a fact nobody can act on.
-            -->
             <p v-if="showIdle" class="caption ml-auto">
                 <span class="numeral">{{ Math.floor(idleMinutes / 60) }}h {{ idleMinutes % 60 }}m</span> open across
                 <span class="numeral">{{ visibleGaps.length }}</span> gaps
@@ -401,11 +347,6 @@ watch(
                     </p>
                     <p v-else-if="shown.length === 0" class="caption mt-4">No bookings for this day.</p>
 
-                    <!--
-                    The freed slots get their action below the grid, where there
-                    is room for a real label: a 9rem column cannot hold "Offer to
-                    3 waiting" and a truncated call to action is not one.
-                -->
                     <ul v-if="freed.length" class="mt-6">
                         <li
                             v-for="booking in freed"
@@ -435,12 +376,6 @@ watch(
             </template>
         </template>
 
-        <!--
-            The week. Deliberately the agenda rather than a seven-column grid:
-            seven days x four groomers is 28 columns, which is a spreadsheet, and
-            the week view's job is "which days are busy", not "what is Priya
-            doing at 14:15 on Thursday". That is what the day view is for.
-        -->
         <div v-else class="space-y-8">
             <section v-for="day in 7" :key="day">
                 <h2 class="border-b border-b-rule pb-2 text-17">

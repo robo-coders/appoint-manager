@@ -62,11 +62,6 @@ it('creates a customer when an in-app waitlist join uses an unseen email', funct
         ->and($entry->customer_id)->toBe($customer->id);
 });
 
-/*
- * The lookup is scoped to the tenant, not to the email column alone. Two salons
- * share a `customers` table and the same person can be a customer of both, so a
- * match in someone else's tenant has to miss.
- */
 it('does not match a customer belonging to another tenant', function () {
     $salon = aSalon();
     $owner = User::factory()->for($salon['tenant'])->owner()->create();
@@ -98,15 +93,6 @@ it('does not match a customer belonging to another tenant', function () {
         ->and(Customer::withoutGlobalScopes()->where('tenant_id', $other->id)->count())->toBe(1);
 });
 
-/*
- * Two forked processes with their own PDO connections, released from a barrier
- * together, so both lookups really do miss before either insert lands. Without
- * `CustomerResolver` the loser hit `customers_tenant_id_email_unique`.
- *
- * One entry, not two: `WaitlistJoiner` takes the same locked read-then-create
- * over `waitlist_entries_active_join_unique`, so the loser re-reads and finds
- * the winner's row rather than adding a second place in the queue.
- */
 it('reuses one customer when two concurrent in-app waitlist joins share a new email', function () {
     $salon = aSalon();
     $owner = User::factory()->for($salon['tenant'])->owner()->create();

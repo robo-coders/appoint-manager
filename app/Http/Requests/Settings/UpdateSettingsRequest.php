@@ -14,9 +14,7 @@ class UpdateSettingsRequest extends FormRequest
         return $this->user()?->tenant_id === current_tenant_id();
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

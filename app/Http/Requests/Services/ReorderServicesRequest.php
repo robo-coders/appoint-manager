@@ -14,9 +14,7 @@ class ReorderServicesRequest extends FormRequest
         return $this->user()?->can('reorder', Service::class) ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

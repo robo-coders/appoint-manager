@@ -10,9 +10,7 @@ use App\Models\Tenant;
 
 final class SmsOutbox
 {
-    /**
-     * @return list<array{id: int, at: string, recipient: string, badge: string, body: string}>
-     */
+    /** @return list<array{id: int, at: string, recipient: string, badge: string, body: string}> */
     public static function list(Tenant $tenant): array
     {
         $rows = Message::withoutGlobalScopes()

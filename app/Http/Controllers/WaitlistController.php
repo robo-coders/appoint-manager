@@ -40,11 +40,6 @@ class WaitlistController extends Controller
                 'id' => $entry->id,
                 'customer_id' => $entry->customer_id,
                 'customer_name' => $entry->customer?->name,
-                /*
-                 * The number is the point of this screen — it exists so
-                 * somebody can ring down the list — so a staff member who
-                 * cannot read it is told that, rather than shown a blank.
-                 */
                 'phone' => $contacts->customer($entry->customer_id)
                     ? $entry->customer?->phone
                     : MaskedContact::phone($entry->customer?->phone),

@@ -7,13 +7,6 @@ use Database\Seeders\DemoDataSeeder;
 use Illuminate\Console\Command;
 use RuntimeException;
 
-/**
- * `db:seed --class=` cannot take an argument, and this seeder needs one: it
- * fills a tenant you name rather than creating one, and pointing it at the
- * wrong salon would delete that salon's rows. So the tenant is a required
- * argument on a real command instead of an environment variable somebody
- * forgets to set.
- */
 class SeedDemoData extends Command
 {
     protected $signature = 'demo:seed
@@ -44,7 +37,6 @@ class SeedDemoData extends Command
         try {
             $tenant = DemoDataSeeder::resolveTenant((string) $this->argument('tenant'));
         } catch (RuntimeException $e) {
-            // A mistyped slug is a normal thing to do, not an exceptional one.
             $this->error($e->getMessage());
 
             $this->line('');
@@ -56,14 +48,6 @@ class SeedDemoData extends Command
             return self::FAILURE;
         }
 
-        /*
-         * Deposits are on by default, because the demo exists to show the
-         * product and deposit capture is the product. `--no-deposits` is for the
-         * one caller that must not have them: `scripts/e2e-setup.sh` books
-         * through the public page against obvious fake Stripe keys, and a
-         * tenant that asks for a deposit there returns 503 where the slot-race
-         * spec expects 201. See DemoDataSeeder::deposits().
-         */
         $deposits = ! $this->option('no-deposits');
         $account = (string) $this->option('stripe-account');
 
@@ -79,14 +63,6 @@ class SeedDemoData extends Command
             return self::FAILURE;
         }
 
-        /*
-         * `--plan-only` says "set the billing state and change nothing else",
-         * so it changes nothing else — including the Stripe columns, which it
-         * used to overwrite on its way past. That also keeps it usable with no
-         * Stripe keys at all, which is the point of having it: flipping a
-         * tenant to `expired` to look at the read-only banner is not a request
-         * to configure payments.
-         */
         $planOnly = (bool) $this->option('plan-only');
 
         if (! $planOnly && $deposits && ! $this->depositsCanComplete($account)) {
@@ -124,21 +100,6 @@ class SeedDemoData extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Refuse to seed a deposit-taking demo that cannot actually take a deposit.
-     *
-     * This used to seed a placeholder connected account and print a paragraph
-     * explaining that paying would not work. The booking page then showed the
-     * deposit line, Reserve took the deposit branch, and Stripe rejected the
-     * account id — a 503 at the last step of the one flow the demo exists to
-     * show. Whoever ran it found out at the end, in the browser, and read it as
-     * a broken product rather than as an unset environment variable.
-     *
-     * So it is a precondition now, checked before anything is written and
-     * stated in full: every missing piece at once, and the exact command that
-     * produces each one. `--no-deposits` is the deliberate way out, and it is
-     * named here so nobody has to go looking for it.
-     */
     private function depositsCanComplete(string $account): bool
     {
         $missing = [];

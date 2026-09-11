@@ -15,16 +15,12 @@ use Traversable;
  */
 final class SlotCollection implements Arrayable, Countable, IteratorAggregate
 {
-    /**
-     * @param  list<Slot>  $slots
-     */
+    /** @param  list<Slot>  $slots */
     public function __construct(
         private array $slots = [],
     ) {}
 
-    /**
-     * @param  list<Slot>  $slots
-     */
+    /** @param  list<Slot>  $slots */
     public static function make(array $slots = []): self
     {
         return new self(array_values($slots));
@@ -79,17 +75,13 @@ final class SlotCollection implements Arrayable, Countable, IteratorAggregate
         return [];
     }
 
-    /**
-     * @return Traversable<int, Slot>
-     */
+    /** @return Traversable<int, Slot> */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->slots);
     }
 
-    /**
-     * @return list<array{starts_at: string, staff_ids: list<int>}>
-     */
+    /** @return list<array{starts_at: string, staff_ids: list<int>}> */
     public function toArray(): array
     {
         return array_map(fn (Slot $slot) => $slot->toArray(), $this->slots);

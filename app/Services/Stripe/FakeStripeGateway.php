@@ -29,21 +29,6 @@ final class FakeStripeGateway implements StripeGateway
 
     public bool $throwOnRefund = false;
 
-    /**
-     * A last line of defence: this class accepts a hardcoded signature and takes no
-     * money. If it is ever reachable in production, that is the emergency.
-     */
-    /**
-     * A second lock on the same door.
-     *
-     * The binding in `AppServiceProvider` already makes this class unreachable
-     * outside `testing`. This is here anyway because the class is `new`-able —
-     * a test helper, a seeder or a future refactor can construct one directly,
-     * and the thing it would then be willing to do is accept a forged webhook.
-     *
-     * It refuses everywhere except `testing`, not just in production. AUDIT C1
-     * is specifically about an environment nobody thought of.
-     */
     private function refuseOutsideTesting(): void
     {
         if (! app()->environment('testing')) {

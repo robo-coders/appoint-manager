@@ -35,11 +35,6 @@ class BillingController extends Controller
                 'monthly_price' => BillingPrice::formatPence(BillingPrice::forTenant($tenant)),
                 'list_price' => BillingPrice::formatPence(BillingPrice::listMonthlyPence()),
                 'has_price_override' => $tenant->monthly_price_override_pence !== null,
-                /*
-                 * Local without keys still needs to *see* the price. Taking a
-                 * card does not work, and the screen must not offer a button
-                 * whose only outcome is an error. Same shape as payments.
-                 */
                 'can_charge' => ! $billing instanceof UnconfiguredBillingGateway,
             ],
             'sms' => $sms->snapshot($tenant),
@@ -115,10 +110,6 @@ class BillingController extends Controller
         return back()->with('toast', 'Subscription cancelled. Clients can still book online.');
     }
 
-    /**
-     * A salon owner cannot set STRIPE_SECRET. Tell them the card cannot be
-     * taken, not which env file is empty.
-     */
     private function unreachable(): RedirectResponse
     {
         return back()->withErrors([

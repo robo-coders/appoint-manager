@@ -4,14 +4,6 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
-/**
- * Confirm the password before something consequential.
- *
- * `quiet`: the panel on the other auth screens is orientation for someone who
- * may not know what this product is. Anyone reaching this page is signed in and
- * halfway through a task, and a paragraph selling them the product while they
- * are being interrupted reads as an advert placed in their way.
- */
 const form = useForm({ password: '' });
 
 const submit = () => {

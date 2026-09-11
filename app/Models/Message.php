@@ -27,9 +27,7 @@ class Message extends Model
         'status',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -40,25 +38,19 @@ class Message extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Customer, $this>
-     */
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    /**
-     * @return BelongsTo<Booking, $this>
-     */
+    /** @return BelongsTo<Booking, $this> */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
-    /**
-     * @return BelongsTo<Subject, $this>
-     */
+    /** @return BelongsTo<Subject, $this> */
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);

@@ -7,9 +7,7 @@ use Carbon\Carbon;
 
 class SubscriptionState
 {
-    /**
-     * @param  array<string, mixed>  $subscription
-     */
+    /** @param  array<string, mixed>  $subscription */
     public function apply(Tenant $tenant, array $subscription, ?string $plan = null): void
     {
         $status = (string) ($subscription['status'] ?? $tenant->subscription_status);
@@ -69,9 +67,7 @@ class SubscriptionState
         $tenant->forceFill($values)->save();
     }
 
-    /**
-     * @param  array<string, mixed>  $subscription
-     */
+    /** @param  array<string, mixed>  $subscription */
     public function periodEnd(array $subscription): ?Carbon
     {
         $end = $subscription['current_period_end']

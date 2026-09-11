@@ -14,12 +14,7 @@ use App\Models\User;
 use App\Models\WaitlistEntry;
 use Carbon\CarbonImmutable;
 
-/**
- * A salon on a fixed Wednesday, so "today", "this month" and "last month" all
- * mean the same thing on every run.
- *
- * @return array{tenant: Tenant, user: User, staff: User, service: Service, customer: Customer}
- */
+/** @return array{tenant: Tenant, user: User, staff: User, service: Service, customer: Customer} */
 function aDashboardSalon(): array
 {
     test()->travelTo(CarbonImmutable::parse('2026-08-19 13:00:00', 'Europe/London'));
@@ -58,7 +53,6 @@ it('counts recovered revenue from bookings that carry a waitlist entry', functio
     ]);
 
     aDashboardBooking($salon, '2026-08-19 15:00:00', '2026-08-19 16:30:00', ['waitlist_entry_id' => $entry->id]);
-    // Same month, no waitlist entry: ordinary revenue, not recovered revenue.
     aDashboardBooking($salon, '2026-08-20 09:00:00', '2026-08-20 10:30:00');
 
     actingAsTenant($salon['user'])
@@ -98,7 +92,6 @@ it('holds deposits only against appointments that have not happened', function (
         'deposit_status' => DepositStatus::Paid,
         'deposit_at_booking' => 1500,
     ]);
-    // Already happened — the money is not held any more, it is earned.
     aDashboardBooking($salon, '2026-08-12 09:00:00', '2026-08-12 10:30:00', [
         'deposit_status' => DepositStatus::Paid,
         'deposit_at_booking' => 1500,
@@ -115,15 +108,12 @@ it('holds deposits only against appointments that have not happened', function (
 it('rates no-shows against finished appointments only, and compares with last month', function () {
     $salon = aDashboardSalon();
 
-    // This month: one no-show in four finished = 25.0%.
     aDashboardBooking($salon, '2026-08-03 09:00:00', '2026-08-03 10:00:00', ['status' => BookingStatus::NoShow]);
     foreach (['2026-08-04', '2026-08-05', '2026-08-06'] as $day) {
         aDashboardBooking($salon, $day.' 09:00:00', $day.' 10:00:00', ['status' => BookingStatus::Completed]);
     }
-    // Still to come: not finished, so it must not dilute the rate.
     aDashboardBooking($salon, '2026-08-28 09:00:00', '2026-08-28 10:00:00');
 
-    // Last month: one no-show in two = 50.0%.
     aDashboardBooking($salon, '2026-07-03 09:00:00', '2026-07-03 10:00:00', ['status' => BookingStatus::NoShow]);
     aDashboardBooking($salon, '2026-07-04 09:00:00', '2026-07-04 10:00:00', ['status' => BookingStatus::Completed]);
 
@@ -147,10 +137,6 @@ it('has no no-show rate at all when nothing has finished', function () {
         ->assertInertia(fn ($page) => $page->where('band.no_shows.value', '—')->where('band.no_shows.previous', null));
 });
 
-/*
- * The bug: both this screen and the diary filtered cancelled bookings out of
- * their queries, so the one row worth acting on today never rendered.
- */
 it('shows a cancelled booking that left a gap as a freed slot', function () {
     $salon = aDashboardSalon();
 
@@ -177,7 +163,6 @@ it('counts the people who would actually be texted, and the offers already out',
         'status' => BookingStatus::Cancelled,
     ]);
 
-    // Wednesday afternoon, this service: a match.
     $match = WaitlistEntry::factory()->create([
         'tenant_id' => $salon['tenant']->id,
         'customer_id' => $salon['customer']->id,
@@ -187,8 +172,6 @@ it('counts the people who would actually be texted, and the offers already out',
         'is_active' => true,
     ]);
 
-    // Saturday mornings only: wants this service, but not this slot. Somebody
-    // else — one active entry per customer per service is now a unique index.
     WaitlistEntry::factory()->create([
         'tenant_id' => $salon['tenant']->id,
         'customer_id' => Customer::factory()->create(['tenant_id' => $salon['tenant']->id])->id,
@@ -220,7 +203,6 @@ it('does not call a cancellation freed when the hour has been refilled end to en
     $salon = aDashboardSalon();
 
     aDashboardBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', ['status' => BookingStatus::Cancelled]);
-    // Somebody took the whole thing. There is nothing left to sell.
     $replacement = aDashboardBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00');
 
     actingAsTenant($salon['user'])
@@ -232,18 +214,12 @@ it('does not call a cancellation freed when the hour has been refilled end to en
             ->where('today.0.freed', null));
 });
 
-/*
- * The bug the demo tenant caught: treating *any* overlap as a refill made
- * Marek's 15:30 freed slot — the one with three people waiting for it — vanish
- * off both screens, because his own 16:30 appointment clipped its tail.
- */
 it('measures what is genuinely still open when a refill covers only part of the hour', function () {
     $salon = aDashboardSalon();
 
     $freed = aDashboardBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', [
         'status' => BookingStatus::Cancelled,
     ]);
-    // Takes the last half hour. An hour of it is still sellable.
     aDashboardBooking($salon, '2026-08-19 16:30:00', '2026-08-19 17:15:00');
 
     actingAsTenant($salon['user'])
@@ -259,7 +235,6 @@ it('drops a cancellation whose remaining gap is too short to sell', function () 
     $salon = aDashboardSalon();
 
     aDashboardBooking($salon, '2026-08-19 15:30:00', '2026-08-19 17:00:00', ['status' => BookingStatus::Cancelled]);
-    // Ten minutes left at the front, which is not an appointment.
     $replacement = aDashboardBooking($salon, '2026-08-19 15:40:00', '2026-08-19 17:00:00');
 
     actingAsTenant($salon['user'])
@@ -273,7 +248,6 @@ it('drops a cancellation whose remaining gap is too short to sell', function () 
 it('does not call a cancellation freed once its slot has passed', function () {
     $salon = aDashboardSalon();
 
-    // It is 13:00. This one is over.
     aDashboardBooking($salon, '2026-08-19 09:00:00', '2026-08-19 10:30:00', ['status' => BookingStatus::Cancelled]);
 
     actingAsTenant($salon['user'])
@@ -285,7 +259,6 @@ it('does not call a cancellation freed once its slot has passed', function () {
 it('marks the appointment happening right now and gives it the extra line', function () {
     $salon = aDashboardSalon();
 
-    // It is 13:00.
     aDashboardBooking($salon, '2026-08-19 12:45:00', '2026-08-19 14:15:00', ['deposit_status' => DepositStatus::Paid]);
 
     actingAsTenant($salon['user'])
@@ -309,25 +282,14 @@ it('names the staff who are in today', function () {
             ->where('heading.date', 'Wednesday 19 August'));
 });
 
-/*
- * The headline and the panel beside it.
- *
- * The no-show rate leads the screen now, and a rate on its own says nothing —
- * `change` is the movement it is judged against, and the sign is what decides
- * whether the arrow is ink or danger. It is asserted here rather than looked at
- * because a `+` that should be a `-` is a screen telling an owner the opposite
- * of the truth.
- */
 it('states the movement in the no-show rate, signed', function () {
     $salon = aDashboardSalon();
 
-    // August: one missed of four finished = 25.0%.
     aDashboardBooking($salon, '2026-08-03 09:00:00', '2026-08-03 10:00:00', ['status' => BookingStatus::NoShow]);
     foreach (['2026-08-04', '2026-08-05', '2026-08-06'] as $day) {
         aDashboardBooking($salon, $day.' 09:00:00', $day.' 10:00:00', ['status' => BookingStatus::Completed]);
     }
 
-    // July: one missed of two finished = 50.0%. So the rate has halved.
     aDashboardBooking($salon, '2026-07-06 09:00:00', '2026-07-06 10:00:00', ['status' => BookingStatus::NoShow]);
     aDashboardBooking($salon, '2026-07-07 09:00:00', '2026-07-07 10:00:00', ['status' => BookingStatus::Completed]);
 
@@ -354,7 +316,6 @@ it('has no movement to state when there is no month to compare with', function (
 it('aggregates what is waiting on her into one panel', function () {
     $salon = aDashboardSalon();
 
-    // Two deposits requested and not paid, the older one four days ago.
     $old = aDashboardBooking($salon, '2026-08-25 09:00:00', '2026-08-25 10:30:00', [
         'deposit_status' => DepositStatus::Required,
         'deposit_at_booking' => 1000,
@@ -366,7 +327,6 @@ it('aggregates what is waiting on her into one panel', function () {
         'deposit_at_booking' => 1500,
     ]);
 
-    // Already happened: she cannot chase a deposit for an appointment that is over.
     aDashboardBooking($salon, '2026-08-01 09:00:00', '2026-08-01 10:30:00', [
         'deposit_status' => DepositStatus::Required,
         'deposit_at_booking' => 9900,
@@ -403,15 +363,9 @@ it('says nothing is waiting on her when nothing is', function () {
             ->where('attention.waitlist.count', 0));
 });
 
-/*
- * "Closed today" and "nothing booked" are different facts, and the empty panel
- * says which. Read off the opening hours, so a salon that never works Saturdays
- * is never told to go and fill one.
- */
 it('knows the shop is shut today and when it opens next', function () {
     $salon = aDashboardSalon();
 
-    // Wednesday is the 19th. Open Mondays and Fridays only.
     foreach ([Weekday::Monday, Weekday::Friday] as $weekday) {
         AvailabilityRule::factory()->create([
             'tenant_id' => $salon['tenant']->id,

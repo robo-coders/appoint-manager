@@ -10,38 +10,6 @@ use App\Models\LoyaltyPackage;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Loyalty packages: a count of sessions, and the next one free.
- *
- * Everything the feature decides is one of four questions, and they are all here
- * so that the booking flow it hangs off has to learn as little as possible:
- *
- *   - `enabled()` — is this switched on for this tenant at all
- *   - `enrol()` — the automatic enrolment, on a customer's next booking
- *   - `rewardDue()` — is this customer's next appointment the free one
- *   - `spendReward()` / `refundReward()` — the free one, taken and given back
- *
- * Adding a stamp is not one of them: `LoyaltyStampService` owns that.
- *
- * **Off by default, and off means nothing happens.** The flag lives in
- * `tenants.settings['loyalty']['enabled']`, beside `notifications.sms_enabled`
- * and the booking settings, so switching it on needs no migration. Every method
- * below returns early when it is off, and nothing reads a loyalty row anywhere
- * else in the codebase — so a tenant that has never touched the setting has the
- * feature not merely hidden but absent.
- *
- * **The reward is spent at booking, and the stamp is earned at completion.**
- * Those are deliberately different moments. A stamp is a session that actually
- * happened, so it cannot be earned by booking one and not turning up; the
- * reward has to be applied at booking, because that is when the price and the
- * deposit are decided and the point of the feature is that the free one is free
- * before the customer is asked for a card.
- *
- * **A reward booking earns no stamp.** `bookings.is_loyalty_reward` is what
- * makes that possible: without it a £0 booking is indistinguishable from a free
- * service, completing it would earn a stamp, and the reward would pay for
- * itself.
- */
 final class Loyalty
 {
     public function enabled(Tenant $tenant): bool
@@ -49,28 +17,12 @@ final class Loyalty
         return (bool) data_get($tenant->settings, 'loyalty.enabled', false);
     }
 
-    /**
-     * The package a tenant is currently collecting towards, if any.
-     *
-     * v1 has one. `is_active` plus "the newest" rather than `sole()` because a
-     * second row is a thing a later version adds and this should degrade to the
-     * current one rather than throw.
-     */
     public function activePackage(Tenant $tenant): ?LoyaltyPackage
     {
         if (! $this->enabled($tenant)) {
             return null;
         }
 
-        /*
-         * `withoutGlobalScopes()` with an explicit `tenant_id`, here and in
-         * every read below. `TenantScope` fails closed — no context means no
-         * rows, everywhere, including queue workers and artisan commands — and
-         * this service is called from a model hook and from the notifier, where
-         * there may be none. The tenant is an argument rather than an ambient
-         * fact, which is the form AUDIT C9 asks for: code that spans contexts
-         * says which one it means.
-         */
         return LoyaltyPackage::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
             ->where('is_active', true)
@@ -78,18 +30,6 @@ final class Loyalty
             ->first();
     }
 
-    /**
-     * Automatic enrolment, on the customer's next booking.
-     *
-     * The alternative was the owner enrolling people by hand, which is a screen,
-     * a button and a decision per customer for a feature whose whole promise is
-     * that it runs itself. So the first booking a customer makes after the
-     * setting goes on is the one that enrols them, and that booking counts.
-     *
-     * `firstOrCreate` on the unique index, so two bookings arriving together
-     * cannot make two enrolments — the second gets a duplicate-key error and
-     * reads the row the first wrote.
-     */
     public function enrol(Tenant $tenant, Customer $customer): ?LoyaltyEnrolment
     {
         $package = $this->activePackage($tenant);
@@ -101,13 +41,6 @@ final class Loyalty
         $enrolment = $this->enrolmentFor($tenant, $customer);
 
         if ($enrolment !== null) {
-            /*
-             * Already enrolled, but on a package that has since been switched
-             * off or deleted. v1 allows one enrolment per customer, so moving
-             * them onto the current package is the only way they ever get onto a
-             * replacement — and it keeps `cycles_completed`, because those
-             * sessions did happen.
-             */
             if (! $enrolment->isEarning()) {
                 $enrolment->forceFill([
                     'loyalty_package_id' => $package->id,
@@ -127,7 +60,6 @@ final class Loyalty
         );
     }
 
-    /** Is this customer's next appointment the free one? */
     public function rewardDue(Tenant $tenant, Customer $customer): bool
     {
         if (! $this->enabled($tenant)) {
@@ -143,17 +75,6 @@ final class Loyalty
         return $enrolment->rewardDue();
     }
 
-    /**
-     * Spend the reward: reset the cycle and count it.
-     *
-     * Called immediately after a booking has been created and marked
-     * `is_loyalty_reward`, so the stamps that paid for it cannot also pay for
-     * the one after. The reset happens here rather than when the free session is
-     * *completed* because the reward has already been given — the price is zero
-     * and no deposit was taken.
-     *
-     * Cancelling the free one gives the stamps back: see `refundReward()`.
-     */
     public function spendReward(Tenant $tenant, Customer $customer): void
     {
         $enrolment = $this->enrolmentFor($tenant, $customer);
@@ -162,14 +83,6 @@ final class Loyalty
             return;
         }
 
-        /*
-         * `withoutGlobalScopes()`, and an update rather than a save. The scope
-         * is dropped because this runs from paths with no tenant context —
-         * `TenantScope` fails closed and would match nothing — and the row is
-         * already known to belong to `$tenant`, because that is how it was
-         * found. `cycles_completed + 1` is done in SQL so two writes cannot both
-         * read the same value and lose one.
-         */
         LoyaltyEnrolment::withoutGlobalScopes()
             ->whereKey($enrolment->getKey())
             ->update([
@@ -182,25 +95,6 @@ final class Loyalty
             ]);
     }
 
-    /**
-     * Put the stamps back after a reward booking is cancelled.
-     *
-     * `spendReward()` clears the card the moment the free appointment is
-     * created, which is the right moment — the price is already zero and no
-     * deposit was asked for. But it left cancellation with nothing to say: the
-     * customer had five stamps, took the free session, the session was called
-     * off, and their card was empty. They had paid for a reward they never
-     * received, which is not what a salon does with a paper card when it crosses
-     * the stamps off and then closes for the day.
-     *
-     * So this is `spendReward()` backwards: the card goes back to full, and the
-     * cycle it counted is uncounted. Their next appointment is the free one
-     * again.
-     *
-     * Deliberately not called for a no-show. Missing the free appointment is
-     * still taking it — the slot was held and nobody else could have it — and
-     * that is the same rule the deposit rules already apply.
-     */
     public function refundReward(Tenant $tenant, Customer $customer): void
     {
         if (! $this->enabled($tenant)) {
@@ -209,21 +103,10 @@ final class Loyalty
 
         $enrolment = $this->enrolmentFor($tenant, $customer);
 
-        /*
-         * `isEarning()` because a package that has since been switched off or
-         * deleted has no `sessions_required` to restore the card to, and the
-         * enrolment is a record of past progress rather than a live one.
-         */
         if ($enrolment === null || ! $enrolment->isEarning()) {
             return;
         }
 
-        /*
-         * In SQL, and unscoped, for the reasons `spendReward()` sets out.
-         * `GREATEST` because a reward booking made before the tenant's current
-         * package existed can be cancelled after it, and a negative count of
-         * completed cycles would be worse than a slightly generous zero.
-         */
         LoyaltyEnrolment::withoutGlobalScopes()
             ->whereKey($enrolment->getKey())
             ->update([
@@ -236,16 +119,6 @@ final class Loyalty
             ]);
     }
 
-    /**
-     * The one line a confirmation message says about the stamps, or null when
-     * this tenant, this customer or this booking has nothing to say.
-     *
-     * Composed here rather than in `Notifier` so the wording is in one place and
-     * the customer screen and the message cannot disagree about the count. Kept
-     * short on purpose: it is appended to an SMS that already has a date and a
-     * link in it, and `SmsSegments::fit` will shorten the salon's name to make
-     * room for it — see `Notifier::fitSms`.
-     */
     public function progressLine(Booking $booking): ?string
     {
         $tenant = $booking->tenant_id === null
@@ -269,12 +142,6 @@ final class Loyalty
             return 'This one is free — '.$required.' stamps used.';
         }
 
-        /*
-         * The count on the message is the count *after* this appointment, not
-         * before it. A confirmation that says "3 of 5" when the appointment just
-         * booked is the fourth is a message the customer has to do arithmetic on
-         * — and the arithmetic is the only thing they wanted from it.
-         */
         $after = min($required, $enrolment->stamps_used + 1);
         $remaining = $required - $after;
 

@@ -18,9 +18,7 @@ class BillingReceipt extends Model
         'pdf_path',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -29,9 +27,7 @@ class BillingReceipt extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Tenant, $this>
-     */
+    /** @return BelongsTo<Tenant, $this> */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

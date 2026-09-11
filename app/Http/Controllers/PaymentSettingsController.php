@@ -10,38 +10,11 @@ use Inertia\Response;
 
 class PaymentSettingsController extends Controller
 {
-    /**
-     * `StripeGateway` is deliberately not injected — not into the constructor
-     * and not into these method signatures.
-     *
-     * Its binding refuses to resolve without platform Stripe credentials
-     * (AUDIT C1: the alternative is a fake gateway that accepts forged webhook
-     * signatures, so refusing is correct). Method injection made that refusal
-     * happen while the container was building the action's arguments, which is
-     * before a line of the action's own code ran. `connect`, `refresh` and
-     * `returned` were therefore a 500 with a stack trace on any installation
-     * without credentials — and `refresh`/`returned` are the two URLs Stripe
-     * itself sends the owner back to, so the failure landed on someone who had
-     * just left the product and come back.
-     *
-     * Same shape as `BookingService::gateway()`: resolved at the point of use,
-     * inside the places that already know what to say when payments cannot be
-     * reached. C1 is untouched — this asks the same binding the same question
-     * and gets the same refusal, somewhere an answer is possible.
-     */
     private function gateway(): StripeGateway
     {
         return app(StripeGateway::class);
     }
 
-    /**
-     * Whether the platform can reach Stripe at all.
-     *
-     * The connect screen offers a button that goes to Stripe. If the binding
-     * will refuse, the honest screen says so instead of rendering a button
-     * whose only outcome is an error — so `show` asks the question `connect`
-     * would have asked, and renders the answer.
-     */
     private function reachable(): bool
     {
         try {
@@ -124,13 +97,6 @@ class PaymentSettingsController extends Controller
         return redirect()->route('settings.payments.show');
     }
 
-    /**
-     * The sentence, in English, for the one person who cannot act on it.
-     *
-     * A salon owner cannot set `STRIPE_SECRET`; saying so would be telling them
-     * about a file they have never seen. What they can do is take bookings
-     * without deposits, which still works, and get in touch.
-     */
     private function unreachable(): RedirectResponse
     {
         return redirect()

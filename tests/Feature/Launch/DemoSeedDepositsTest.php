@@ -4,21 +4,6 @@ use App\Models\Booking;
 use App\Models\Tenant;
 use App\Models\User;
 
-/**
- * `demo:seed` refuses to set up deposits it cannot complete.
- *
- * The command used to seed a placeholder connected account and print a
- * paragraph saying that paying would not actually work. The booking page then
- * showed the deposit line, Reserve took the deposit branch, and Stripe rejected
- * the account id — a 503 at the last step of the one flow the demo exists to
- * show. It read as a broken product rather than as an unset variable, and it
- * was only discovered in the browser, after the seed had already run.
- *
- * It is a precondition now. Nothing is written until the keys and the account
- * are both there.
- */
-
-/** The command is local-only, and this is a test. */
 function asLocalEnvironment(callable $body): void
 {
     $original = app()->environment();
@@ -39,11 +24,6 @@ function aTenantToSeed(): Tenant
     return $tenant;
 }
 
-/**
- * Unscoped on purpose: the command clears the tenant context when it finishes,
- * and `Booking` fails closed without one, so `$tenant->bookings()` counts zero
- * whether the seed ran or not.
- */
 function seededBookingCount(Tenant $tenant): int
 {
     return Booking::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
@@ -79,8 +59,6 @@ it('refuses to seed deposits when the stripe keys are missing', function () {
             ->expectsOutputToContain('STRIPE_WEBHOOK_SECRET')
             ->assertFailed();
 
-        // And it stopped before writing anything, rather than seeding a salon
-        // and then complaining.
         expect($tenant->fresh()->takesDeposits())->toBeFalse()
             ->and(seededBookingCount($tenant))->toBe(0);
     });
@@ -97,11 +75,6 @@ it('refuses to seed deposits with keys but no connected account', function () {
     });
 });
 
-/*
- * The message has to be actionable, not just correct. Whoever hits this is
- * being told to go and do something, so the way out has to be in the same
- * output as the refusal.
- */
 it('names the no-deposits escape hatch in the refusal', function () {
     aTenantToSeed();
     withNoStripeKeys();
@@ -140,13 +113,6 @@ it('seeds deposits against a real connected account when everything is present',
     });
 });
 
-/*
- * `--plan-only` says it changes the billing state and nothing else, and now it
- * does. It used to overwrite the Stripe columns on its way past, which meant
- * looking at the read-only banner silently reset the demo's payment setup — and
- * with the check above it would have refused to run at all without keys, for a
- * flag that has nothing to do with payments.
- */
 it('leaves the stripe columns alone under --plan-only', function () {
     $tenant = aTenantToSeed();
     $tenant->forceFill([

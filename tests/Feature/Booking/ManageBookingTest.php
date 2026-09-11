@@ -19,16 +19,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
-/**
- * The customer-facing manage page. `.design/mockups/booking/manage-booking.dc.html`.
- *
- * `SelfServiceTest` covers the happy paths — an atomic reschedule, a refund on
- * each side of the window, a tampered token. This file covers the edges the
- * mockup's three states imply and that file does not: what a dead token is
- * allowed to reveal, the exact second the refund window turns over, a refund
- * Stripe refuses, and whether a booking that is over can still be acted on by
- * somebody posting straight at the endpoint.
- */
 function manageTenant(string $suffix = 'a'): array
 {
     $tenant = Tenant::factory()->create([
@@ -89,11 +79,6 @@ beforeEach(function () {
 });
 
 describe('what a dead link may reveal', function () {
-    /*
-     * The whole point: a token that never existed and a token that existed and
-     * expired must be indistinguishable, or the endpoint is an oracle for
-     * guessing valid tokens.
-     */
     it('answers every unresolvable token with one identical response', function () {
         $neverExisted = $this->get(route('booking.manage.show', Str::uuid()));
         $wrongShape = $this->get(route('booking.manage.show', 'abc'));
@@ -146,12 +131,6 @@ describe('what a dead link may reveal', function () {
 });
 
 describe('the refund window boundary', function () {
-    /*
-     * `refund_window_hours` is 48 and the appointment is 09:00 on the 10th, so
-     * the window turns over at 09:00 on the 8th. One second either side of that
-     * instant is a different answer about somebody's money, which is why this
-     * is asserted at the second rather than at the day.
-     */
     $cutoff = '2026-03-08 09:00:00';
 
     it('refunds one second before the cutoff', function () use ($cutoff) {
@@ -203,11 +182,6 @@ describe('a refund Stripe refuses', function () {
             ->and($fresh->deposit_status)->not->toBe(DepositStatus::Refunded);
     });
 
-    /*
-     * The owner has to be able to see it. A customer ringing about a refund
-     * that never arrived, against a record that says the booking is simply
-     * cancelled, is the failure this guards.
-     */
     it('shows as refund pending on the operator record', function () {
         $salon = manageTenant();
         $booking = manageBooking($salon);
@@ -246,9 +220,6 @@ describe('a booking that is over or already cancelled', function () {
             ->and($response->getContent())->toContain('"can_reschedule":false');
     });
 
-    /*
-     * Hidden client-side is not refused. These post straight at the endpoints.
-     */
     it('refuses a cancel posted directly at an already-cancelled booking', function () {
         $salon = manageTenant();
         $booking = manageBooking($salon, ['status' => BookingStatus::Cancelled]);
@@ -315,11 +286,6 @@ describe('the freed slot', function () {
 });
 
 describe('the throttle', function () {
-    /*
-     * Unauthenticated by design, so the limiter is the only thing between the
-     * token space and somebody walking it. `booking-manage` is the same pattern
-     * the public `.ics` feed uses.
-     */
     it('caps how hard one link can be hammered', function () {
         $salon = manageTenant();
         $booking = manageBooking($salon);
@@ -332,11 +298,6 @@ describe('the throttle', function () {
         $this->get(route('booking.manage.show', $booking->public_token))->assertStatus(429);
     });
 
-    /*
-     * The one that matters. Every guess carries a different token, so a limiter
-     * keyed by the token alone would put each guess in a bucket of its own and
-     * never trip — which is what this route used to do.
-     */
     it('caps a walk through the token space from one address', function () {
         $perIp = (int) config('booking_management.rate_limit_per_ip_per_minute');
         $blocked = false;

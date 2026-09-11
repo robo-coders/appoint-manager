@@ -7,20 +7,12 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Subject;
 
-/**
- * What the public booking page renders: one appointment it believes in, three
- * spread ways out, and enough context to say who it thinks it is talking to.
- */
 final readonly class Suggestion
 {
     /**
      * @param  list<Proposal>  $alternatives
      * @param  int|null  $intervalDays  The customer's own typical gap, when they have
-     *                                  one. Null for a new customer — the service's
-     *                                  suggested interval was used instead.
      * @param  SetupReason|null  $setupReason  Why there is nothing to show, when the
-     *                                         cause is configuration rather than a
-     *                                         full diary. Null on every other path.
      */
     public function __construct(
         public ?Proposal $primary,
@@ -33,7 +25,6 @@ final readonly class Suggestion
         public ?SetupReason $setupReason = null,
     ) {}
 
-    /** Nothing is bookable inside the salon's horizon. The page offers the waitlist. */
     public function isEmpty(): bool
     {
         return $this->primary === null;
@@ -53,9 +44,7 @@ final readonly class Suggestion
         return $this->primary === null ? 'fully_booked' : 'proposal';
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function toArray(string $timezone): array
     {
         return [

@@ -7,29 +7,9 @@ use App\Models\Subject;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 
-/**
- * One finished appointment, and the sentence that justifies it.
- *
- * The reason is not decoration and it is not a label bolted on afterwards. A
- * proposal that cannot say why it is the right appointment in a short phrase is
- * the wrong proposal, and the ranking that produced it needs changing — a
- * confidently wrong suggestion is worse than a calendar, because the customer
- * cannot see the reasoning well enough to correct it. So the reason is built by
- * the same code that picks the slot, from the same facts, and there is no way
- * to construct one of these without it.
- *
- * `reason` is the phrase a person reads. `reasonKey` is the same thing for
- * tests and analytics, so an assertion about ranking does not have to match on
- * English.
- */
 final readonly class Proposal
 {
-    /**
-     * @param  list<int>  $staffIds  Everyone free at this instant. `staff` is the
-     *                               one being proposed; the rest are why a
-     *                               different staff member can be swapped in
-     *                               without re-querying.
-     */
+    /** @param  list<int>  $staffIds  Everyone free at this instant. `staff` is the */
     public function __construct(
         public CarbonImmutable $startsAt,
         public CarbonImmutable $endsAt,
@@ -41,7 +21,6 @@ final readonly class Proposal
         public array $staffIds = [],
     ) {}
 
-    /** The day-of-week and half of the day, which is what "spread" is measured on. */
     public function bucket(string $timezone): string
     {
         $local = $this->startsAt->timezone($timezone);
@@ -49,9 +28,7 @@ final readonly class Proposal
         return $local->toDateString().'|'.($local->hour < 12 ? 'am' : 'pm');
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function toArray(string $timezone): array
     {
         $local = $this->startsAt->timezone($timezone);

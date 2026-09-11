@@ -8,15 +8,6 @@ use App\Models\Service;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 
-/**
- * The loyalty settings tab: what it may be sent, and whose scheme it may touch.
- *
- * `LoyaltyPackagesTest` already covers switching the feature on and off and the
- * two bounds that existed before the scheme grew a service scope and four
- * switches. This file covers what came with them, and the one rule that no
- * amount of front-end care can be trusted with: the service a card is scoped to
- * has to belong to the salon scoping it.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
@@ -26,9 +17,7 @@ function anOwnerOf(array $salon): User
     return User::factory()->create(['tenant_id' => $salon['tenant']->id]);
 }
 
-/**
- * @return array{0: array<string, mixed>, 1: User}
- */
+/** @return array{0: array<string, mixed>, 1: User} */
 function aSchemePayload(array $overrides = []): array
 {
     return array_merge([
@@ -43,12 +32,6 @@ function aSchemePayload(array $overrides = []): array
         'show_visit_date' => true,
     ], $overrides);
 }
-
-/*
-|--------------------------------------------------------------------------
-| What the screen sends
-|--------------------------------------------------------------------------
-*/
 
 it('saves the scope and all four switches', function () {
     $salon = aSalon();
@@ -101,12 +84,6 @@ it('leaves a switch it was not sent exactly as it was', function () {
     expect(LoyaltyPackage::withoutGlobalScopes()->sole()->auto_enrol)->toBeFalse();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Bounds
-|--------------------------------------------------------------------------
-*/
-
 it('refuses a card longer than the configured ceiling', function () {
     $salon = aSalon();
 
@@ -140,12 +117,6 @@ it('refuses a reward longer than the configured length', function () {
         ]))
         ->assertSessionHasErrors(['reward']);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Whose service, whose scheme
-|--------------------------------------------------------------------------
-*/
 
 it('refuses a service belonging to another salon', function () {
     $salon = aSalon();
@@ -205,17 +176,6 @@ it('shows a salon its own scheme and not anybody else', function () {
         ->assertInertia(fn ($page) => $page->where('loyalty.name', 'Our card'));
 });
 
-/*
-|--------------------------------------------------------------------------
-| A shorter card
-|--------------------------------------------------------------------------
-*/
-
-/**
- * The warning on the screen is not decoration: this is what it warns about.
- * Dropping the count below what somebody has already collected completes their
- * card there and then, and the operator is told before it happens.
- */
 it('completes the cards that a shorter scheme has already qualified', function () {
     $salon = aSalon();
     $owner = anOwnerOf($salon);

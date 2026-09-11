@@ -1,18 +1,5 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Super admin — admin.{domain}
-|--------------------------------------------------------------------------
-|
-| Us, at 2am. Nothing here is reachable from the app surface, so a salon
-| owner cannot hit one of these routes even to be told 403.
-|
-| Its own session cookie, its own login, and an IP allowlist when
-| ADMIN_IP_ALLOWLIST is set.
-|
-*/
-
 use App\Http\Controllers\Admin\AdminSessionController;
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\VerticalController;
@@ -46,7 +33,6 @@ Route::middleware(['auth', 'super-admin'])->group(function (): void {
     Route::post('/tenants/{tenant}/price', [SuperAdminController::class, 'setPrice'])->name('super-admin.price');
     Route::post('/tenants/{tenant}/comp', [SuperAdminController::class, 'comp'])->name('super-admin.comp');
     Route::post('/tenants/{tenant}/flags', [SuperAdminController::class, 'flags'])->name('super-admin.flags');
-    // BetaSandbox — see BETA_SANDBOX.md.
     Route::post('/tenants/{tenant}/beta', [SuperAdminController::class, 'setBeta'])->name('super-admin.beta');
     Route::post('/tenants/{tenant}/go-live', [SuperAdminController::class, 'goLive'])->name('super-admin.go-live');
     Route::post('/tenants/{tenant}/preview', [SuperAdminController::class, 'previewLink'])->name('super-admin.preview');

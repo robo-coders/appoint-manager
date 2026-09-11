@@ -6,16 +6,6 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Models\Subject;
 
-/**
- * How soon this subject is due again.
- *
- * Highest wins:
- *   1. The interval set at checkout for this appointment
- *   2. The subject's own interval
- *   3. The service default (from the service row, seeded from the vertical)
- *
- * A checkout value is written onto the subject so the next visit inherits it.
- */
 final class RebookInterval
 {
     public function days(?Subject $subject, Service $service, ?int $checkoutDays = null): int

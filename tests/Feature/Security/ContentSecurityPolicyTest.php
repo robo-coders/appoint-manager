@@ -6,13 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Vite;
 
-/**
- * The CSP carves out the Vite dev server so `npm run dev` works locally. That
- * carve-out is a hole in a security header, so most of what follows is here to
- * prove it cannot reach any environment but local-with-the-dev-server-running.
- */
-
-/** Run the middleware for a surface and return the CSP it set. */
 function cspFor(Surface $surface): string
 {
     config([
@@ -30,12 +23,6 @@ function cspFor(Surface $surface): string
     return (string) $response->headers->get('Content-Security-Policy');
 }
 
-/**
- * Point Vite at a hot file holding $contents, as `npm run dev` would write it.
- * `withVite()` first because the base TestCase disables Vite, and its stand-in
- * ignores `useHotFile()` — which would leave these tests reading whatever
- * `public/hot` happens to hold on the machine running them.
- */
 function useHotFile(?string $contents): void
 {
     test()->withVite();
@@ -51,11 +38,6 @@ function useHotFile(?string $contents): void
     Vite::useHotFile($path);
 }
 
-/**
- * The one that matters. A local carve-out that leaks to production is a worse
- * outcome than a broken dev setup, so production is asserted explicitly and by
- * name rather than inferred from "the test environment is not local".
- */
 it('never puts a localhost or websocket origin in the production policy', function (Surface $surface) {
     app()->detectEnvironment(fn () => 'production');
     useHotFile('http://localhost:5173');
@@ -70,8 +52,6 @@ it('never puts a localhost or websocket origin in the production policy', functi
         ->not->toContain('wss://')
         ->not->toContain(':5173');
 
-    // Every directive that the carve-out widens is checked as a whole token,
-    // so a dev origin cannot hide inside one that happens to allow a CDN.
     $directives = collect(explode('; ', $policy))
         ->mapWithKeys(fn (string $directive) => [explode(' ', $directive)[0] => $directive]);
 
@@ -121,12 +101,6 @@ it('adds the dev origin to every directive that loads an asset in local while th
 
     expect($directives['script-src'])->toContain('http://localhost:5173')
         ->and($directives['style-src'])->toContain('http://localhost:5173')
-        /*
-         * `img-src` is in this list because it was once not, and `https:`
-         * hid it: the directive looked open enough to be nobody's problem
-         * while it silently refused every SVG Vite was serving. The logo
-         * was a broken-image icon on the auth screens in development.
-         */
         ->and($directives['img-src'])->toContain('http://localhost:5173')
         ->and($directives['font-src'])->toContain('http://localhost:5173')
         ->and($directives['connect-src'])->toContain('http://localhost:5173')

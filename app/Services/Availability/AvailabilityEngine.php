@@ -16,19 +16,6 @@ use Illuminate\Support\Collection;
 
 final class AvailabilityEngine
 {
-    /**
-     * Every start the salon could actually take, ignoring who is already booked.
-     *
-     * The public booking page's fallback picker shows unavailable times struck
-     * through rather than removing them — an empty grid reads as broken, and a
-     * grid with three times in it does not tell a customer whether the salon is
-     * busy or shut. That needs two answers: what the day *is*, and what is left
-     * of it. This is the first; `slotsFor` is the second, and the difference
-     * between them is what gets the strike-through.
-     *
-     * Minimum notice and the horizon still apply. A struck-through 09:00 at
-     * three in the afternoon is noise, not information.
-     */
     public function gridFor(
         Tenant $tenant,
         Service $service,
@@ -39,13 +26,6 @@ final class AvailabilityEngine
         return $this->slotsFor($tenant, $service, $from, $to, $staff, null, ignoreBookings: true);
     }
 
-    /**
-     * @param  int|null  $ignoreBookingId  A booking to treat as if it were not there.
-     *                                     Used when rescheduling, so a booking does not
-     *                                     block the slot it is being moved within.
-     * @param  bool  $ignoreBookings  Every existing booking treated as absent. Use
-     *                                `gridFor()` rather than passing this by hand.
-     */
     public function slotsFor(
         Tenant $tenant,
         Service $service,
@@ -172,9 +152,7 @@ final class AvailabilityEngine
         return SlotCollection::make($slots);
     }
 
-    /**
-     * @return Collection<int, User>
-     */
+    /** @return Collection<int, User> */
     private function staffWhoCanPerform(Tenant $tenant, Service $service, ?User $staff): Collection
     {
         $query = User::withoutGlobalScopes()
@@ -192,9 +170,7 @@ final class AvailabilityEngine
         return $query->get();
     }
 
-    /**
-     * @return list<CarbonImmutable>
-     */
+    /** @return list<CarbonImmutable> */
     private function localDays(CarbonImmutable $from, CarbonImmutable $to, DateTimeZone $timezone): array
     {
         $cursor = $from->timezone($timezone)->startOfDay();
@@ -266,9 +242,7 @@ final class AvailabilityEngine
         return array_values(array_filter($remaining, fn (TimeWindow $window) => ! $window->isEmpty()));
     }
 
-    /**
-     * @return list<CarbonImmutable>
-     */
+    /** @return list<CarbonImmutable> */
     private function startsIn(TimeWindow $window, int $durationMinutes, int $granularity, DateTimeZone $timezone): array
     {
         $starts = [];

@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-/**
- * Integer pence in, mono tabular out. Accepts the Money payload the API sends
- * or a pre-formatted string; never does float arithmetic on money.
- */
 const props = defineProps<{
     value: { amount: number; formatted: string; currency: string } | string;
-    /** Muted when it is a secondary figure, e.g. "of which £10 deposit". */
     muted?: boolean;
 }>();
 

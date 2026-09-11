@@ -4,11 +4,7 @@ namespace App\Support;
 
 final class AvailabilityOverlap
 {
-    /**
-     * Touching endpoints are allowed (09:00–12:00 and 12:00–17:00).
-     *
-     * @param  list<array{start_time: string, end_time: string}>  $ranges
-     */
+    /** @param  list<array{start_time: string, end_time: string}>  $ranges */
     public static function rangesOverlap(array $ranges): bool
     {
         $normalized = [];

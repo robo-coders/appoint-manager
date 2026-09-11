@@ -1,30 +1,11 @@
 <script setup lang="ts">
-/**
- * One day in the borderless week rail.
- *
- * Only the selected day takes a fill. Containment is a signal and it is spent
- * once: an unselected day sits on the page with a hairline, and a row of seven
- * filled boxes tells you nothing about which one you are on.
- *
- * The fill is **ink, not brand**. A time is a choice the customer is making,
- * not a thing the salon is branding, and brand is rationed to two places on
- * this page — the mark and the primary button.
- *
- * A closed or fully booked day keeps its place, for the same reason a taken
- * time does. Its meaning lives in the accessible name, never in the
- * strike-through alone.
- */
 const props = withDefaults(
     defineProps<{
-        /** `Mon`, already localised. */
         weekday: string;
-        /** Day of the month, as a number. */
         dayOfMonth: string;
-        /** The full name for assistive tech: `Saturday 14 March`. */
         fullLabel: string;
         selected?: boolean;
         available?: boolean;
-        /** `no times` or `closed` — the two honest reasons. */
         unavailableReason?: string;
     }>(),
     { selected: false, available: true, unavailableReason: 'no times' },

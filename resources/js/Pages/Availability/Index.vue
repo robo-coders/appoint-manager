@@ -40,11 +40,6 @@ const form = useForm({
 
 const selectedStaff = computed(() => props.staff.filter((person) => person.id === selectedId.value));
 
-/*
- * Whether there is anything to save. Compared as a stable string rather than by
- * identity, because `WeeklyHoursGrid` replaces the array on every keystroke and
- * an identity check would always say "dirty".
- */
 const shape = (ranges: AvailabilityRange[]) =>
     JSON.stringify(ranges.map((range) => [range.weekday, range.start_time, range.end_time]).sort());
 
@@ -69,8 +64,6 @@ const save = () => {
         <Head title="Availability" />
         <PageHeader title="Availability" description="Weekly hours for each person." />
 
-        <!-- One person at a time. Seven days times four groomers is
-             twenty-eight cards, which is a wall rather than a form. -->
         <div class="mb-6 flex flex-wrap gap-2" role="group" aria-label="Whose hours">
             <Button
                 v-for="person in staff"
@@ -95,8 +88,6 @@ const save = () => {
 
             <div class="mt-6 flex items-center gap-4">
                 <Button :loading="form.processing" @click="save">Save hours</Button>
-                <!-- The same save-state indicator as Settings: a form that
-                     silently succeeds is a form you save twice. -->
                 <SaveState :dirty="dirty" :processing="form.processing" :saved-at="savedAt" />
             </div>
 

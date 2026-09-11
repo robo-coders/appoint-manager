@@ -13,27 +13,11 @@ use App\Services\Booking\BookingService;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/**
- * Marking an appointment as missed.
- *
- * The bug: `BookingStatus::NoShow` existed, the dashboard's no-show rate read
- * it, and nothing in the app could write it. The stat was structurally zero for
- * every tenant — not "we have no no-shows" but "this number cannot move" — and
- * the only rows carrying the status came out of the demo seeder.
- *
- * The eligibility rules are deliberately the same as `complete()`'s, so the two
- * buttons appear and disappear together: an appointment is over, and the owner
- * says which way it went.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
 
-/**
- * A salon, an owner to click the button, and a customer to miss the slot.
- *
- * @return array{tenant: Tenant, staff: User, service: Service, owner: User, customer: Customer}
- */
+/** @return array{tenant: Tenant, staff: User, service: Service, owner: User, customer: Customer} */
 function aNoShowSalon(): array
 {
     $salon = aSalon();
@@ -51,7 +35,6 @@ function aNoShowSalon(): array
     return [...$salon, 'owner' => $owner, 'customer' => $customer];
 }
 
-/** One appointment, booked the way the salon books one. */
 function aNoShowBooking(array $salon, string $when = '2026-03-10 09:00:00'): Booking
 {
     return app(BookingService::class)->create(
@@ -63,12 +46,6 @@ function aNoShowBooking(array $salon, string $when = '2026-03-10 09:00:00'): Boo
         BookingSource::Online,
     );
 }
-
-/*
-|--------------------------------------------------------------------------
-| The action
-|--------------------------------------------------------------------------
-*/
 
 it('marks a past confirmed appointment as a no show', function () {
     $salon = aNoShowSalon();
@@ -109,12 +86,6 @@ it('treats a second press as a no-op rather than an error', function () {
 
     expect($booking->fresh()->status)->toBe(BookingStatus::NoShow);
 });
-
-/*
-|--------------------------------------------------------------------------
-| What it refuses
-|--------------------------------------------------------------------------
-*/
 
 it('refuses an appointment that has not happened yet', function () {
     $salon = aNoShowSalon();
@@ -180,9 +151,6 @@ it('refuses an operator from another salon', function () {
     $salon = aNoShowSalon();
     $booking = aNoShowBooking($salon);
 
-    // `aNoShowBooking` leaves the first salon in the tenant context, and
-    // `BelongsToTenant` refuses to create a row for a different one while it is
-    // set. Clearing it is what a fresh request would do.
     app(TenantContext::class)->clear();
     $intruder = User::factory()->create(['tenant_id' => aSalon()['tenant']->id]);
 
@@ -195,12 +163,6 @@ it('refuses an operator from another salon', function () {
     expect($booking->fresh()->status)->toBe(BookingStatus::Confirmed);
 });
 
-/*
-|--------------------------------------------------------------------------
-| The stat that reads it
-|--------------------------------------------------------------------------
-*/
-
 it('moves the dashboard no-show rate off zero once a booking is marked', function () {
     $salon = aNoShowSalon();
 
@@ -209,7 +171,6 @@ it('moves the dashboard no-show rate off zero once a booking is marked', functio
 
     $this->travelTo(CarbonImmutable::parse('2026-03-11 10:30:00', 'Europe/London'));
 
-    // Before: nothing has finished, so there is no rate to show at all.
     actingAsTenant($salon['owner'])
         ->get(route('dashboard'))
         ->assertOk()
@@ -218,7 +179,6 @@ it('moves the dashboard no-show rate off zero once a booking is marked', functio
     $this->actingAs($salon['owner'])->post(route('bookings.no-show', $missed))->assertSessionHasNoErrors();
     $this->actingAs($salon['owner'])->post(route('bookings.complete', $kept))->assertSessionHasNoErrors();
 
-    // One missed in two finished.
     actingAsTenant($salon['owner'])
         ->get(route('dashboard'))
         ->assertOk()

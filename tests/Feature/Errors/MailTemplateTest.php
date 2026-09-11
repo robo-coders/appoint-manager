@@ -19,23 +19,9 @@ use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Mail\Mailable;
 
-/**
- * The seven transactional emails.
- *
- * They were stock `<x-mail::message>` markdown — a framework default with the
- * framework's own chrome, which is the first thing a customer sees after
- * booking. These assert the things that are actually easy to get wrong in
- * email and impossible to notice until somebody complains: that a plain text
- * part exists at all, that it is not HTML-escaped, that the layout survives a
- * client with no stylesheet, and that money and times keep the mono tabular
- * treatment they have everywhere else in the product.
- */
-
-/** A booking with everything filled in: staff, address, price and a deposit. */
 function aMailBooking(): array
 {
     $tenant = Tenant::factory()->create([
-        // An ampersand on purpose: it is what broke the plain text part.
         'name' => 'Paw & Order',
         'timezone' => 'Europe/London',
         'address_line_1' => '12 Willow Street',
@@ -66,13 +52,6 @@ function aMailBooking(): array
         'deposit_at_booking' => 1000,
     ]);
 
-    /*
-     * Relations attached while the context is still set. `TenantScope` fails
-     * closed — with no context it appends `0 = 1` rather than reading across
-     * tenants — so a lazy load after `clear()` returns null and the mailable
-     * dies on `$booking->service->name`. Which is correct scoping and a
-     * confusing test failure.
-     */
     $booking->setRelation('service', $service)
         ->setRelation('staff', $staff)
         ->setRelation('customer', $customer);
@@ -82,17 +61,7 @@ function aMailBooking(): array
     return [$booking, $tenant];
 }
 
-/**
- * The data a Mailable's views are rendered with.
- *
- * `buildViewData()` returns the Mailable's public properties and whatever
- * `with()` put on the *instance* — it does **not** include the `with:` array on
- * the `Content` object, which is where all of this copy lives. Merging both is
- * what the mailer does internally at render time, and getting it wrong made
- * every text-part assertion fail on "Undefined variable $heading".
- *
- * @return array<string, mixed>
- */
+/** @return array<string, mixed> */
 function viewDataFor(Mailable $mail): array
 {
     return array_merge($mail->buildViewData(), $mail->content()->with);
@@ -114,17 +83,6 @@ function everyMail(): array
     ];
 }
 
-/*
-|--------------------------------------------------------------------------
-| Every message has both parts
-|--------------------------------------------------------------------------
-|
-| The plaintext part is not an afterthought. Somebody reads it — a phone on a
-| bad signal, a client set to text-only, a screen reader that prefers it — and
-| every spam filter scores a message that has none.
-|
-*/
-
 it('sends both an HTML and a plain text part', function () {
     foreach (everyMail() as $name => $mail) {
         $content = $mail->content();
@@ -137,11 +95,6 @@ it('sends both an HTML and a plain text part', function () {
 });
 
 it('does not HTML-escape the plain text part', function () {
-    /*
-     * Blade escapes by default, which is right in HTML and wrong here: there is
-     * no markup in a text part for a value to break out of, and a salon called
-     * "Paw & Order" arrived in a text-only client as "Paw &amp; Order".
-     */
     foreach (everyMail() as $name => $mail) {
         $text = view($mail->content()->text, viewDataFor($mail))->render();
 
@@ -159,25 +112,12 @@ it('names the salon in the plain text part, ampersand and all', function () {
         ->toContain('Paw & Order');
 });
 
-/*
-|--------------------------------------------------------------------------
-| The HTML survives a client that throws the stylesheet away
-|--------------------------------------------------------------------------
-|
-| Outlook on Windows renders with Word's engine: no flexbox, no grid, no
-| `max-width` on a div, and `<style>` largely discarded. Every structural rule
-| has to be inline on a table.
-|
-*/
-
 it('lays out with tables and inline styles, not with a stylesheet', function () {
     foreach (everyMail() as $name => $mail) {
         $html = $mail->render();
 
         expect($html)
             ->toContain('<table role="presentation"')
-            // Nothing structural in the <style> block: the layout must hold up
-            // with it thrown away.
             ->not->toContain('display:flex')
             ->not->toContain('display:grid')
             ->not->toContain('<link ');
@@ -185,24 +125,11 @@ it('lays out with tables and inline styles, not with a stylesheet', function () 
 });
 
 it('tells the client we have an opinion about dark mode', function () {
-    /*
-     * Without `color-scheme`, iOS Mail and Outlook force-invert the whole
-     * message — and an auto-inverted warm-paper email comes back muddy
-     * blue-grey with the ink action flipped to near-white on near-white.
-     * DESIGN.md's light-only rule is about the app; email is repainted whether
-     * or not we have a view, so specifying beats being repainted.
-     */
     $html = (new BookingConfirmedMail(...aMailBooking()))->render();
 
     expect($html)
         ->toContain('name="color-scheme"')
         ->toContain('prefers-color-scheme: dark')
-        /*
-         * And the action's *label* is overridden, not only the cell it sits in.
-         * The anchor carries an inline colour, which beats a class on its
-         * parent — so without this the button inverts its fill and keeps its
-         * white text, and the only action in the message disappears.
-         */
         ->toContain('.action-label');
 });
 
@@ -213,7 +140,6 @@ it('keeps money and times mono and tabular, as everywhere else', function () {
         ->toContain('font-variant-numeric:tabular-nums')
         ->toContain('£45.00')
         ->toContain('£10.00')
-        // The remainder, computed rather than left for the reader to work out.
         ->toContain('£35.00');
 });
 
@@ -225,10 +151,6 @@ it('writes its own preheader rather than leaking the first line of the body', fu
     }
 });
 
-/*
- * A deposit row for a salon that takes no deposit would read "Deposit £0.00",
- * which invites exactly the question it exists to answer.
- */
 it('omits the deposit rows when there is no deposit', function () {
     [$booking, $tenant] = aMailBooking();
     $booking->deposit_at_booking = new Money(0);

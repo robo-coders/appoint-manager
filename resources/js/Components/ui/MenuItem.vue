@@ -6,12 +6,6 @@ withDefaults(defineProps<{ danger?: boolean; disabled?: boolean }>(), { danger: 
 
 const emit = defineEmits<{ click: [] }>();
 
-/*
- * Close first, then act. An item that opens a modal used to leave the menu on
- * screen behind the overlay; closing here rather than relying on the click
- * bubbling to the panel means the outcome does not depend on what the handler
- * does next. Injected, so an item used outside a `Menu` still works.
- */
 const close = inject(MENU_CLOSE, null);
 
 const onClick = () => {

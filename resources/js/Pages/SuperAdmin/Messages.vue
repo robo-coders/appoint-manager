@@ -5,18 +5,6 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Table, { type Column } from '@/Components/ui/Table.vue';
 import { Head } from '@inertiajs/vue3';
 
-/**
- * Every SMS and email the platform has sent, newest first.
- *
- * The one idea: **this screen exists to answer "did it actually go out".** So
- * the status is a column and not a word buried in a run-on muted line, and the
- * body — which is the only part that is long — is the row's own text rather
- * than something competing with the metadata for the same line.
- *
- * It was an unstyled `<ul>` of `created_at · tenant 4 · sms · sent` followed by
- * `07700900000 — Your appointment is confirmed…`, all at 13px, with the one
- * fact you came for sitting fourth in a chain of middots.
- */
 defineProps<{
     messages: Array<{
         id: number;
@@ -32,16 +20,6 @@ defineProps<{
     }>;
 }>();
 
-/*
- * `body` is a `line` at 375, and that is the point of the fix.
- *
- * The first version gave the narrow layout the timestamp and the status and
- * dropped the message — so a send log on a phone was twenty-five rows of
- * "07700900123 / 2m ago / delivered" with the thing you came to read missing
- * entirely, and every row's timestamp was the same because the seed writes them
- * in one go. The message and the time share the second line now; the time is
- * second, because it is the less interesting of the two.
- */
 const columns: Column[] = [
     { key: 'sent_label', label: 'Sent', width: 'when', sortable: true },
     { key: 'status', label: 'Status', width: 'status', sortable: true, narrow: 'meta' },
@@ -51,8 +29,6 @@ const columns: Column[] = [
     { key: 'tenant_name', label: 'Salon', width: 'staff', sortable: true, secondary: true },
 ];
 
-/* Delivered is the boring answer and gets the quiet badge. Failure earns the
- * only colour on the screen. */
 const toneFor = (status: string) =>
     ['failed', 'undelivered', 'bounced'].includes(status.toLowerCase()) ? 'cancelled' : 'confirmed';
 </script>

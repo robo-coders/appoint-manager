@@ -11,18 +11,14 @@ class SmsAllowanceWarning extends Notification
 {
     use Queueable;
 
-    /**
-     * @param  array<string, mixed>  $snapshot
-     */
+    /** @param  array<string, mixed>  $snapshot */
     public function __construct(
         public Tenant $tenant,
         public int $threshold,
         public array $snapshot,
     ) {}
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function via(object $notifiable): array
     {
         return ['mail'];

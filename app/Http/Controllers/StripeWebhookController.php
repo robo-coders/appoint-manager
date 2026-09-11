@@ -38,13 +38,8 @@ class StripeWebhookController extends Controller
                 'payload' => $event['data'],
             ]);
         } catch (UniqueConstraintViolationException) {
-            // Stripe retried an event we already have. Acknowledge and do nothing:
-            // the original delivery either has been or will be processed.
             return response('ok', 200);
         } catch (Throwable $exception) {
-            // Anything else means we failed to record a real event. Never acknowledge
-            // that — a 200 here is Stripe's cue to stop retrying, and the payment
-            // would be lost in silence.
             report($exception);
 
             $this->recordFailure($event, $exception);
@@ -57,9 +52,7 @@ class StripeWebhookController extends Controller
         return response('ok', 200);
     }
 
-    /**
-     * @param  array<string, mixed>  $event
-     */
+    /** @param  array<string, mixed>  $event */
     private function recordFailure(array $event, Throwable $exception): void
     {
         try {
@@ -70,7 +63,6 @@ class StripeWebhookController extends Controller
                 'message' => $exception->getMessage(),
             ]);
         } catch (Throwable) {
-            // The database is the thing that is broken. The 500 is the signal.
         }
     }
 }

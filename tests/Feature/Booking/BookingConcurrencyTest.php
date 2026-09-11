@@ -74,11 +74,6 @@ it('creates an unconnected online booking as confirmed with no deposit', functio
         ->and($booking->stripe_payment_intent_id)->toBeNull();
 });
 
-/*
- * These two fork PHP processes with their own PDO connections and release
- * them from a barrier. The staff `users` row is locked for the write, so
- * the loser waits, then `assertSlotOpen()` throws `SlotUnavailableException`.
- */
 it('lets exactly one of two concurrent transactions take the same slot', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = bookableSalon();
     $first = Customer::factory()->create(['tenant_id' => $tenant->id]);

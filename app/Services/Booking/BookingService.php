@@ -42,20 +42,6 @@ final class BookingService
 
     private ?string $lastClientSecret = null;
 
-    /**
-     * `StripeGateway` is deliberately not a constructor dependency.
-     *
-     * Its binding refuses to resolve without Stripe credentials (AUDIT C1: the
-     * alternative is a fake gateway that accepts forged webhook signatures, so
-     * refusing is correct). Type-hinting it here made that refusal happen at
-     * *container resolution* — so `PublicBookingController::store` died before
-     * a line of its own code ran, for every tenant on the page, whether or not
-     * the booking involved money at all. A salon that takes no deposits got a
-     * stack trace out of a code path that never needed a gateway.
-     *
-     * So it is resolved at the point of use instead, inside the two places that
-     * already know what to do when payments cannot be reached. See `gateway()`.
-     */
     public function __construct(
         private AvailabilityEngine $engine,
         private Notifier $notifier,
@@ -63,18 +49,6 @@ final class BookingService
         private Loyalty $loyalty,
     ) {}
 
-    /**
-     * Resolve the gateway, late.
-     *
-     * Late enough that a booking with no deposit never asks for one, and that a
-     * platform with no credentials is a `PaymentsNotConfiguredException` the
-     * caller can catch rather than a container failure nobody can. C1 is
-     * untouched either way: this asks the same binding the same question and
-     * gets the same refusal — it just asks it somewhere an answer is possible.
-     *
-     * Not memoised: the binding is a singleton, so this is a container lookup,
-     * and reading it fresh is what lets a test swap the gateway underneath.
-     */
     private function gateway(): StripeGateway
     {
         return app(StripeGateway::class);
@@ -85,9 +59,6 @@ final class BookingService
         return $this->lastClientSecret;
     }
 
-    /**
-     * @internal Tests inject a competing write after lockForUpdate().
-     */
     public function withAfterLock(Closure $callback): self
     {
         $this->afterLock = $callback;
@@ -132,16 +103,6 @@ final class BookingService
         $endsAt = $startsAt->addMinutes($service->duration_minutes);
         app(TenantContext::class)->set($tenant);
 
-        /*
-         * Loyalty, and the whole of its reach into this method.
-         *
-         * `enrol()` is a no-op unless the tenant has switched the feature on, so
-         * for every other tenant these two lines are two early returns and
-         * nothing else changes. When the reward is due the booking is free:
-         * price zero, deposit zero, and `needsDeposit` false — which is why the
-         * loyalty question is asked *before* `needsDeposit()` rather than
-         * unpicking its answer afterwards. Nothing else about the flow moves.
-         */
         $this->loyalty->enrol($tenant, $customer);
         $isReward = $this->loyalty->rewardDue($tenant, $customer);
         $needsDeposit = ! $isReward && $this->needsDeposit($tenant, $service, $source, $customer);
@@ -170,9 +131,6 @@ final class BookingService
                 'ends_at' => $endsAt,
                 'status' => $resolved,
                 'deposit_status' => $depositStatus ?? ($needsDeposit ? DepositStatus::Required : DepositStatus::None),
-                // The reward is the free one. Zero here rather than a discount
-                // applied later, so every screen, export and refund path that
-                // reads `price_at_booking` sees the price that was charged.
                 'price_at_booking' => $isReward ? 0 : $service->price->amount,
                 'deposit_at_booking' => $needsDeposit ? $this->upfrontAmount($service, $customer) : 0,
                 'is_loyalty_reward' => $isReward,
@@ -191,16 +149,8 @@ final class BookingService
             return $booking;
         });
 
-        // Everything below runs with no transaction open and no row locks held. The
-        // staff window must never stay locked across a third-party call.
         AvailabilityCache::bust($tenant->id);
 
-        /*
-         * Spend the stamps that paid for this one, before the confirmation goes
-         * out — the message quotes the counter, and a message saying "5 of 5" on
-         * the appointment that used them would be a receipt for a card that has
-         * already been cleared.
-         */
         if ($isReward) {
             $this->loyalty->spendReward($tenant, $customer);
         }
@@ -218,14 +168,6 @@ final class BookingService
         return $booking;
     }
 
-    /**
-     * A pending booking with no payment intent is unpayable: the customer would be
-     * shown a hold they can never complete, and it would be cancelled 15 minutes
-     * later. So a Stripe failure releases the slot and is raised to the caller
-     * rather than being logged and hidden.
-     *
-     * @throws PaymentSetupFailedException
-     */
     private function attachPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): void
     {
         try {
@@ -284,27 +226,6 @@ final class BookingService
         return $outcome->fresh();
     }
 
-    /**
-     * Mark an appointment as having happened.
-     *
-     * **This is new, and it is here because the status had no writer.**
-     * `BookingStatus::Completed` existed and was read in four places — the
-     * dashboard's takings, the rebooking suggester, the overdue list — and set
-     * by nothing but the demo seeders. So "past appointments" and "completed
-     * appointments" were different sets in a product whose rebooking chase reads
-     * the second one, and loyalty stamps would have had nothing to count.
-     *
-     * Deliberately narrow. It refuses anything that is not a confirmed
-     * appointment that has already started: a pending request has not been
-     * accepted, a cancellation did not happen, and an appointment in three weeks
-     * has not happened yet. A booking already completed is returned unchanged
-     * rather than treated as an error, so a double press is not a failure.
-     *
-     * The loyalty stamp is not applied here. It hangs off `Booking`'s `updated`
-     * hook, so an import, a support script or a later "no show / completed"
-     * bulk action agrees with this method by construction rather than by
-     * remembering to call the same service.
-     */
     public function complete(Booking $booking, ?User $actor = null): Booking
     {
         $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
@@ -325,9 +246,6 @@ final class BookingService
                 throw BookingNotCompletableException::notYetStarted();
             }
 
-            // `forceFill` and `save`, not `update`: the `updated` model hook
-            // that adds the loyalty stamp needs `wasChanged('status')`, which a
-            // mass update on the query builder would never produce.
             $locked->forceFill(['status' => BookingStatus::Completed])->save();
 
             return $locked;
@@ -338,47 +256,6 @@ final class BookingService
         return $outcome->fresh();
     }
 
-    /**
-     * Mark an appointment as missed.
-     *
-     * **This is new, and it is here for the same reason `complete()` is.**
-     * `BookingStatus::NoShow` existed as an enum case and the dashboard's
-     * no-show rate read it, but nothing in the app could write it — the stat was
-     * structurally zero for every tenant, forever, and the only rows that ever
-     * carried the status came out of the demo seeder.
-     *
-     * Same eligibility as `complete()`, deliberately: a confirmed appointment
-     * whose start time has passed. A pending request was never accepted, a
-     * cancellation is a different thing that happened, and an appointment on
-     * Thursday cannot have been missed yet. Already a no-show is returned
-     * unchanged rather than treated as an error, so a double press is not a
-     * failure.
-     *
-     * No loyalty stamp, and no loyalty refund. The stamp hook only fires on
-     * `Completed`, so a missed appointment earns nothing — which is the point of
-     * stamping at completion rather than at booking. And a missed *reward*
-     * booking stays spent: the slot was held and nobody else could have it.
-     *
-     * ## The hour is freed, so it is offered
-     *
-     * A missed appointment leaves exactly the same hole in the day as a
-     * cancellation does, and it used to be the only way of leaving one that
-     * told nobody. `cancel()`, `decline()` and `reschedule()` all hand the
-     * vacated window to `WaitlistOfferer::offerForBooking()`; this does the
-     * same, through the same call, so the offer rows, the batch size, the TTL
-     * and the wording are whatever they already are for every other freed slot.
-     * Nothing here composes a message — the customer being texted is being told
-     * a slot opened, and *why* it opened is not their business.
-     *
-     * Placed after the transaction commits, like every other caller: the blast
-     * writes offer rows and queues SMS, and none of that may run inside a lock
-     * on the booking row.
-     *
-     * The `already` flag is why the transaction now returns a pair. The
-     * idempotent second press returns early with the status unchanged, and it
-     * must not put a second round of offers out for a slot that was already
-     * offered when it was first marked.
-     */
     public function markNoShow(Booking $booking, ?User $actor = null): Booking
     {
         $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
@@ -486,11 +363,6 @@ final class BookingService
         ]);
     }
 
-    /**
-     * Give the slot straight back rather than leaving a hold nobody can pay for.
-     * Quiet on purpose: the customer is about to be told directly, and they were
-     * never charged, so a "your booking is cancelled" text would be nonsense.
-     */
     private function releaseUnpayable(Booking $booking, Tenant $tenant): void
     {
         try {
@@ -507,16 +379,6 @@ final class BookingService
         }
     }
 
-    /**
-     * Cancel, then refund, then tell people — in that order, each step committed
-     * before the next begins.
-     *
-     * The refund used to run inside the transaction, which meant a failure in any
-     * later step (an SMS, a waitlist blast) rolled the database back after Stripe
-     * had already moved the money: refunded in Stripe, still confirmed and still
-     * paid here, with nobody told. Money leaves the account exactly once, and only
-     * after the row that authorises it is durable.
-     */
     public function cancel(Booking $booking, ?string $reason = null, bool $offerWaitlist = true): Booking
     {
         $tenant = $booking->tenant ?? Tenant::query()->findOrFail($booking->tenant_id);
@@ -539,8 +401,6 @@ final class BookingService
                 'cancelled_at' => now(),
                 'cancellation_reason' => $reason,
                 'reminder_cancelled_at' => now(),
-                // Marked before the call so a crash mid-refund is visible as an
-                // owed refund rather than as a booking that was never refunded.
                 'deposit_status' => $refundable ? DepositStatus::RefundPending : $locked->deposit_status,
             ])->save();
 
@@ -553,16 +413,6 @@ final class BookingService
             return $booking;
         }
 
-        /*
-         * Give the stamps back before anything else runs.
-         *
-         * A cancelled reward booking used to leave the customer's card empty and
-         * the reward gone: `spendReward()` clears it at creation, and nothing
-         * ever undid that. Placed after the transaction — like `spendReward()`
-         * in `create()` — because the enrolment write is its own concern and
-         * must not extend the lock on the booking row. Guarded by the `already`
-         * return above, so a second cancel cannot refund a second time.
-         */
         if ($booking->is_loyalty_reward) {
             $customer = $booking->customer ?? Customer::withoutGlobalScopes()->find($booking->customer_id);
 
@@ -586,9 +436,6 @@ final class BookingService
         return $booking;
     }
 
-    /**
-     * Issue the refund with no transaction open, then record what happened.
-     */
     private function settleRefund(Booking $booking, Tenant $tenant, bool $refundable): string
     {
         if (! $refundable) {
@@ -605,8 +452,6 @@ final class BookingService
         } catch (Throwable $exception) {
             report($exception);
 
-            // Left as RefundPending on purpose: this is a refund we owe and have
-            // not yet made, and it needs to stay visible until it is settled.
             return 'Your refund is being processed.';
         }
 
@@ -634,8 +479,6 @@ final class BookingService
                 'staff_id' => $staff->id,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
-                // The old reminder was scheduled against the old time. Retire it and
-                // let the new one be scheduled below.
                 'reminder_cancelled_at' => now(),
             ])->save();
 
@@ -758,16 +601,6 @@ final class BookingService
             && CarbonImmutable::parse($booking->starts_at)->utc()->isFuture();
     }
 
-    /**
-     * Serialise writes for one staff member by locking their `users` row.
-     *
-     * The previous approach selected overlapping bookings `FOR UPDATE`. That
-     * window is usually empty (first booking of the day), so InnoDB takes a
-     * gap lock. Two transactions can both hold the gap, both INSERT into it,
-     * and InnoDB kills one with SQLSTATE 40001. The staff row exists, so this
-     * is a row lock: the loser waits, then `assertSlotOpen()` sees the slot
-     * gone and throws `SlotUnavailableException`.
-     */
     private function lockStaffRow(Tenant $tenant, User $staff): void
     {
         User::withoutGlobalScopes()

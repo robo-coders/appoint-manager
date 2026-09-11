@@ -14,9 +14,7 @@ class AvailabilityRule extends Model
     /** @use HasFactory<AvailabilityRuleFactory> */
     use BelongsToTenant, HasFactory;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'user_id',
         'weekday',
@@ -24,9 +22,7 @@ class AvailabilityRule extends Model
         'end_time',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -34,9 +30,7 @@ class AvailabilityRule extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

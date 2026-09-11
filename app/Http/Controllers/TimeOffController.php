@@ -75,9 +75,7 @@ class TimeOffController extends Controller
         return redirect()->route('time-off.index')->with('toast', 'Time off removed.');
     }
 
-    /**
-     * @return array{0: Carbon, 1: Carbon}
-     */
+    /** @return array{0: Carbon, 1: Carbon} */
     private function bounds(StoreTimeOffRequest $request, string $timezone): array
     {
         if ($request->boolean('is_all_day')) {

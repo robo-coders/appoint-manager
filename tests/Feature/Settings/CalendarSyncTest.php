@@ -19,9 +19,7 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
 
-/**
- * @return array{tenant: Tenant, owner: User, staff: User, service: Service}
- */
+/** @return array{tenant: Tenant, owner: User, staff: User, service: Service} */
 function aSyncSalon(array $overrides = []): array
 {
     $tenant = Tenant::factory()->create(array_merge([
@@ -102,11 +100,7 @@ function activeToken(Tenant $tenant, string $scope, ?int $staffId = null): Calen
         ->firstOrFail();
 }
 
-/**
- * Unfold, then split into a calendar and its events.
- *
- * @return array{properties: array<string, string>, events: list<array<string, string>>}
- */
+/** @return array{properties: array<string, string>, events: list<array<string, string>>} */
 function parseIcs(string $body): array
 {
     expect($body)->toEndWith("\r\n");
@@ -157,12 +151,6 @@ function parseIcs(string $body): array
 
     return ['properties' => $properties, 'events' => $events];
 }
-
-/*
-|--------------------------------------------------------------------------
-| The settings screen
-|--------------------------------------------------------------------------
-*/
 
 it('shows the owner one feed per bookable person plus the combined feed', function () {
     $salon = aSyncSalon();
@@ -301,12 +289,6 @@ it('rejects a scope and a mode it does not recognise', function () {
         ->assertSessionHasErrors('mode');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Regenerating
-|--------------------------------------------------------------------------
-*/
-
 it('retires the old link and issues a working one', function () {
     $salon = aSyncSalon();
     $this->actingAs($salon['owner'])->get(route('settings.calendar-sync'))->assertOk();
@@ -396,12 +378,6 @@ it('mints a token of the configured length from the configured alphabet', functi
     expect(strlen($token))->toBe((int) config('calendar_sync.token_length'))
         ->and(preg_match('/^[A-Za-z0-9]+$/', $token))->toBe(1);
 });
-
-/*
-|--------------------------------------------------------------------------
-| The feed itself
-|--------------------------------------------------------------------------
-*/
 
 it('serves a parseable calendar with one event per appointment', function () {
     $salon = aSyncSalon();
@@ -604,12 +580,6 @@ it('records when a client last pulled the feed', function () {
         ->get(route('settings.calendar-sync'))
         ->assertInertia(fn ($page) => $page->where('salonFeed.lastPulledAt', fn (?string $when) => is_string($when)));
 });
-
-/*
-|--------------------------------------------------------------------------
-| What the public endpoint refuses
-|--------------------------------------------------------------------------
-*/
 
 it('404s a slug that is not a salon', function () {
     $salon = aSyncSalon();

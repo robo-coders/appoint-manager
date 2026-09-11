@@ -8,7 +8,6 @@ const props = withDefaults(
     defineProps<{
         id?: string;
         label: string;
-        /** Visually hidden, still announced. See `ui/Field`. */
         labelHidden?: boolean;
         rows?: number;
         error?: string;

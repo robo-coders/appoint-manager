@@ -14,19 +14,6 @@ use Illuminate\View\View;
 
 class SlotOfferController extends Controller
 {
-    /**
-     * The offer, and — if it has already gone — the next appointment.
-     *
-     * The *taken* state is a designed state, not an error: several people were
-     * texted about the same slot and only one of them can have it, which is the
-     * mechanic working exactly as intended. So this always computes a fallback
-     * proposal for the same customer, and the page shows it in the same
-     * dominant type instead of a red box saying "sorry".
-     *
-     * Cost is worked out here for the same reason it is on the booking page:
-     * currency and timezone live on the server, and formatting either one in
-     * the browser means shipping the salon's configuration to it.
-     */
     public function show(string $token, AppointmentSuggester $suggester): View
     {
         $offer = $this->offer($token);
@@ -83,7 +70,6 @@ class SlotOfferController extends Controller
         ]);
     }
 
-    /** "full groom for Bramble · 90 min with Marek" */
     private function context(SlotOffer $offer): string
     {
         $service = mb_strtolower((string) $offer->service?->name);

@@ -9,15 +9,6 @@ use App\Models\User;
 use App\Services\Booking\BookingService;
 use Carbon\CarbonImmutable;
 
-/**
- * The staff calendar feed, and the settings screen that hands the links out.
- *
- * The feed is unauthenticated because a calendar client cannot authenticate —
- * it fetches a URL on a timer with no cookie. That makes the URL the credential,
- * and these tests are mostly about the consequences of that: a wrong token is a
- * 404, a token is revocable, and the file contains the minimum a diary needs
- * rather than everything the booking knows.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
@@ -47,12 +38,6 @@ function aCalendarBooking(array $salon, Customer $customer, string $when): Booki
     );
 }
 
-/*
-|--------------------------------------------------------------------------
-| The feed
-|--------------------------------------------------------------------------
-*/
-
 it('serves a valid calendar for a staff token with no login', function () {
     $salon = aSalon();
     $customer = aCalendarCustomer($salon['tenant']);
@@ -68,8 +53,6 @@ it('serves a valid calendar for a staff token with no login', function () {
         ->toEndWith("END:VCALENDAR\r\n")
         ->toContain('VERSION:2.0')
         ->toContain('BEGIN:VEVENT')
-        // UTC, with the Z, so the file carries no VTIMEZONE and cannot be wrong
-        // about British Summer Time.
         ->toContain('DTSTART:20260310T090000Z')
         ->toContain('DTEND:20260310T100000Z')
         ->toContain('Alex Reed');
@@ -81,8 +64,6 @@ it('breaks every line with CRLF, as the format requires', function () {
 
     $body = $this->get('/calendar/'.$salon['staff']->calendarToken().'.ics')->getContent();
 
-    // A bare LF is not a line break in iCalendar, and iOS rejects the whole
-    // file rather than the line.
     expect(preg_match('/(?<!\r)\n/', $body))->toBe(0);
 });
 
@@ -104,11 +85,6 @@ it('carries only what a diary needs, and none of the customer record', function 
 
     $body = $this->get('/calendar/'.$salon['staff']->calendarToken().'.ics')->getContent();
 
-    /*
-     * A leaked link is then a leak of who is coming in on Thursday, not of a
-     * customer list somebody can ring. The price is out too: a staff calendar is
-     * not a takings report.
-     */
     expect($body)
         ->toContain($customer->name)
         ->not->toContain((string) $customer->phone)
@@ -119,7 +95,6 @@ it('carries only what a diary needs, and none of the customer record', function 
 
 it('escapes a customer name that would otherwise break the file', function () {
     $salon = aSalon();
-    // A comma is structural in an iCalendar TEXT value.
     aCalendarBooking($salon, aCalendarCustomer($salon['tenant'], 'Smith, J'), '2026-03-10 09:00:00');
 
     $body = $this->get('/calendar/'.$salon['staff']->calendarToken().'.ics')->getContent();
@@ -158,7 +133,6 @@ it('404s an unknown token, a blank one and a token that has been replaced', func
     $salon = aSalon();
     $old = $salon['staff']->calendarToken();
 
-    // A wrong token must be indistinguishable from a URL never issued.
     $this->get('/calendar/'.str_repeat('a', 32).'.ics')->assertNotFound();
 
     $salon['staff']->regenerateCalendarToken();
@@ -168,8 +142,6 @@ it('404s an unknown token, a blank one and a token that has been replaced', func
 });
 
 it('refuses a token that is not the right shape at the route', function () {
-    // The route constraint keeps a malformed token off the controller and out of
-    // the query entirely.
     $this->get('/calendar/not-a-token.ics')->assertNotFound();
 });
 
@@ -199,12 +171,6 @@ it('does not mint a token until somebody asks for one', function () {
     expect($salon['staff']->fresh()->calendar_token)->not->toBeNull();
 });
 
-/*
-|--------------------------------------------------------------------------
-| The settings screen
-|--------------------------------------------------------------------------
-*/
-
 it('lists every member of staff with an absolute link on the app host', function () {
     $salon = aSalon(['staff' => ['name' => 'Marek Nowak']]);
     $owner = User::factory()->create(['tenant_id' => $salon['tenant']->id, 'name' => 'Ana Diaz']);
@@ -215,8 +181,6 @@ it('lists every member of staff with an absolute link on the app host', function
         ->assertInertia(fn ($page) => $page
             ->component('Settings/Calendar')
             ->has('staff', 2)
-            // Absolute, because the owner is about to paste it into somebody
-            // else's phone.
             ->where('staff.0.url', fn (string $url) => str_starts_with($url, 'http')
                 && str_ends_with($url, '.ics')));
 });
@@ -240,12 +204,6 @@ it('keeps one salon out of another calendar settings', function () {
     $intruder = User::factory()->create(['tenant_id' => $other['tenant']->id]);
     $before = $salon['staff']->calendarToken();
 
-    /*
-     * 404, not 403, and that is the stronger answer. `ResolveTenant` runs before
-     * route model binding (see `bootstrap/app.php`), so `TenantScope` never
-     * finds the other salon's row at all — the policy is not reached because
-     * there is nothing to hand it. A 403 would confirm the id exists.
-     */
     $this->actingAs($intruder)
         ->post(route('settings.calendar.regenerate', $salon['staff']))
         ->assertNotFound();

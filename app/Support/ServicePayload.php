@@ -6,9 +6,7 @@ use App\Models\Service;
 
 class ServicePayload
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public static function toArray(Service $service): array
     {
         $service->loadMissing('staff');

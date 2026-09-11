@@ -21,9 +21,6 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): Response
     {
         return Inertia::render('Profile/Edit', [
@@ -32,9 +29,6 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -48,14 +42,6 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit');
     }
 
-    /**
-     * Close the user's account.
-     *
-     * Bookings reference this user as their staff member, so the row cannot simply
-     * be deleted: past appointments would lose their staff name and the database
-     * would refuse the delete anyway. Instead the person is erased — name, email,
-     * credentials — and the row is retired so the diary's history stays readable.
-     */
     public function destroy(Request $request): HttpResponse
     {
         $request->validate([
@@ -93,19 +79,9 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        /*
-         * Same reason as logging out: the marketing homepage is Blade, and an
-         * Inertia client handed a Blade document paints it inside the shell it
-         * was already showing. `Inertia::location()` forces a real page visit.
-         */
         return Inertia::location(marketing_url());
     }
 
-    /**
-     * Strip the person out of the row and make the login unusable, while leaving the
-     * record itself for the bookings that point at it. The email is released so it
-     * can be used again.
-     */
     private function anonymise(User $user): void
     {
         $user->forceFill([

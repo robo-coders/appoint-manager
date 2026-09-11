@@ -1,12 +1,5 @@
 <?php
 
-/**
- * The rest of the suite runs withoutVite(), which stubs @vite out entirely. That is
- * why a Blade page could reference an asset that was never registered as a Vite
- * input and still pass every test, while returning a 500 in production.
- *
- * These tests resolve assets for real against the built manifest.
- */
 beforeEach(function () {
     $this->withVite();
 
@@ -14,8 +7,6 @@ beforeEach(function () {
         $this->markTestSkipped('Run `npm run build` first — these assert against the real manifest.');
     }
 
-    // A stale `hot` file makes Vite serve dev-server URLs and skip the manifest,
-    // which would hide exactly the failure these tests exist to catch.
     if (file_exists(public_path('hot'))) {
         $this->markTestSkipped('Vite dev server is running; the manifest is not in use.');
     }
@@ -86,6 +77,5 @@ it('keeps every @vite reference in Blade resolvable', function () {
         }
     }
 
-    // Anything listed here renders a 500 in production: @vite cannot resolve it.
     expect($unresolvable)->toBe([]);
 });

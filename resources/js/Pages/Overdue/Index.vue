@@ -11,19 +11,11 @@ import Table, { type Column } from '@/Components/ui/Table.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Who is due back, and what that is worth.
- *
- * The list is useful even if nobody ever turns messages on: a groomer who
- * rings her regulars needs the phone number, the due date, and a way to say
- * she called. Automatic sending is off until she reviews a dry run.
- */
 type Row = {
     subject_id: number;
     subject_name: string;
     customer_id: number | null;
     customer_name: string | null;
-    /** The number, or the masked stand-in when `contact_hidden`. */
     phone: string | null;
     contact_hidden?: boolean;
     service_name: string;
@@ -70,7 +62,6 @@ const props = defineProps<{
     timezone: string;
     recent_sends: Array<{
         id: number;
-        /** The number the text went to, masked when `contact_hidden`. */
         to: string;
         contact_hidden?: boolean;
         customer_name: string | null;
@@ -92,10 +83,6 @@ const columns: Column[] = [
     { key: 'price', label: 'Usual', align: 'right', numeric: true, width: 'amount' },
 ];
 
-/**
- * Why a due subject would not be texted, in the operator's language rather than
- * the enum's. Every one of these leaves them on the list: the phone still works.
- */
 const suppressionLabels: Record<string, string> = {
     opted_out: 'replied STOP — ring instead',
     no_phone: 'no phone number on file',
@@ -212,23 +199,12 @@ const call = (phone: string) => {
             empty-title="Nobody is overdue"
             empty-description="When a regular goes past their interval, they land here."
         >
-            <!--
-                A number this person may not read is shown masked rather than
-                blank: this is the screen for ringing people, and an empty cell
-                here reads as "no number on file" — which would send somebody
-                looking for a record to fix. See `ui/HiddenContact`.
-            -->
             <template #cell:phone="{ row }">
                 <HiddenContact v-if="row.contact_hidden && row.phone" :masked="row.phone as string" />
                 <PhoneLink v-else :phone="row.phone as string | null" />
             </template>
             <template #cell:subject_name="{ row }">
                 <span class="font-medium">{{ row.subject_name }}</span>
-                <!--
-                    Both markers keep the row on the list. Replying STOP stops
-                    the texts, not the relationship — she can still ring them,
-                    and she needs to know that is now the only way.
-                -->
                 <span v-if="row.opted_out" class="text-ink-2"> · no texts</span>
                 <span v-else-if="row.number_failing" class="text-ink-2"> · check number</span>
             </template>

@@ -19,24 +19,11 @@ use App\Services\Stripe\StripeGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
 
-/**
- * Loyalty packages, v1.
- *
- * The three rules the feature is: a stamp per completed appointment, the next
- * one free when the card is full, and nothing at all when the tenant has not
- * switched it on. The last is the one worth having tests for — an opt-in feature
- * that leaks into a tenant that declined it is worse than a feature that does
- * not work.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-03 08:00:00', 'Europe/London'));
 });
 
-/**
- * A salon with loyalty on and one package.
- *
- * @return array{tenant: Tenant, staff: User, service: Service, package: LoyaltyPackage}
- */
+/** @return array{tenant: Tenant, staff: User, service: Service, package: LoyaltyPackage} */
 function aLoyaltySalon(int $sessions = 5, array $overrides = []): array
 {
     $salon = aSalon($overrides);
@@ -67,7 +54,6 @@ function aLoyaltyCustomer(Tenant $tenant, string $name = 'Alex Reed'): Customer
     return $customer;
 }
 
-/** Book one appointment through the service, as the salon would. */
 function bookFor(array $salon, Customer $customer, string $when = '2026-03-10 09:00:00'): Booking
 {
     return app(BookingService::class)->create(
@@ -79,12 +65,6 @@ function bookFor(array $salon, Customer $customer, string $when = '2026-03-10 09
         BookingSource::Online,
     );
 }
-
-/*
-|--------------------------------------------------------------------------
-| Off by default
-|--------------------------------------------------------------------------
-*/
 
 it('is off for a new tenant and touches nothing', function () {
     $salon = aSalon();
@@ -109,12 +89,6 @@ it('adds no stamp when the feature is off, even on a completed appointment', fun
 
     expect(LoyaltyEnrolment::withoutGlobalScopes()->count())->toBe(0);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Enrolment
-|--------------------------------------------------------------------------
-*/
 
 it('enrols a customer automatically on their next booking', function () {
     $salon = aLoyaltySalon();
@@ -151,7 +125,6 @@ it('moves a customer onto the current package when theirs was switched off', fun
         'cycles_completed' => 2,
     ])->save();
 
-    // The old package goes away; a new one takes its place.
     $salon['package']->forceFill(['is_active' => false])->save();
     $replacement = LoyaltyPackage::factory()->create([
         'tenant_id' => $salon['tenant']->id,
@@ -162,17 +135,9 @@ it('moves a customer onto the current package when theirs was switched off', fun
     $enrolment = LoyaltyEnrolment::withoutGlobalScopes()->sole();
 
     expect($enrolment->loyalty_package_id)->toBe($replacement->id)
-        // The current cycle restarts against the new count; the completed ones
-        // happened and are kept.
         ->and($enrolment->stamps_used)->toBe(0)
         ->and($enrolment->cycles_completed)->toBe(2);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Stamps
-|--------------------------------------------------------------------------
-*/
 
 it('adds one stamp per completed appointment and none for a booking', function () {
     $salon = aLoyaltySalon();
@@ -216,19 +181,12 @@ it('does not stamp past the package count', function () {
     ]);
 
     $booking = bookFor($salon, $customer, '2026-03-24 09:00:00');
-    // That booking is the reward, so completing it must not stamp either.
     $this->travelTo(CarbonImmutable::parse('2026-03-24 10:30:00', 'Europe/London'));
     app(BookingService::class)->complete($booking);
 
     expect($booking->fresh()->is_loyalty_reward)->toBeTrue()
         ->and(LoyaltyEnrolment::withoutGlobalScopes()->sole()->stamps_used)->toBe(0);
 });
-
-/*
-|--------------------------------------------------------------------------
-| The free one
-|--------------------------------------------------------------------------
-*/
 
 it('makes the next booking free and skips the deposit once the card is full', function () {
     Mail::fake();
@@ -251,7 +209,6 @@ it('makes the next booking free and skips the deposit once the card is full', fu
         ->and($booking->price_at_booking->amount)->toBe(0)
         ->and($booking->deposit_at_booking->amount)->toBe(0)
         ->and($booking->deposit_status)->toBe(DepositStatus::None)
-        // Straight to confirmed: no card, so no pending-payment window.
         ->and($booking->status)->toBe(BookingStatus::Confirmed)
         ->and(app(StripeGateway::class)->intents)->toBe([]);
 });
@@ -308,12 +265,6 @@ it('charges normally while the card is not full', function () {
         ->and($booking->price_at_booking->amount)->toBe(3500);
 });
 
-/*
-|--------------------------------------------------------------------------
-| What the customer is told
-|--------------------------------------------------------------------------
-*/
-
 it('puts the stamp count on the booking confirmation text', function () {
     Mail::fake();
     $salon = aLoyaltySalon(5);
@@ -332,8 +283,6 @@ it('puts the stamp count on the booking confirmation text', function () {
         ->where('type', MessageType::BookingConfirmed)
         ->sole();
 
-    // The count *after* this appointment, because the alternative asks the
-    // customer to do the arithmetic the message exists to save them.
     expect($sms->body)->toContain('3 of 5 stamps')
         ->toContain('2 more until your free session');
 });
@@ -351,12 +300,6 @@ it('says the free one is free on its confirmation', function () {
 
     bookFor($salon, $customer);
 
-    /*
-     * Filtered to the confirmation. `Notifier::bookingConfirmed` also schedules
-     * the reminder, and the suite runs on `QUEUE_CONNECTION=sync`, which ignores
-     * the delay and sends it inside the same request — so there are two SMS rows
-     * and `sole()` on the channel alone finds both.
-     */
     $sms = Message::withoutGlobalScopes()
         ->where('channel', MessageChannel::Sms)
         ->where('type', MessageType::BookingConfirmed)
@@ -378,14 +321,6 @@ it('says the next one is free on the confirmation that fills the card', function
 
     bookFor($salon, $customer);
 
-    /*
-     * Asserted in two pieces on purpose. `SmsSegments::sanitise` folds the em
-     * dash to a hyphen because GSM-7 has no em dash and one non-GSM character
-     * turns the whole message into UCS-2 — which doubles the segments the salon
-     * is billed for. So the body is not byte-identical to the composed string,
-     * and matching the whole line would be asserting that the sanitiser is not
-     * doing its job.
-     */
     expect(Message::withoutGlobalScopes()
         ->where('channel', MessageChannel::Sms)
         ->where('type', MessageType::BookingConfirmed)
@@ -407,12 +342,6 @@ it('leaves the confirmation text alone for a tenant with the feature off', funct
         ->sole()->body)
         ->not->toContain('stamps');
 });
-
-/*
-|--------------------------------------------------------------------------
-| The owner's view
-|--------------------------------------------------------------------------
-*/
 
 it('shows the card, the count and the free sessions on the customer screen', function () {
     $salon = aLoyaltySalon(3);
@@ -452,12 +381,6 @@ it('sends no loyalty panel to the customer screen when the feature is off', func
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('loyalty', null));
 });
-
-/*
-|--------------------------------------------------------------------------
-| Settings
-|--------------------------------------------------------------------------
-*/
 
 it('shows the setting off by default with no package', function () {
     $salon = aSalon();
@@ -528,7 +451,6 @@ it('switches the feature off without deleting anybody progress', function () {
 
     expect(app(Loyalty::class)->enabled($salon['tenant']->fresh()))->toBeFalse()
         ->and(LoyaltyEnrolment::withoutGlobalScopes()->sole()->stamps_used)->toBe(3)
-        // And nothing is free while it is off, however full the card was.
         ->and(app(Loyalty::class)->rewardDue($salon['tenant']->fresh(), $customer))->toBeFalse();
 });
 
@@ -568,12 +490,6 @@ it('keeps one salon loyalty out of another', function () {
         ->and($enrolment->loyalty_package_id)->toBe($salon['package']->id)
         ->and($enrolment->loyalty_package_id)->not->toBe($other['package']->id);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Marking an appointment as done
-|--------------------------------------------------------------------------
-*/
 
 it('refuses to complete an appointment that has not happened yet', function () {
     $salon = aLoyaltySalon();
@@ -621,16 +537,6 @@ it('refuses to complete a cancelled appointment', function () {
         ->assertSessionHasErrors('status');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Cancelling the free one
-|--------------------------------------------------------------------------
-|
-| The bug: `spendReward()` clears the card at booking, and nothing put it back.
-| A customer who earned a free session, booked it, and then had it called off
-| had paid five stamps for nothing.
-*/
-
 it('gives the stamps back when the free one is cancelled', function () {
     $salon = aLoyaltySalon(3);
     $customer = aLoyaltyCustomer($salon['tenant']);
@@ -651,7 +557,6 @@ it('gives the stamps back when the free one is cancelled', function () {
 
     expect($enrolment->stamps_used)->toBe(3)
         ->and($enrolment->cycles_completed)->toBe(1)
-        // The point of all of it: the next one is free again.
         ->and(app(Loyalty::class)->rewardDue($salon['tenant'], $customer))->toBeTrue();
 });
 
@@ -752,7 +657,6 @@ it('keeps the reward spent when the free one is a no-show rather than cancelled'
     $this->travelTo(CarbonImmutable::parse('2026-03-10 10:30:00', 'Europe/London'));
     app(BookingService::class)->markNoShow($free);
 
-    // The slot was held and nobody else could have it. The stamps stay spent.
     expect(LoyaltyEnrolment::withoutGlobalScopes()->sole()->stamps_used)->toBe(0)
         ->and(app(Loyalty::class)->rewardDue($salon['tenant'], $customer))->toBeFalse();
 });

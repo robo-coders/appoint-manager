@@ -12,28 +12,6 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Import. The day-one screen, and it was the least finished thing in the app:
- * two bare textareas, a "commit" checkbox, and a flat list of "Row 3: skip".
- *
- * Day one is the moment a salon decides whether this software is worth the
- * afternoon it is about to cost them, so this screen has to do four things the
- * old one did not:
- *
- *   1. **Take a file.** `ui/FileDrop` — dropped or chosen, never drag-only.
- *   2. **Show the mapping.** The file's own header row against the columns the
- *      importer reads, so a mis-ordered CSV is caught before it is uploaded
- *      rather than after 200 rows have been created.
- *   3. **Dry-run first, and mean it.** The dry run is the default action and
- *      the only one offered until it has been done. Import is disabled until
- *      then, and it says why.
- *   4. **Say what happened.** Counts, then every failure with its row number,
- *      on the shared table.
- *
- * Pasting still works. Somebody with twelve customers in a spreadsheet should
- * not have to save a file to move them.
- */
-
 type Row = { row: number; ok: boolean; message: string; [key: string]: unknown };
 
 type Result = {
@@ -52,7 +30,6 @@ const props = defineProps<{
 
 const kind = ref<'customers' | 'bookings'>(props.result?.kind ?? 'customers');
 
-/** Per kind, so switching tabs does not lose what has been pasted. */
 const csv = ref<Record<string, string>>({ customers: '', bookings: '' });
 const fileName = ref<Record<string, string | null>>({ customers: null, bookings: null });
 const busy = ref(false);
@@ -75,26 +52,11 @@ const lines = computed(() =>
         .filter((line) => line !== ''),
 );
 
-/*
- * A very small CSV reader, and deliberately so: it exists to *show* the file
- * back, not to parse it. The server does the real parse with `str_getcsv`, and
- * a second full implementation in TypeScript would be a second set of rules
- * about quoting for the two to disagree over.
- */
 const cells = (line: string) =>
     (line.match(/("([^"]|"")*"|[^,]*)(,|$)/g) ?? [])
         .map((cell) => cell.replace(/,$/, '').trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
         .slice(0, expected.value.length);
 
-/**
- * Does the file's first row look like a header?
- *
- * The importer skips a first row containing "email", so it matters whether
- * there is one — a headerless file loses its first customer, and a headed file
- * counted as data reports one bogus failure. Saying which we think it is, and
- * showing the mapping, is how somebody catches a mis-ordered file *before*
- * uploading it.
- */
 const hasHeader = computed(() => lines.value[0]?.toLowerCase().includes('email') ?? false);
 
 const headerCells = computed(() => (hasHeader.value ? cells(lines.value[0]) : []));
@@ -125,7 +87,6 @@ const run = (commit: boolean) => {
     );
 };
 
-/** A dry run for *this* file, not a stale one for a different tab. */
 const dryRunDone = computed(() => props.result !== null && props.result.kind === kind.value && !props.result.committed);
 
 const resultColumns: Column[] = [
@@ -177,11 +138,6 @@ const resultRows = computed(() =>
                     <Button variant="secondary" :loading="busy" :disabled="lines.length === 0" @click="run(false)">
                         Dry run
                     </Button>
-                    <!--
-                        Importing is disabled until a dry run has been done for
-                        this file, and the reason is attached to the control
-                        rather than left for somebody to work out.
-                    -->
                     <Button
                         :loading="busy"
                         :disabled="!dryRunDone"
@@ -196,7 +152,6 @@ const resultRows = computed(() =>
                 </p>
             </div>
 
-            <!-- ---- the mapping ------------------------------------------ -->
             <div>
                 <h2 class="border-b border-b-rule pb-2 text-17">Columns</h2>
 
@@ -236,7 +191,6 @@ const resultRows = computed(() =>
             </div>
         </div>
 
-        <!-- ---- the result ----------------------------------------------- -->
         <template v-if="result && result.kind === kind">
             <h2 class="mt-8 border-b border-b-rule pb-2 text-17">
                 {{ result.committed ? 'Imported' : 'Dry run' }}

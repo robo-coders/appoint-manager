@@ -14,9 +14,7 @@ class WebhookFailure extends Model
         'payload',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

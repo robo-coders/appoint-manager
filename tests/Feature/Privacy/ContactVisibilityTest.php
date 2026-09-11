@@ -9,32 +9,7 @@ use App\Models\User;
 use App\Models\WaitlistEntry;
 use App\Support\MaskedContact;
 
-/**
- * `users.can_see_customer_contacts`, enforced.
- *
- * The toggle is set on the staff step of onboarding and in Settings → People,
- * and until this suite existed it was a permission that lied: the column was
- * written and nothing read it.
- *
- * The rule, and the shape of every test below:
- *
- *   - the **owner** always reads contact details;
- *   - a staff member **with the toggle on** always reads them;
- *   - a staff member **with it off** reads them only for their own customers —
- *     the people they personally have an appointment with. You cannot do the
- *     job without ringing the customer whose dog is in front of you.
- *
- * **Every assertion is against the payload, not the markup.** A `v-if` in a Vue
- * file still ships the number to the browser, where it is one devtools panel
- * away; these tests fail if the raw value is present in the response at all.
- */
-
-/**
- * A salon with an owner, a member of staff, and two customers — one the staff
- * member has an appointment with, one they do not.
- *
- * @return array{tenant: Tenant, owner: User, staff: User, mine: Customer, theirs: Customer, booking: Booking}
- */
+/** @return array{tenant: Tenant, owner: User, staff: User, mine: Customer, theirs: Customer, booking: Booking} */
 function aSalonWithTwoCustomers(bool $canSeeContacts = false): array
 {
     $tenant = Tenant::factory()->create(['timezone' => 'Europe/London']);
@@ -42,7 +17,6 @@ function aSalonWithTwoCustomers(bool $canSeeContacts = false): array
     $owner = User::factory()->create([
         'tenant_id' => $tenant->id,
         'role' => UserRole::Owner,
-        // Deliberately off, to prove the owner check does not read the column.
         'can_see_customer_contacts' => false,
     ]);
 
@@ -75,7 +49,6 @@ function aSalonWithTwoCustomers(bool $canSeeContacts = false): array
         'customer_id' => $mine->id,
     ]);
 
-    // The other customer's appointment belongs to the owner, not the staff member.
     Booking::factory()->create([
         'tenant_id' => $tenant->id,
         'staff_id' => $owner->id,
@@ -88,19 +61,10 @@ function aSalonWithTwoCustomers(bool $canSeeContacts = false): array
     return compact('tenant', 'owner', 'staff', 'mine', 'theirs', 'booking');
 }
 
-/**
- * The whole Inertia payload as one string, for "is this anywhere in here".
- *
- * `JSON_UNESCAPED_UNICODE` so the em dash in the notice stays an em dash — the
- * default escapes it to `\u2014`, and a haystack that has re-encoded the needle
- * makes `toContain` quietly wrong rather than loudly.
- */
 function payloadOf($response): string
 {
     return json_encode($response->viewData('page')['props'] ?? [], JSON_UNESCAPED_UNICODE) ?: '';
 }
-
-/* ------------------------------------------------------ the toggle is off -- */
 
 it('hides contact fields from a staff member with the toggle off', function () {
     $salon = aSalonWithTwoCustomers(canSeeContacts: false);
@@ -108,7 +72,6 @@ it('hides contact fields from a staff member with the toggle off', function () {
     $response = actingAsTenant($salon['staff'])->get(route('customers.index'))->assertOk();
     $payload = payloadOf($response);
 
-    // The customer they have no appointment with: nothing readable, anywhere.
     expect($payload)
         ->not->toContain('priya@example.com')
         ->not->toContain('07700900456');
@@ -118,7 +81,6 @@ it('hides contact fields from a staff member with the toggle off', function () {
 
     expect($theirs['email'])->toBeNull()
         ->and($theirs['contact_hidden'])->toBeTrue()
-        // Masked, not blank — a blank cell reads as "no number on file".
         ->and($theirs['phone'])->toBe(MaskedContact::phone('07700900456'))
         ->and($theirs['phone'])->toEndWith('56');
 });
@@ -139,14 +101,12 @@ it('still shows a staff member the contact details of their own customers', func
 it('hides contact on a booking assigned to somebody else, and shows it on their own', function () {
     $salon = aSalonWithTwoCustomers(canSeeContacts: false);
 
-    // Their own appointment.
     $response = actingAsTenant($salon['staff'])
         ->get(route('bookings.show', $salon['booking']))
         ->assertOk();
 
     expect(payloadOf($response))->toContain('07700900123');
 
-    // A colleague's appointment, for a customer they do not have one with.
     $other = Booking::query()->where('staff_id', $salon['owner']->id)->sole();
 
     $response = actingAsTenant($salon['staff'])
@@ -182,14 +142,12 @@ it('masks the number on the waitlist and the overdue list', function () {
 it('will not let the search box confirm an address it would refuse to print', function () {
     $salon = aSalonWithTwoCustomers(canSeeContacts: false);
 
-    // The palette endpoint: matching on the address would be an oracle.
     $response = actingAsTenant($salon['staff'])
         ->getJson(route('search', ['q' => 'priya@example.com']))
         ->assertOk();
 
     expect($response->json('customers'))->toBe([]);
 
-    // And the list screen's own search box.
     $response = actingAsTenant($salon['staff'])
         ->get(route('customers.index', ['search' => 'priya@example.com']))
         ->assertOk();
@@ -204,13 +162,10 @@ it('refuses the subject-access export to somebody who cannot read the details', 
         ->get(route('customers.export', $salon['theirs']))
         ->assertForbidden();
 
-    // Their own customer is still exportable.
     actingAsTenant($salon['staff'])
         ->get(route('customers.export', $salon['mine']))
         ->assertOk();
 });
-
-/* ------------------------------------------------------- the toggle is on -- */
 
 it('shows every contact field to a staff member with the toggle on', function () {
     $salon = aSalonWithTwoCustomers(canSeeContacts: true);
@@ -227,24 +182,18 @@ it('shows every contact field to a staff member with the toggle on', function ()
             ->and($row['contact_hidden'])->toBeFalse();
     }
 
-    // Including on a colleague's booking.
     $other = Booking::query()->where('staff_id', $salon['owner']->id)->sole();
 
     expect(payloadOf(actingAsTenant($salon['staff'])->get(route('bookings.show', $other))))
         ->toContain('07700900456');
 
-    // And the search box works on addresses again.
     expect(actingAsTenant($salon['staff'])->getJson(route('search', ['q' => 'priya@example.com']))->json('customers'))
         ->toHaveCount(1);
 });
 
-/* ------------------------------------------------------------- the owner -- */
-
 it('shows every contact field to the owner regardless of the toggle', function () {
     $salon = aSalonWithTwoCustomers(canSeeContacts: false);
 
-    // The owner's own column is false — see the factory. The rule reads the
-    // role first, so it must not matter.
     expect($salon['owner']->can_see_customer_contacts)->toBeFalse();
 
     $response = actingAsTenant($salon['owner'])->get(route('customers.index'))->assertOk();
@@ -258,7 +207,6 @@ it('shows every contact field to the owner regardless of the toggle', function (
             ->and($row['contact_hidden'])->toBeFalse();
     }
 
-    // A booking that is not theirs either.
     expect(payloadOf(actingAsTenant($salon['owner'])->get(route('bookings.show', $salon['booking']))))
         ->toContain('07700900123');
 
@@ -267,13 +215,9 @@ it('shows every contact field to the owner regardless of the toggle', function (
         ->assertOk();
 });
 
-/* ----------------------------------------------------------- the masking -- */
-
 it('keeps the last two digits and nothing else', function () {
     expect(MaskedContact::phone('07700 900123'))->toEndWith('23')
         ->and(MaskedContact::phone('07700 900123'))->not->toContain('7700')
-        // Formatting is normalised away, so the mask does not leak which
-        // format the number is stored in.
         ->and(MaskedContact::phone('+447700900123'))->toBe(MaskedContact::phone('07700900123'))
         ->and(MaskedContact::phone(null))->toBeNull()
         ->and(MaskedContact::phone('  '))->toBeNull();

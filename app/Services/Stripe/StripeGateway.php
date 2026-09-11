@@ -11,14 +11,10 @@ interface StripeGateway
 
     public function createAccountLink(string $accountId, string $returnUrl, string $refreshUrl): string;
 
-    /**
-     * @return array{charges_enabled: bool, currently_due: list<string>}
-     */
+    /** @return array{charges_enabled: bool, currently_due: list<string>} */
     public function retrieveAccount(string $accountId): array;
 
-    /**
-     * @return array{id: string, client_secret: string}
-     */
+    /** @return array{id: string, client_secret: string} */
     public function createPaymentIntent(Tenant $tenant, Booking $booking, string $captureMethod = 'automatic'): array;
 
     public function capturePaymentIntent(string $paymentIntentId, string $accountId): void;
@@ -27,8 +23,6 @@ interface StripeGateway
 
     public function refundPaymentIntent(string $paymentIntentId, string $accountId): string;
 
-    /**
-     * @return array{id: string, type: string, account: string|null, data: array<string, mixed>}
-     */
+    /** @return array{id: string, type: string, account: string|null, data: array<string, mixed>} */
     public function constructEvent(string $payload, string $signature): array;
 }

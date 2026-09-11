@@ -16,26 +16,6 @@ import Upload from 'lucide-vue-next/dist/esm/icons/upload';
 import Users from 'lucide-vue-next/dist/esm/icons/users';
 import type { Component } from 'vue';
 
-/**
- * The nav rail's icons.
- *
- * **Deep imports, never the barrel.** `lucide-vue-next` exports 5,847 icons
- * from its index. It declares `sideEffects: false`, so Rollup *should* shake the
- * rest away — but "should" is doing a lot of work in a file nobody looks at
- * again, and a single future import from the barrel in any other file would
- * silently undo it for the whole bundle. Naming the file makes the cost visible
- * and fixed: sixteen icons, and adding a seventeenth means adding a line here.
- *
- * The names are chosen, not derived, for the same reason the letter glyphs they
- * replace were: `Services`, `Staff` and `Settings` all begin with S, and three
- * icons that all mean "a person" would be the same collision in a different
- * medium. Read down this list and every entry is a different object.
- *
- * Every icon is decorative. It is drawn `aria-hidden`, the accessible name
- * comes from the label beside it or from an `aria-label` when the rail is
- * collapsed, and nothing on the screen is distinguished by icon alone — the
- * 148px rail still carries the words.
- */
 export const NAV_ICONS: Record<string, Component> = {
     diary: CalendarDays,
     bookings: List,
@@ -52,13 +32,11 @@ export const NAV_ICONS: Record<string, Component> = {
 
     more: Menu,
 
-    // The console.
     tenants: Building2,
     'send-log': Send,
     failures: TriangleAlert,
 };
 
-/** The key a nav label maps to. `Time off` -> `time-off`. */
 export const iconKeyFor = (label: string): string => label.trim().toLowerCase().replace(/\s+/g, '-');
 
 export const navIconFor = (label: string): Component | null => NAV_ICONS[iconKeyFor(label)] ?? null;

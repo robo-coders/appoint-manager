@@ -8,25 +8,6 @@ import Sun from 'lucide-vue-next/dist/esm/icons/sun';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { ThemePreference } from '@/lib/theme';
 
-/**
- * The signed-in person, pinned to the bottom of the nav rail.
- *
- * Separate from `UserMenu`, which is the top-bar version: this one is a 24px
- * ink square with an initial, a name, and a chevron, and its menu **opens
- * upward** because there is nothing below it to open into. The chevron points
- * up when closed and down when open, so the direction always says where the
- * menu will go rather than what state it is in — which is the version that
- * survives somebody glancing at it.
- *
- * "Log out" is `--danger`, below a hairline, and it is the only danger-coloured
- * text in the rail. The hairline is not decoration: it is what stops it being
- * the thing you hit by accident on the way to Billing.
- *
- * While impersonating, this whole area becomes a `--danger` bordered block. A
- * super admin borrowing a salon owner's session needs to be told so by the
- * chrome, permanently, in the one place they will always be looking — not by a
- * banner at the top of a page they have scrolled past.
- */
 withDefaults(
     defineProps<{
         name: string;
@@ -78,12 +59,6 @@ const chooseAppearance = (next: ThemePreference) => {
     closeTimer = setTimeout(() => close(false), 180);
 };
 
-
-/*
- * Opening upward means the *last* item is the one nearest the trigger, so
- * ArrowUp lands there and ArrowDown lands on the top of the list. Focusing the
- * first item on open would jump the cursor to the far end of the menu.
- */
 const openMenu = async (focus: 'first' | 'last' = 'last') => {
     open.value = true;
     await nextTick();
@@ -140,14 +115,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <!-- The rule is on the rail's footer block now, which is what this and the
-         search button share. Two rules here drew a line between them. -->
     <div ref="root" class="relative" @keydown="onKeydown">
-        <!--
-            Impersonating. Not a subtle tint: a border in --danger and the
-            salon's name, so there is no version of this session where a super
-            admin can forget whose diary they are typing in.
-        -->
         <div v-if="impersonating" class="rounded border border-danger p-2">
             <p class="text-12 text-danger">Impersonating</p>
             <p class="mt-1 truncate text-13">{{ impersonatedTenant ?? 'this salon' }}</p>

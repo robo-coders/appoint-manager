@@ -59,8 +59,6 @@ class FakeBillingGateway implements BillingGateway
 
     public function constructEvent(string $payload, string $signature): array
     {
-        // AUDIT C1, same reasoning as FakeStripeGateway: `testing` only, never
-        // "not production". A signature this accepts is a signature anyone can send.
         if (! app()->environment('testing')) {
             throw new RuntimeException(
                 'FakeBillingGateway is for the test suite only. It accepts forged webhook signatures; '

@@ -30,20 +30,12 @@ class OverdueController extends Controller
         $summary = $overdue->summary($tenant);
         $previewing = session()->get('rebooking_preview') === true;
 
-        /*
-         * The masking happens here rather than in `OverdueSubjects`, because
-         * that service has a second caller: `RebookMessenger` reads `phone` off
-         * the same rows to actually send the text. Masking at the source would
-         * send eight bullet points to Twilio.
-         */
         $contacts = ContactVisibility::for($request->user());
         $dryRun = $previewing ? $messages->dryRun($tenant) : null;
 
         return Inertia::render('Overdue/Index', [
             'summary' => $summary,
             'rows' => $this->maskRows($rows, $contacts),
-            // `stopped` and `snoozed` carry no number — subject, customer name
-            // and a date — so there is nothing on them to mask.
             'stopped' => $overdue->stoppedForTenant($tenant),
             'snoozed' => $overdue->snoozedForTenant($tenant),
             'messages_enabled' => $messages->isEnabled($tenant),
@@ -129,9 +121,6 @@ class OverdueController extends Controller
             'rebook_stopped_at' => null,
             'rebook_snoozed_until' => null,
             'rebook_contacted_at' => null,
-            // Starting again means starting again. A subject blocked because
-            // their number kept failing gets a clean slate too, or "chase this
-            // one again" would quietly not.
             'rebook_failed_sends' => 0,
             'rebook_send_blocked_at' => null,
         ])->save();
@@ -139,23 +128,8 @@ class OverdueController extends Controller
         return back()->with('toast', 'Chasing again.');
     }
 
+    /** @return list<array<string, mixed>> */
     /**
-     * The chases that actually went out, and what became of them.
-     *
-     * The salon sees delivery failures here or nowhere. A message Twilio
-     * accepted and then could not deliver is currently billed and invisible,
-     * which means she believes she chased somebody she did not — and the fix,
-     * correcting a mistyped number, is one she can only make if she is told.
-     *
-     * @return list<array<string, mixed>>
-     */
-    /**
-     * Blank the number on every row this person may not read it on.
-     *
-     * `customer_id` is the key rather than `subject_id`: the permission is
-     * about the person you would be ringing, and one customer's three dogs are
-     * three rows here.
-     *
      * @template T of iterable<int, array<string, mixed>>
      *
      * @param  T  $rows
@@ -188,7 +162,6 @@ class OverdueController extends Controller
             ->get()
             ->map(fn (Message $message) => [
                 'id' => $message->id,
-                // `to` is the number the text went to, which is the customer's.
                 'to' => $contacts->customer($message->customer_id)
                     ? $message->to
                     : MaskedContact::phone($message->to),

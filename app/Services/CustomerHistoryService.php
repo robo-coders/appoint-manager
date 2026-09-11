@@ -106,9 +106,7 @@ class CustomerHistoryService
         ];
     }
 
-    /**
-     * @param  Collection<int, Booking>  $settled
-     */
+    /** @param  Collection<int, Booking>  $settled */
     public function averageGapDays(Collection $settled): ?int
     {
         if ($settled->count() < 2) {
@@ -193,9 +191,7 @@ class CustomerHistoryService
         ];
     }
 
-    /**
-     * @param  Collection<int, Booking>  $bookings
-     */
+    /** @param  Collection<int, Booking>  $bookings */
     public function depositBehaviour(Collection $bookings): string
     {
         $required = $bookings->filter(fn (Booking $booking) => $booking->deposit_status !== DepositStatus::None
@@ -229,9 +225,7 @@ class CustomerHistoryService
         return sprintf(self::DEPOSIT_PART_PAID, $paid, $required->count());
     }
 
-    /**
-     * @param  Collection<int, Booking>  $bookings
-     */
+    /** @param  Collection<int, Booking>  $bookings */
     public function booksThrough(Collection $bookings): ?string
     {
         if ($bookings->isEmpty()) {
@@ -245,9 +239,7 @@ class CustomerHistoryService
             : self::SOURCE_DIARY;
     }
 
-    /**
-     * @param  Collection<int, Booking>  $settled
-     */
+    /** @param  Collection<int, Booking>  $settled */
     public function usualSlot(Collection $settled, string $timezone): ?string
     {
         if ($settled->isEmpty()) {
@@ -319,9 +311,7 @@ class CustomerHistoryService
         return $rows;
     }
 
-    /**
-     * @param  Collection<int, Booking>  $bookings
-     */
+    /** @param  Collection<int, Booking>  $bookings */
     public function noShowsInWindow(Collection $bookings): int
     {
         $since = CarbonImmutable::now()->subMonths((int) config('customers.watch_window_months'));

@@ -13,9 +13,6 @@ it('gates super admin and logs impersonation', function () {
 
     $this->actingAs($admin)->get(route('super-admin.index'))->assertOk();
 
-    // The console cannot set a cookie for the app surface, so impersonation
-    // hands off a short-lived signed link that the app exchanges for a session.
-    // Cross-surface behaviour is covered in detail in tests/Feature/Surfaces.
     $handoff = $this->actingAs($admin)
         ->post(route('super-admin.impersonate', $tenant))
         ->headers->get('Location');
@@ -40,8 +37,6 @@ it('renders marketing pages without mentioning other verticals on dog grooming',
 
     $grooming->assertSee('cancellation, sold twice');
 
-    // The reason this surface is Blade and not Vue: a vertical's copy must not
-    // leak. Every other trade we might add, asserted rather than only dentists.
     foreach (['dentist', 'physio', 'barber', 'tattoo', 'clinic', 'salon chair'] as $elsewhere) {
         $grooming->assertDontSee($elsewhere);
     }

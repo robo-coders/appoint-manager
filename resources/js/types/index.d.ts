@@ -9,7 +9,6 @@ export interface User {
     theme_preference?: 'light' | 'dark' | 'system';
 }
 
-/** Mirrors the `tenant` payload in HandleInertiaRequests::share(). */
 export interface Tenant {
     id: number;
     name: string;
@@ -18,7 +17,6 @@ export interface Tenant {
     currency: string;
     onboarding_completed: boolean;
     read_only: boolean;
-    /** BetaSandbox — see BETA_SANDBOX.md. */
     is_beta: boolean;
     trial_days_remaining: number;
     show_trial_banner: boolean;
@@ -58,11 +56,6 @@ export type PageProps<
     vertical: Vertical;
     today: string | null;
     toast: string | null;
-    /**
-     * Set after a manual diary booking. The diary swaps the optimistic row
-     * in place by `correlation_id` instead of dropping it and waiting for
-     * the redirected bookings list.
-     */
     createdBooking: {
         correlation_id: string | null;
         booking: {
@@ -97,12 +90,7 @@ export type PageProps<
     } | null;
     impersonating: boolean;
     urls: { marketing: string; app: string; admin: string };
-    /** The one sentence the auth surface's quiet column carries. Built in PHP. */
     auth_panel: { headline: string; body: string };
-    /**
-     * Stale CSRF / dropped session on the login form. Distinct from a wrong
-     * password, which arrives as a validation error on `email`.
-     */
     authNotice: { kind: 'expired'; title: string; body: string } | null;
     preview: unknown;
 };

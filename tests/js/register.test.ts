@@ -4,31 +4,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
 import { forms, resetForms } from './setup';
 
-/**
- * `/register`, and the two things a signup form is allowed to do to somebody.
- *
- * Not that it validates — the server does that and `RegistrationTest` proves
- * it. What is only true in the browser is *when* a message appears and *what
- * survives* one appearing:
- *
- *   - the confirmation says it does not match before anything is submitted,
- *     because finding that out after a round trip is finding it out twice;
- *   - a rejected form still holds every character that was typed into it,
- *     including both passwords. This page used to empty those two on any
- *     failure, which turned "you mistyped one" into "type both again".
- */
-
 const businessTypes = [
     { value: 'groomer', label: 'Dog grooming', note: 'dogs · per visit' },
     { value: 'therapist', label: 'Therapy', note: 'clients only' },
 ];
 
-/*
- * `attached` puts the component in the real document, which `focus()` needs:
- * an element outside it can be focused and `document.activeElement` still
- * reads `<body>`. Only the focus test pays for it, because attaching means
- * cleaning up after itself.
- */
 const mountPage = (attached = false) =>
     mount(Register, {
         attachTo: attached ? document.body : undefined,
@@ -42,15 +22,12 @@ const mountPage = (attached = false) =>
         },
         global: {
             stubs: {
-                // The layout is a shell around a slot; its own rail is tested by
-                // the Playwright suite, where it has a width.
                 GuestLayout: { template: '<div><slot /><slot name="foot" /></div>' },
                 Head: true,
             },
         },
     });
 
-/** Every field, by its visible label, which is how a person addresses it. */
 const fieldOf = (page: ReturnType<typeof mountPage>, label: string) => {
     const wanted = page
         .findAll('label')
@@ -80,7 +57,6 @@ describe('the passwords not matching', () => {
         await fieldOf(page, 'Confirm password').setValue('correct-horse-batery');
 
         expect(page.text()).toContain('Those two passwords do not match.');
-        // No request was made to find that out.
         expect(forms[0].post).not.toHaveBeenCalled();
     });
 
@@ -142,7 +118,6 @@ describe('a submit the server rejects', () => {
         await page.find('form').trigger('submit');
         expect(forms[0].post).toHaveBeenCalled();
 
-        // What a 422 arrives as.
         forms[0].setError('email', 'An account with this email already exists.');
         await nextTick();
 
@@ -169,7 +144,6 @@ describe('a submit the server rejects', () => {
         expect(link.attributes('href')).toContain('/login');
         expect(link.text()).toBe('sign in instead');
 
-        // The plain sentence is still what the field points a screen reader at.
         expect(email.attributes('aria-invalid')).toBe('true');
     });
 
@@ -190,7 +164,6 @@ describe('a submit the server rejects', () => {
         await nextTick();
 
         expect(page.text()).toContain('Too many attempts. Try again in 2 minutes.');
-        // Not under the email, which is not what went wrong.
         expect(fieldOf(page, 'Email').attributes('aria-invalid')).toBeUndefined();
     });
 });
@@ -209,8 +182,6 @@ describe('the state of the button', () => {
         expect(button.attributes('disabled')).toBeDefined();
         expect(button.attributes('aria-busy')).toBe('true');
 
-        // And a second submit that gets past the disabled attribute — an Enter
-        // keypress in flight — posts nothing.
         await fillEverything(page);
         await page.find('form').trigger('submit');
         expect(forms[0].post).not.toHaveBeenCalled();
@@ -229,7 +200,6 @@ describe('the password requirement', () => {
         await fieldOf(page, 'Password').setValue('correct-horse-battery');
 
         expect(hint()?.text()).toBe('✓ At least eight characters.');
-        // Same ink either way: this system's one signal colour means "wrong".
         expect(hint()?.classes()).toContain('text-ink-2');
     });
 });
@@ -242,7 +212,6 @@ describe('the trade', () => {
         expect(radios).toHaveLength(businessTypes.length);
         expect(page.text()).toContain('Dog grooming');
         expect(page.text()).toContain('dogs · per visit');
-        // No "Choose one" option that is not a choice.
         expect(page.text()).not.toContain('Choose one');
     });
 
@@ -252,8 +221,6 @@ describe('the trade', () => {
         await fieldOf(page, 'Business name').setValue('Willow Street Grooming');
         await page.find('form').trigger('submit');
 
-        // `ui/RadioGroup` exposes a focus() of its own, so "you have not
-        // answered this" lands on the unanswered question.
         expect(document.activeElement).toBe(page.find('input[type="radio"]').element);
 
         page.unmount();

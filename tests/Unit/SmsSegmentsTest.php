@@ -15,8 +15,6 @@ it('counts exactly 160 GSM-7 characters as one segment and 161 as two', function
 });
 
 it('drops the limit to 70 when one character is outside GSM-7', function () {
-    // A curly apostrophe is the commonest way this happens by accident; an
-    // accented name is the commonest way it happens legitimately.
     $accented = 'Zoë';
 
     expect(SmsSegments::isGsm7($accented))->toBeFalse()
@@ -26,21 +24,16 @@ it('drops the limit to 70 when one character is outside GSM-7', function () {
 });
 
 it('treats the GSM-7 extension characters as two septets each', function () {
-    // '[' is in the extension table: it is sent as escape plus character, so
-    // eighty of them fill a segment rather than 160.
     expect(SmsSegments::count(str_repeat('[', 80)))->toBe(1)
         ->and(SmsSegments::count(str_repeat('[', 81)))->toBe(2);
 });
 
 it('counts an emoji as two UCS-2 units', function () {
-    // Outside the BMP, so a surrogate pair.
     expect(SmsSegments::count(str_repeat('a', 68).'🐕'))->toBe(1)
         ->and(SmsSegments::count(str_repeat('a', 69).'🐕'))->toBe(2);
 });
 
 it('keeps a GSM-7 accented character inside GSM-7', function () {
-    // é, ü, à and £ really are in GSM 03.38, and treating them as UCS-2 would
-    // halve the budget of a perfectly ordinary message.
     expect(SmsSegments::isGsm7('Café £5 Müller à la'))->toBeTrue();
 });
 
@@ -64,8 +57,6 @@ it('shortens the named part rather than the tail when a message will not fit', f
     $fitted = SmsSegments::fit(str_repeat('Long Salon Name ', 40), $render, 1);
 
     expect(SmsSegments::count($fitted))->toBe(1)
-        // The link and the opt-out survive, which is the whole point. Character
-        // truncation cut both off the end.
         ->and($fitted)->toEndWith($url.' Reply STOP to opt out.');
 });
 

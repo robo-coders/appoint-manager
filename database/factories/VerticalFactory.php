@@ -5,14 +5,10 @@ namespace Database\Factories;
 use App\Models\Vertical;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Vertical>
- */
+/** @extends Factory<Vertical> */
 class VerticalFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [

@@ -29,22 +29,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Mail;
 
-/*
-|--------------------------------------------------------------------------
-| The rebooking chase, pointed at real phone numbers
-|--------------------------------------------------------------------------
-|
-| Everything here is about what happens when the feature meets two hundred dog
-| owners rather than a seeded database: sending once, not sending to somebody
-| who said stop, not sending at ten at night, and knowing what it cost.
-|
-| The clock is 2026-09-01, a TUESDAY, deliberately. The existing
-| `RebookingTest` freezes a Sunday, which is outside the default weekdays-only
-| window — a fine default that would make every send test here silently pass by
-| doing nothing.
-|
-*/
-
 /**
  * @param  array<string, mixed>  $tenant
  * @param  array<string, mixed>  $service
@@ -58,13 +42,6 @@ function aChasingSalon(array $tenant = [], array $service = [], array $customer 
 
     $salon = Tenant::factory()->create(array_merge([
         'name' => $name,
-        /*
-         * Pinned to the name, because `TenantFactory` generates the slug from
-         * `fake()->company()` and not from whatever name the caller passed. The
-         * slug is in the booking URL, the URL is in the message, and the message
-         * length is what half of this file asserts — so leaving the slug to
-         * faker makes the segment counts randomly one or two.
-         */
         'slug' => TenantSlug::generate($name),
         'timezone' => 'Europe/London',
         'email' => 'salon@example.com',
@@ -106,13 +83,9 @@ function aChasingSalon(array $tenant = [], array $service = [], array $customer 
     return ['salon' => $salon, 'staff' => $staff, 'service' => $svc, 'customer' => $client, 'subject' => $subject];
 }
 
-/**
- * @param  array<string, mixed>  $salon
- */
+/** @param  array<string, mixed>  $salon */
 function anOverdueVisit(array $salon, string $utcStart = '2026-07-20 09:00:00'): Booking
 {
-    // Two-tenant tests build one salon after the other, so the context left by
-    // the last `aChasingSalon` is not necessarily this salon's.
     app(TenantContext::class)->set($salon['salon']);
 
     $start = CarbonImmutable::parse($utcStart, 'UTC');
@@ -144,19 +117,10 @@ beforeEach(function () {
     Mail::fake();
 });
 
-/*
-|--------------------------------------------------------------------------
-| One message per subject per due cycle
-|--------------------------------------------------------------------------
-*/
-
 it('sends exactly one message when the job runs three days running', function () {
     $salon = aChasingSalon();
     anOverdueVisit($salon);
 
-    // The rule this test exists for. A subject overdue on Tuesday is overdue on
-    // Wednesday and on Thursday, and before the claim table existed each of
-    // those mornings was another text.
     foreach (['2026-09-01 10:00:00', '2026-09-02 10:00:00', '2026-09-03 10:00:00'] as $day) {
         test()->travelTo(CarbonImmutable::parse($day, 'UTC'));
         app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
@@ -170,8 +134,6 @@ it('cannot be made to duplicate by running the job twice in the same minute', fu
     $salon = aChasingSalon();
     anOverdueVisit($salon);
 
-    // A manual trigger on top of the scheduled one. Nothing has moved between
-    // the two calls, so any guard that reads a timestamp would let this through.
     app(RebookMessenger::class)->sendDue($salon['salon']);
     app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
 
@@ -184,8 +146,6 @@ it('refuses a second claim on the same cycle at the data layer', function () {
 
     app(RebookMessenger::class)->sendDue($salon['salon']);
 
-    // Straight at the table, bypassing every line of the job's logic. This is
-    // what a second worker, a replayed job and a crash retry all reduce to.
     $duplicate = new RebookSend;
     $duplicate->forceFill([
         'tenant_id' => $salon['salon']->id,
@@ -208,18 +168,14 @@ it('sends one follow-up after the configured gap and then stops for good', funct
     app(RebookMessenger::class)->sendDue($salon['salon']);
     expect(chaseMessages($salon['salon']))->toBe(1);
 
-    // The day before the gap elapses: still silent.
     test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'UTC')->addDays($gap - 1));
     app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
     expect(chaseMessages($salon['salon']))->toBe(1);
 
-    // The day it elapses: one follow-up.
     test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'UTC')->addDays($gap));
     app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
     expect(chaseMessages($salon['salon']))->toBe(2);
 
-    // And then nothing, ever, for this cycle. Six weeks on and still overdue is
-    // a phone call, not a third text.
     foreach ([$gap * 2, $gap * 3, $gap * 4] as $days) {
         test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'UTC')->addDays($days));
         app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
@@ -233,13 +189,10 @@ it('leaves a chased subject on the overdue list for the salon to ring', function
     anOverdueVisit($salon);
     $gap = (int) config('rebooking.attempts.follow_up_gap_days');
 
-    // Both attempts spent: the first chase and the follow-up.
     app(RebookMessenger::class)->sendDue($salon['salon']);
     test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'UTC')->addDays($gap));
     app(RebookMessenger::class)->sendDue($salon['salon']->fresh());
 
-    // Six weeks on, still overdue, still not booked. Silence is better than
-    // nagging — but she must still be able to see them and ring them.
     test()->travelTo(CarbonImmutable::parse('2026-09-01 10:00:00', 'UTC')->addDays(90));
 
     $rows = app(OverdueSubjects::class)->forTenant($salon['salon']->fresh());
@@ -258,8 +211,6 @@ it('starts a new cycle when the subject books, and chases again when that lapses
     app(RebookMessenger::class)->sendDue($salon['salon']);
     expect(chaseMessages($salon['salon']))->toBe(1);
 
-    // They book. The last visit moves, so the due date moves, so the cycle key
-    // moves — and that is the only thing that starts a new cycle.
     anOverdueVisit($salon, '2026-09-02 09:00:00');
 
     test()->travelTo(CarbonImmutable::parse('2026-10-15 10:00:00', 'UTC'));
@@ -270,12 +221,6 @@ it('starts a new cycle when the subject books, and chases again when that lapses
         ->and(RebookSend::withoutGlobalScopes()->where('tenant_id', $salon['salon']->id)->distinct()->count('due_on'))->toBe(2);
 });
 
-/*
-|--------------------------------------------------------------------------
-| STOP, and consent
-|--------------------------------------------------------------------------
-*/
-
 it('appends the opt-out notice to every chase and counts it in the budget', function () {
     $salon = aChasingSalon();
     anOverdueVisit($salon);
@@ -284,7 +229,6 @@ it('appends the opt-out notice to every chase and counts it in the budget', func
     $body = $run['messages'][0]['body'];
 
     expect($body)->toContain(trim((string) config('rebooking.message.opt_out_suffix')))
-        // Counted, not bolted on afterwards: the reported length includes it.
         ->and($run['messages'][0]['characters'])->toBe(mb_strlen($body));
 });
 
@@ -335,9 +279,6 @@ it('reverses an opt-out on START and on UNSTOP', function () {
 });
 
 it('does not opt somebody out of a salon they did not text', function () {
-    // The webhook payload cannot say which tenant a reply belongs to — inbound
-    // arrives on one platform number. The most recent message to that number
-    // can, and it is the only thing that can.
     $ours = aChasingSalon(['name' => 'Willow Street']);
     anOverdueVisit($ours);
 
@@ -377,8 +318,6 @@ it('still sends a booking confirmation to somebody who opted out of marketing', 
     $booking = anOverdueVisit($salon, '2026-09-08 09:00:00');
     app(Notifier::class)->bookingConfirmed($booking);
 
-    // The service message they asked for by booking. Withholding it would put
-    // somebody outside a locked salon door because they once replied STOP.
     expect(Message::withoutGlobalScopes()
         ->where('tenant_id', $salon['salon']->id)
         ->where('type', MessageType::BookingConfirmed->value)
@@ -408,16 +347,7 @@ it('answers 200 to an inbound message from a number it has never texted', functi
     $this->post(route('twilio.inbound'), ['From' => '+447700900999', 'Body' => 'what time do you open'])->assertOk();
 });
 
-/*
-|--------------------------------------------------------------------------
-| When messages go out
-|--------------------------------------------------------------------------
-*/
-
 it('does not send outside the window, in the tenant\'s own timezone', function () {
-    // Sydney is UTC+10 in September. 10:00 UTC is 20:00 there — inside our
-    // 09:00–18:00 window if you read the server's clock, and firmly outside it
-    // if you read the salon's, which is the one the client's phone is next to.
     $salon = aChasingSalon(['timezone' => 'Australia/Sydney']);
     anOverdueVisit($salon);
 
@@ -425,7 +355,6 @@ it('does not send outside the window, in the tenant\'s own timezone', function (
         ->and(app(RebookMessenger::class)->sendDue($salon['salon']))->toBe(0)
         ->and(chaseMessages($salon['salon']))->toBe(0);
 
-    // A London salon at the same instant is at 11:00 and is sent for.
     $london = aChasingSalon(['timezone' => 'Europe/London']);
     anOverdueVisit($london);
 
@@ -437,10 +366,8 @@ it('waits for the next window rather than dropping the subject', function () {
     $salon = aChasingSalon(['timezone' => 'Australia/Sydney']);
     anOverdueVisit($salon);
 
-    // 20:00 Sydney: nothing.
     expect(app(RebookMessenger::class)->sendDue($salon['salon']))->toBe(0);
 
-    // 09:30 Sydney the next morning, which is 23:30 UTC the same day.
     test()->travelTo(CarbonImmutable::parse('2026-09-01 23:30:00', 'UTC'));
 
     expect(app(RebookMessenger::class)->sendDue($salon['salon']->fresh()))->toBe(1)
@@ -448,7 +375,6 @@ it('waits for the next window rather than dropping the subject', function () {
 });
 
 it('does not send at the weekend by default and does when a tenant asks for it', function () {
-    // Saturday.
     $salon = aChasingSalon();
     anOverdueVisit($salon);
     test()->travelTo(CarbonImmutable::parse('2026-09-05 10:00:00', 'UTC'));
@@ -467,12 +393,6 @@ it('describes the window in the operator\'s own words', function () {
 
     expect(SendWindow::describe($salon['salon']))->toBe('09:00 to 18:00, weekdays');
 });
-
-/*
-|--------------------------------------------------------------------------
-| Message length and cost
-|--------------------------------------------------------------------------
-*/
 
 it('reports a two-segment message in the dry run when the salon name is long', function () {
     $salon = aChasingSalon(['name' => 'Battersea and Clapham Junction Dog Grooming and Pet Care Company']);
@@ -496,7 +416,6 @@ it('reports the UCS-2 penalty for an accented name without mangling it', functio
 
     expect($run['messages'][0]['body'])->toContain('Zoë')
         ->and($run['messages'][0]['encoding'])->toBe('UCS-2')
-        // Under 160 characters and still two segments, because UCS-2 caps at 70.
         ->and($run['messages'][0]['characters'])->toBeLessThan(160)
         ->and($run['messages'][0]['segments'])->toBeGreaterThan(1);
 });
@@ -512,8 +431,6 @@ it('decrements the allowance by segments, not by messages', function () {
         ->where('channel', MessageChannel::Sms->value)
         ->first();
 
-    // One message, two segments, two off the allowance — because that is what
-    // the carrier bills. Counting messages would let a 200 pack cost us 400.
     expect($message->segments)->toBe(2)
         ->and($salon['salon']->fresh()->sms_cycle_used)->toBe(2);
 });
@@ -546,16 +463,8 @@ it('does not cut the booking link off the end of a transactional message', funct
         ->where('channel', MessageChannel::Sms->value)
         ->value('body');
 
-    // `Str::limit($body, 160)` truncated by characters from the end, and the end
-    // is where the link lives. A confirmation with half a URL in it is useless.
     expect($body)->toContain('/b/'.$booking->public_token);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Failure, retry, and the truth about what was sent
-|--------------------------------------------------------------------------
-*/
 
 it('retries tomorrow when the provider rejects the send today', function () {
     $salon = aChasingSalon();
@@ -565,7 +474,6 @@ it('retries tomorrow when the provider rejects the send today', function () {
     try {
         app(RebookMessenger::class)->sendDue($salon['salon']);
     } catch (Throwable) {
-        // The job is allowed to throw. What matters is the state it leaves.
     }
 
     expect($salon['salon']->fresh()->sms_cycle_used)->toBe(0)
@@ -597,7 +505,6 @@ it('stops attempting a number that keeps being rejected, and flags it', function
     expect($salon['subject']->fresh()->rebook_send_blocked_at)->not->toBeNull()
         ->and($salon['subject']->fresh()->rebook_failed_sends)->toBe($limit);
 
-    // And it stays flagged rather than being tried a fourth time.
     RecordingSmsGateway::$shouldFail = false;
     test()->travelTo(CarbonImmutable::parse('2026-09-10 10:00:00', 'UTC'));
 
@@ -636,7 +543,6 @@ it('records a delivery failure against the message so the salon can see it', fun
 
     expect($message->fresh()->status)->toBe(MessageStatus::Undelivered)
         ->and($message->fresh()->provider_error)->toContain('Unreachable destination handset')
-        // Billed on accept, and not refunded. Visible, though, which was the gap.
         ->and($salon['salon']->fresh()->sms_cycle_used)->toBe(1)
         ->and($salon['subject']->fresh()->rebook_failed_sends)->toBe(1);
 });
@@ -671,12 +577,6 @@ it('shows the send log on the overdue page including what failed', function () {
             ->has('recent_sends.0.error'));
 });
 
-/*
-|--------------------------------------------------------------------------
-| The ceiling, and the trial
-|--------------------------------------------------------------------------
-*/
-
 it('takes the hard ceiling from config, not from a number in the allowance class', function () {
     $salon = aChasingSalon();
 
@@ -698,7 +598,6 @@ it('reads the trial allowance from config rather than from the reset rule', func
 
     expect(app(SmsAllowance::class)->included($salon['salon']))->toBe(50);
 
-    // And a paying tenant is unaffected by the trial key.
     $paying = aChasingSalon(['subscription_status' => 'active', 'trial_ends_at' => now()->subDay()]);
     expect(app(SmsAllowance::class)->included($paying['salon']))->toBe((int) config('billing.sms_included'));
 });
@@ -717,12 +616,6 @@ it('can be made not to reset a trial cycle monthly', function () {
 
     expect($salon['salon']->fresh()->sms_cycle_used)->toBe(120);
 });
-
-/*
-|--------------------------------------------------------------------------
-| The command
-|--------------------------------------------------------------------------
-*/
 
 it('sends to exactly one subject when told to', function () {
     $salon = aChasingSalon();

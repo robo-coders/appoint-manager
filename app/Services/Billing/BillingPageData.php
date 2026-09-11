@@ -11,9 +11,7 @@ use Carbon\CarbonInterface;
 
 class BillingPageData
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function for(Tenant $tenant, bool $canCharge): array
     {
         $state = $this->state($tenant);
@@ -60,9 +58,6 @@ class BillingPageData
         return $seats.' staff seats · '.$texts.' auto-fill texts a month';
     }
 
-    /**
-     * @return 'healthy'|'past_due'|'unpaid'|'trial'|'trial_ended'|'no_payment_method'|'cancelled_pending'|'cancelled_ended'|'incomplete'
-     */
     public function state(Tenant $tenant): string
     {
         if (in_array($tenant->subscription_status, ['unpaid', 'incomplete_expired'], true)) {
@@ -108,9 +103,7 @@ class BillingPageData
         return 'healthy';
     }
 
-    /**
-     * @return array{variant: string, message: string, action_label: string|null, reassurance: bool}|null
-     */
+    /** @return array{variant: string, message: string, action_label: string|null, reassurance: bool}|null */
     private function banner(Tenant $tenant, string $state): ?array
     {
         return match ($state) {
@@ -158,9 +151,7 @@ class BillingPageData
         };
     }
 
-    /**
-     * @return array{variant: string, message: string, action_label: string|null, reassurance: bool}
-     */
+    /** @return array{variant: string, message: string, action_label: string|null, reassurance: bool} */
     private function pastDueBanner(Tenant $tenant): array
     {
         $failure = PaymentFailure::query()
@@ -191,9 +182,7 @@ class BillingPageData
         ];
     }
 
-    /**
-     * @return list<array{id: int, invoice_number: string, date: string, amount: string, status: string, download_url: string, declined: bool}>
-     */
+    /** @return list<array{id: int, invoice_number: string, date: string, amount: string, status: string, download_url: string, declined: bool}> */
     private function invoices(Tenant $tenant): array
     {
         return BillingReceipt::query()

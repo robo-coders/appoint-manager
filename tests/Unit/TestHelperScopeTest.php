@@ -1,27 +1,5 @@
 <?php
 
-/**
- * The rule that keeps `pest --parallel` from being a different suite.
- *
- * A plain `function` in a test file is defined only once that file has been
- * loaded. Run serially, every file is loaded eventually and in a stable order,
- * so a helper borrowed across files works by accident. Run in parallel, the two
- * files land in different workers and the borrower dies with `Call to undefined
- * function` — a fatal, not a failure, so it takes the worker with it. That is
- * how this suite came to be green and fatal at the same time on the same code.
- *
- * Two rules, both checked here:
- *
- *   1. A helper called from another test file must be declared in tests/Pest.php,
- *      which every worker loads before any test file.
- *   2. No two files may declare the same helper name. A redeclaration is a hard
- *      fatal in whichever worker happens to load both, and it is invisible in
- *      the workers that load one.
- *
- * Read with the tokenizer rather than a regex, because prose is not code: three
- * of the eight matches a naive grep finds in this suite are helper names inside
- * docblocks explaining this exact problem.
- */
 $phpFilesUnder = function (string $directory): array {
     $files = [];
 
@@ -36,9 +14,7 @@ $phpFilesUnder = function (string $directory): array {
     return $files;
 };
 
-/**
- * @return array{declared: list<string>, called: list<string>}
- */
+/** @return array{declared: list<string>, called: list<string>} */
 $scan = function (string $path): array {
     $tokens = array_values(array_filter(
         token_get_all(file_get_contents($path)),
@@ -56,15 +32,12 @@ $scan = function (string $path): array {
         $before = $tokens[$i - 1] ?? null;
         $after = $tokens[$i + 1] ?? null;
 
-        // `function name` — a declaration. Anonymous functions have `(` next
-        // and never reach here.
         if (is_array($before) && $before[0] === T_FUNCTION) {
             $declared[] = $token[1];
 
             continue;
         }
 
-        // `name(` — a call, unless it is a method or a class constant reference.
         if ($after === '(' && ! in_array($before, ['->', '::'], true)
             && ! (is_array($before) && in_array($before[0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NEW, T_FUNCTION], true))) {
             $called[] = $token[1];
@@ -100,7 +73,7 @@ it('declares every cross-file test helper in tests/Pest.php', function () use ($
             }
 
             if (! isset($declaredIn[$name])) {
-                continue; // A framework or PHP function, not a test helper.
+                continue;
             }
 
             $owner = str_replace($root.'/', '', $declaredIn[$name][0]);

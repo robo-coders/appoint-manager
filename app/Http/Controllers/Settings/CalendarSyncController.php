@@ -88,9 +88,7 @@ class CalendarSyncController extends Controller
         return $tenant;
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
+    /** @return list<array<string, mixed>> */
     private function feeds(Tenant $tenant, int $viewerId): array
     {
         return $this->bookableStaff()
@@ -110,9 +108,7 @@ class CalendarSyncController extends Controller
             ->all();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function salonFeed(Tenant $tenant): array
     {
         $token = $this->tokens->ensure($tenant, CalendarFeedToken::SCOPE_SALON);
@@ -123,9 +119,7 @@ class CalendarSyncController extends Controller
         ];
     }
 
-    /**
-     * @return Collection<int, User>
-     */
+    /** @return Collection<int, User> */
     private function bookableStaff(): Collection
     {
         return User::query()

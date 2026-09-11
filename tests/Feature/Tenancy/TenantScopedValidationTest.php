@@ -70,7 +70,6 @@ it('will not attach another tenant staff member to a service', function () {
         'staff_ids' => [$theirs['staff']->id],
     ])->assertSessionHasErrors('staff_ids.0');
 
-    // Their own service still has them attached; the point is that nothing new was.
     expect(DB::table('service_user')->where('user_id', $theirs['staff']->id)->count())->toBe(1)
         ->and(Service::withoutGlobalScopes()->where('tenant_id', $mine['tenant']->id)->where('name', 'Full groom')->exists())
         ->toBeFalse();

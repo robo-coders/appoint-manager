@@ -14,9 +14,7 @@ class Subject extends Model
     /** @use HasFactory<SubjectFactory> */
     use BelongsToTenant, HasFactory;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'customer_id',
         'name',
@@ -27,9 +25,7 @@ class Subject extends Model
         'rebook_contacted_at',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -43,17 +39,13 @@ class Subject extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Customer, $this>
-     */
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    /**
-     * @return HasMany<Booking, $this>
-     */
+    /** @return HasMany<Booking, $this> */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

@@ -1,23 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { FROZEN_NOW } from '../../playwright.config';
 
-/**
- * The operator app on a phone. `.design/mockups/mobile/mobile-views.dc.html`
- * is the target, and 375 is the width the rest of the suite already uses.
- *
- * These are not a second copy of `screens.spec.ts`. That file snapshots the
- * three widths the design system has opinions about, to catch a label clipped
- * by half a line. This one asserts the *shell swap*: below `md` the rail is
- * gone, `ui/MobileTabBar` is the only way between screens, and no list ends
- * underneath it. Those are four propositions a pixel diff states badly and an
- * assertion states in one line.
- *
- * The five screens are the five the mockup draws. Bookings and the dashboard
- * already have 375px baselines in `screens.spec.ts`; the waitlist, the staff
- * list and the booking record never had one at any width, which is why the
- * sticky action bar had never been looked at on a phone.
- */
-
 const PHONE = { width: 375, height: 900 };
 
 const SHEET = '[role="dialog"]';
@@ -42,29 +25,14 @@ async function openPhone(page: Page, url: string): Promise<void> {
     await settled(page);
 }
 
-/*
- * The bar, not the rail's own nav.
- *
- * Both are `aria-label="Main"` — correctly, because `display:none` means only
- * ever one of them is in the accessibility tree — so the selector has to name
- * the one that is pinned to the bottom of the viewport.
- */
 const tabBar = (page: Page) => page.locator('nav[aria-label="Main"].bottom-0');
 
 const tabCells = (page: Page) => tabBar(page).locator('a, button');
 
-/** The document must never scroll sideways. This is the failure it replaces. */
 async function noSidewaysScroll(page: Page): Promise<void> {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
-/*
- * The last row of a list must not sit under the fixed bar.
- *
- * Measured rather than eyeballed: the bar's top edge against the bottom of the
- * last row in the scroller, at full scroll. A snapshot cannot catch this at all
- * — the hidden row is off the bottom of the frame either way.
- */
 async function clearsTheTabBar(page: Page, lastRow: string): Promise<void> {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(100);
@@ -105,11 +73,6 @@ test.describe('the shell swaps for the rail', () => {
         await expect(tabBar(page)).toBeHidden();
     });
 
-    /*
-     * Rotation, without a reload. The layout is CSS, so this is really a test
-     * that nothing computes the breakpoint once on mount — which is exactly
-     * what a JS-measured layout gets wrong.
-     */
     test('follows a rotation mid-session with no reload', async ({ page }) => {
         await openPhone(page, '/bookings');
         await expect(tabBar(page)).toBeVisible();
@@ -217,10 +180,6 @@ test.describe('the five screens at 375', () => {
 
         await expect(page.getByRole('link', { name: '← Bookings' })).toBeVisible();
 
-        /*
-         * The action bar is fixed, so it must sit clear of the tab bar rather
-         * than under it — and the record's last row must sit clear of both.
-         */
         const actions = page.locator('.above-tabbar');
         await expect(actions).toBeVisible();
 
@@ -228,23 +187,12 @@ test.describe('the five screens at 375', () => {
         const barBox = await tabBar(page).boundingBox();
         expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(barBox!.y + 1);
 
-        // The header cluster is the desktop register and must not double up.
         await expect(page.getByRole('button', { name: 'Show in the diary' })).toBeHidden();
-
 
         await noSidewaysScroll(page);
         await expect(page).toHaveScreenshot('mobile-booking-detail-375.png', { mask: volatileRegions(page) });
     });
 
-    /*
-     * The crowded case, which is the only one worth a second baseline: a
-     * confirmed appointment that has already started carries all three
-     * actions, and three controls across 375px is where a pinned bar either
-     * fits or wraps into a second row on top of the tab bar.
-     *
-     * Booking 182 is 11:15 on the frozen day — `completable` is "confirmed and
-     * started", and the seed's own note says today holds eighteen of them.
-     */
     test('fits all three actions on a started appointment', async ({ page }) => {
         await openPhone(page, '/bookings/182');
 
@@ -255,7 +203,6 @@ test.describe('the five screens at 375', () => {
         const bar = await actions.boundingBox();
         const tabs = await tabBar(page).boundingBox();
 
-        // One row of controls, not two stacked on the tab bar.
         expect(bar!.height).toBeLessThan(80);
         expect(bar!.y + bar!.height).toBeLessThanOrEqual(tabs!.y + 1);
 
@@ -266,16 +213,6 @@ test.describe('the five screens at 375', () => {
     });
 });
 
-/*
- * The comparison set, written where the rest of this project's visual checks
- * live. Numbered on from the operator redesign's eleven, and suffixed `-app`
- * to match them — the mockup halves are the five phone frames in
- * `.design/mockups/mobile/mobile-views.dc.html`.
- *
- * Separate from the snapshots above on purpose: `toHaveScreenshot` is a
- * regression gate that fails a run, and these are artefacts for a person to
- * look at beside the mockup.
- */
 const VISUAL_CHECK = '.design/mockups/Backend/visual-check';
 
 const COMPARISONS = [

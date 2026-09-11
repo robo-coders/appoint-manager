@@ -12,13 +12,6 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
-/**
- * One side of a concurrency test.
- *
- * Bootstraps Laravel in its own process so it has its own PDO connection, then
- * waits on a barrier file so two (or more) workers actually overlap. The parent
- * is `Tests\Support\Concurrent`. Do not call this by hand.
- */
 $jobFile = $argv[1] ?? null;
 $outFile = $argv[2] ?? null;
 
@@ -106,13 +99,6 @@ function workerBook(array $job): array
 }
 
 /**
- * A request through the real HTTP kernel.
- *
- * `user_id` signs the worker in first, the way `actingAs` does in-process: the
- * guard is asked for a user before `StartSession` runs, so `Authenticate` finds
- * one already set and `ResolveTenant` can read `$request->user()->tenant_id`.
- * Without it only the unauthenticated `book.` surface is reachable from here.
- *
  * @param  array<string, mixed>  $job
  * @return array<string, mixed>
  */

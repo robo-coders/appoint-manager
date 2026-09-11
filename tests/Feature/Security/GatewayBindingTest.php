@@ -8,7 +8,6 @@ use App\Services\Stripe\FakeStripeGateway;
 use App\Services\Stripe\StripeConnectGateway;
 use App\Services\Stripe\StripeGateway;
 
-/** Re-resolve a singleton after changing the environment it is bound against. */
 function rebind(string $abstract): mixed
 {
     app()->forgetInstance($abstract);
@@ -58,16 +57,6 @@ it('refuses to boot a billing gateway in production when billing is not configur
     expect(fn () => rebind(BillingGateway::class))->toThrow(RuntimeException::class);
 });
 
-/*
- * AUDIT C1. The hole was `STRIPE_FAKE`: an opt-in that bound the fake gateway in
- * any environment that was not literally named `production`. A staging box, or a
- * local box somebody pointed a real webhook at, would then accept the fake's
- * literal `t=1,v1=test` signature and confirm whatever booking id an
- * unauthenticated request named.
- *
- * These assert the hole is shut, not that the happy path still works: every
- * environment other than `testing` must be unable to reach the fake at all.
- */
 it('cannot resolve the fake stripe gateway in any environment but testing', function () {
     foreach (['local', 'staging', 'production', 'anything-else'] as $environment) {
         app()['env'] = $environment;
@@ -118,11 +107,6 @@ it('has no STRIPE_FAKE escape hatch left to set', function () {
     expect(config()->has('services.stripe.fake'))->toBeFalse();
 });
 
-/*
- * The binding is one lock; this is the second. The class is `new`-able, so a
- * seeder or a helper could construct one directly — and the thing it would then
- * be willing to do is accept a forged webhook signature.
- */
 it('will not let the fake stripe gateway construct an event outside testing', function () {
     foreach (['local', 'staging', 'production'] as $environment) {
         app()['env'] = $environment;
@@ -141,11 +125,6 @@ it('will not let the fake billing gateway construct an event outside testing', f
     }
 });
 
-/*
- * The webhook route is the thing the fake would have exposed. A signature the
- * real gateway rejects must be a 400 and must write nothing, whatever the
- * payload claims.
- */
 it('rejects a forged webhook signature at the door', function () {
     app()['env'] = 'testing';
 

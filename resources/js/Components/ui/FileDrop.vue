@@ -3,27 +3,12 @@ import Label from '@/Components/ui/Label.vue';
 import FieldError from '@/Components/ui/FieldError.vue';
 import { ref, useId } from 'vue';
 
-/**
- * A file, chosen by dropping it or by pressing it.
- *
- * **Drag is never the only way in.** WCAG 2.2 requires a single-pointer
- * alternative to any author-controlled drag operation, so the drop zone is a
- * real `<input type="file">` with a real `<label>`: it is in the tab order, it
- * opens the file dialog on Enter, and dropping is an enhancement on top of a
- * control that already works without a mouse at all.
- *
- * The zone changes on drag-over by border colour only — the motion rules in
- * DESIGN.md allow opacity and border-colour and nothing else, and a box that
- * grows when a file passes over it is the sort of thing that looks clever once.
- */
 const props = withDefaults(
     defineProps<{
         label: string;
-        /** `accept` on the input, e.g. `.csv,text/csv`. */
         accept?: string;
         hint?: string;
         error?: string;
-        /** The file already chosen, so the zone can say so. */
         fileName?: string | null;
     }>(),
     { fileName: null },

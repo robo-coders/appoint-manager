@@ -4,19 +4,6 @@ import FieldError from '@/Components/ui/FieldError.vue';
 import { STAFF_COLOURS } from '@/lib/staffColour';
 import { nextTick, ref, useId } from 'vue';
 
-/**
- * Which colour a staff member is in the diary.
- *
- * Six presets, not a colour wheel. The previous control was `<input
- * type="color">` — an operating-system picker dropped into a monochrome
- * product, which guarantees that some salon eventually ships a neon-yellow
- * groomer and it is *our* app that looks broken. Exactly the argument DESIGN.md
- * makes for tenant brand presets, and the same six values.
- *
- * A radio group with a roving tabindex: one tab stop for the whole set, arrows
- * to move, and the colour is never the only thing carrying the choice — each
- * swatch has a name, and the selected one is announced.
- */
 const props = defineProps<{ error?: string }>();
 
 const model = defineModel<string>({ required: true });

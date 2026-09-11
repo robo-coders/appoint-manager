@@ -36,9 +36,7 @@ class SlotOffer extends Model
         });
     }
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -54,33 +52,25 @@ class SlotOffer extends Model
         return $this->status === SlotOfferStatus::Sent && $this->expires_at?->isFuture();
     }
 
-    /**
-     * @return BelongsTo<WaitlistEntry, $this>
-     */
+    /** @return BelongsTo<WaitlistEntry, $this> */
     public function waitlistEntry(): BelongsTo
     {
         return $this->belongsTo(WaitlistEntry::class);
     }
 
-    /**
-     * @return BelongsTo<Booking, $this>
-     */
+    /** @return BelongsTo<Booking, $this> */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
-    /**
-     * @return BelongsTo<Service, $this>
-     */
+    /** @return BelongsTo<Service, $this> */
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
+    /** @return BelongsTo<User, $this> */
     public function staff(): BelongsTo
     {
         return $this->belongsTo(User::class, 'staff_id');

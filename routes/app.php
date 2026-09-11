@@ -1,19 +1,5 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| The operator app — app.{domain}
-|--------------------------------------------------------------------------
-|
-| The salon owner. Auth, tenant context, onboarding gate and the billing
-| read-only gate. Super admin lives on its own host and nothing of it is
-| reachable from here.
-|
-| Auth routes live here rather than in a shared file: the admin surface has
-| its own login so that a super admin never authenticates on this host.
-|
-*/
-
 use App\Http\Controllers\AppearanceController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BillingController;
@@ -44,11 +30,6 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';
 
-/*
- * Handoff from the admin surface. A super admin cannot be issued a cookie for
- * this host from admin.{domain}, so impersonation arrives as a short-lived
- * signed URL that is exchanged here for a normal app session.
- */
 Route::get('/impersonate/{user}', [ImpersonationController::class, 'start'])
     ->middleware(['signed', 'throttle:6,1'])
     ->name('impersonation.start');
@@ -57,18 +38,6 @@ Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])
     ->middleware('auth')
     ->name('impersonation.stop');
 
-/*
- * A staff member's calendar feed.
- *
- * Outside `auth` on purpose, and outside `tenant` because it has to be: a
- * calendar client fetches a URL on a timer with no cookie, so there is no
- * session to resolve a tenant from. The token is the credential and the row it
- * finds establishes the tenant context — see `StaffCalendarController`.
- *
- * Throttled harder than the surface default. A calendar client polls every
- * fifteen minutes; sixty requests an hour per token is generous for that and is
- * a ceiling on anybody trying tokens.
- */
 Route::get('/calendar/{token}.ics', StaffCalendarController::class)
     ->where('token', '[0-9a-f]{32}')
     ->middleware('throttle:60,1')
@@ -77,11 +46,6 @@ Route::get('/calendar/{token}.ics', StaffCalendarController::class)
 Route::middleware(['auth', 'tenant'])->group(function (): void {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
 
-    /*
-     * Advisory, and throttled because it is called as you type. It reads one
-     * indexed column and returns a boolean; the binding answer comes from the
-     * unique index when the step is saved.
-     */
     Route::get('/onboarding/slug-available', [OnboardingController::class, 'checkSlug'])
         ->middleware('throttle:60,1')
         ->name('onboarding.slug');
@@ -101,26 +65,12 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed', 'billing-access
 
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
-    /*
-     * Before `/bookings/{booking}`, or the model binding claims the word and
-     * "export" 404s as a booking id that is not a number.
-     */
     Route::get('/bookings/export', [BookingController::class, 'export'])->name('bookings.export');
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/approve', [BookingController::class, 'approve'])->name('bookings.approve');
     Route::post('/bookings/{booking}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
-    /*
-     * Marking an appointment as having happened. `BookingStatus::Completed` was
-     * read in four places and written by nothing but the demo seeders before
-     * this existed — see `BookingService::complete`.
-     */
     Route::post('/bookings/{booking}/complete', [BookingController::class, 'complete'])->name('bookings.complete');
-    /*
-     * And marking one as missed. `BookingStatus::NoShow` was read by the
-     * dashboard's no-show rate and written by nothing, so the stat could only
-     * ever be zero — see `BookingService::markNoShow`.
-     */
     Route::post('/bookings/{booking}/no-show', [BookingController::class, 'noShow'])->name('bookings.no-show');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
@@ -201,11 +151,6 @@ Route::middleware(['auth', 'tenant', 'onboarding', 'subscribed', 'billing-access
     Route::post('/overdue/{subject}/stop', [OverdueController::class, 'stop'])->name('overdue.stop');
     Route::post('/overdue/{subject}/resume', [OverdueController::class, 'resume'])->name('overdue.resume');
 
-    /*
-     * Beta sandbox — sample data, fast-forward, reset. See BETA_SANDBOX.md.
-     * Everything it owns is in that one file; deleting the feature is deleting
-     * this line and routes/beta-sandbox.php.
-     */
     require __DIR__.'/beta-sandbox.php';
     require __DIR__.'/sandbox.php';
 

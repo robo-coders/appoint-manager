@@ -80,9 +80,7 @@ final class WaitlistOfferer
         return $created;
     }
 
-    /**
-     * @return Collection<int, WaitlistEntry>
-     */
+    /** @return Collection<int, WaitlistEntry> */
     public function rankedMatches(Tenant $tenant, Service $service, CarbonImmutable $startsAt): Collection
     {
         $local = $startsAt->timezone($tenant->timezone);
@@ -130,18 +128,6 @@ final class WaitlistOfferer
             ->values();
     }
 
-    /**
-     * Retire the offers whose window has closed, and offer the slot on.
-     *
-     * `$tenantId` narrows the sweep to one salon. The scheduled command passes
-     * nothing and sweeps the platform, which is what it has always done; a
-     * caller that must not touch anybody else's rows — running one tenant's
-     * automation early, on demand — passes an id and gets exactly that tenant.
-     *
-     * The filter is on the read, not on the write side, so nothing downstream
-     * has to remember the restriction: an offer that is not in the result set is
-     * never expired, never superseded, and never re-offered.
-     */
     public function expireAndContinue(?int $tenantId = null): void
     {
         $expired = SlotOffer::withoutGlobalScopes()

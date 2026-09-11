@@ -12,9 +12,6 @@ class ResolvePublicTenant
 {
     public function __construct(private TenantContext $tenantContext) {}
 
-    /**
-     * @param  Closure(Request): Response  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $slug = (string) $request->route('tenant_slug');

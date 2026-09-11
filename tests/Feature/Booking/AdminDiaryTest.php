@@ -269,11 +269,6 @@ it('does not write an interval when Come back in is cleared', function () {
     expect($subject?->rebook_interval_days)->toBeNull()
         ->and(Booking::query()->value('rebook_interval_days'))->toBeNull();
 
-    /*
-     * Clearing the checkout field does not stop chasing. DECISIONS.md and
-     * RebookInterval fall through to the service default; Stop is the action
-     * that takes a subject off the list. The form's empty option is "The usual".
-     */
     $this->travelTo(CarbonImmutable::parse('2026-04-21 10:00:00', 'Europe/London'));
 
     expect(app(OverdueSubjects::class)->forTenant($tenant))->toHaveCount(1);

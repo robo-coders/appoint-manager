@@ -8,23 +8,6 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/**
- * Step one: the trading name, the slug in the booking URL, the trade, and the
- * week the diary is drawn against.
- *
- * **The slug is validated here rather than generated here.** `TenantSlug` still
- * mints the first one at registration, but from this screen onwards it is a
- * field a person can see and edit, so it needs the same uniqueness rule the
- * database has — including against soft-deleted tenants, because their slugs
- * are still occupied. `ignore($tenant)` so re-saving step one without touching
- * the slug is not a collision with yourself.
- *
- * **Hours arrive as seven days, not as a flat list of ranges.** The screen is a
- * row per day with an open/closed toggle, so "closed" has to be expressible;
- * a list of ranges can only say "closed" by omission, and omission is also what
- * an empty form looks like. `open` is the discriminator, and the times are only
- * required — and only checked against each other — on the days that have it.
- */
 class UpdateBasicsRequest extends FormRequest
 {
     public function authorize(): bool
@@ -32,9 +15,7 @@ class UpdateBasicsRequest extends FormRequest
         return $this->user()?->tenant_id === current_tenant_id();
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [
@@ -46,13 +27,6 @@ class UpdateBasicsRequest extends FormRequest
                 'max:50',
                 'lowercase',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                /*
-                 * No `withoutTrashed()`, deliberately. A soft-deleted tenant
-                 * still owns its slug — the booking URL it printed on a card is
-                 * still out there — and `TenantSlug::generate()` skips those
-                 * too. The two have to agree or the generator would hand out a
-                 * suggestion this rule then rejects.
-                 */
                 Rule::unique(Tenant::class, 'slug')->ignore(current_tenant_id()),
             ],
             'type' => ['required', 'string', Rule::exists(Vertical::class, 'key')],
@@ -74,13 +48,6 @@ class UpdateBasicsRequest extends FormRequest
         ];
     }
 
-    /*
-     * `open` is cast to a real boolean before anything reads it. It arrives
-     * from a toggle as `true`, `1` or `"1"` depending on how the request was
-     * built, and `required_if:hours.*.open,true` compares strictly against a
-     * string — so the rule silently passes for a day sent as a JSON boolean.
-     * Casting here means the check below can be an honest `if`.
-     */
     protected function prepareForValidation(): void
     {
         $slug = $this->input('slug');
@@ -127,28 +94,13 @@ class UpdateBasicsRequest extends FormRequest
                 }
             }
 
-            /*
-             * A week with every day shut is a booking page that can never take
-             * a booking. It is also the state the form is in if somebody
-             * toggles their way through it by accident, so it is worth a
-             * sentence rather than a silent save.
-             */
             if (! $anyOpen && count($days) > 0) {
                 $validator->errors()->add('hours', 'Open on at least one day, or nobody can book.');
             }
         });
     }
 
-    /**
-     * The seven-day form, flattened into the `availability_rules` shape.
-     *
-     * One range per open day. The grid in Settings can hold several — a
-     * lunch break is two ranges — but asking a new salon to describe a split
-     * shift before it has taken a single booking is the sort of thing that
-     * makes people close the tab.
-     *
-     * @return list<array{weekday: int, start_time: string, end_time: string}>
-     */
+    /** @return list<array{weekday: int, start_time: string, end_time: string}> */
     public function openDays(): array
     {
         $rules = [];

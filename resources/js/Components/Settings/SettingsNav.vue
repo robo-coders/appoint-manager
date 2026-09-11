@@ -2,35 +2,8 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-/**
- * The five settings screens, as tabs.
- *
- * They were two underlined words floating above the form, which reads as
- * "here are some links" rather than "this screen has five parts". They are
- * separate routes rather than a single page with client-side tabs because each
- * one saves independently and each one deserves its own URL — a person sent a
- * link to Payments should land on Payments.
- *
- * Not `ui/Tabs`: that component owns a `tablist` and switches panels within one
- * page, and using it for navigation would announce three tabs to a screen
- * reader and then unload the page when one is chosen. These are links, so they
- * are links, and `aria-current` carries which one you are on.
- */
 defineProps<{ current: 'business' | 'branding' | 'calendar' | 'loyalty' | 'payments' | 'billing' | 'beta-sandbox' }>();
 
-/**
- * BetaSandbox — see BETA_SANDBOX.md. The sixth tab, for beta salons only.
- *
- * Conditional rather than always-present-and-disabled, which is the opposite of
- * the reasoning next to the Loyalty tab above: Loyalty is a feature every salon
- * could switch on, so hiding it until they had would hide it forever. The
- * sandbox is not something a salon can opt into — we put them in the beta — so a
- * tab that says "not for you" would be an advert for a door with no handle.
- *
- * Last in the row on purpose: it is the only tab that is not part of running a
- * salon, and the five that are should not shift position for the handful of
- * shops that see a sixth.
- */
 const page = usePage();
 
 const beta = computed(() => page.props.tenant?.is_beta === true);

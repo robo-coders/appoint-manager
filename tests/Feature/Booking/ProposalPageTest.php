@@ -11,17 +11,7 @@ use App\Models\User;
 use App\Support\ReturningCustomer;
 use Carbon\CarbonImmutable;
 
-/**
- * The proposal model, end to end.
- *
- * The page has no calendar on it. What it has is one finished appointment, the
- * phrase that justifies it, three spread alternatives and a picker behind the
- * quietest control on the page — so these assert on the props the island is
- * handed rather than on rendered markup, which is where the decisions actually
- * live.
- *
- * @return array{tenant: Tenant, staff: User, service: Service}
- */
+/** @return array{tenant: Tenant, staff: User, service: Service} */
 function aBookingSalon(): array
 {
     test()->travelTo(CarbonImmutable::parse('2026-08-26 08:00:00', 'Europe/London'));
@@ -67,7 +57,6 @@ function aBookingSalon(): array
     return compact('tenant', 'staff', 'service');
 }
 
-/** The props the island is mounted with, dug out of the JSON script tag. */
 function bookingProps(string $html): array
 {
     expect($html)->toContain('id="booking-props"');
@@ -91,10 +80,8 @@ it('proposes one appointment with a reason, and three spread alternatives', func
     expect($suggestion['primary']['cost_line'])->toBe('£45.00, pay on the day');
     expect($suggestion['alternatives'])->toHaveCount(3);
 
-    // The context line leads with the reason, then says what the appointment is.
     expect($suggestion['context'])->toBe('First available · full groom · 90 min with Ana');
 
-    // The spread rule, asserted on the payload the page actually renders.
     $buckets = collect([$suggestion['primary'], ...$suggestion['alternatives']])
         ->map(fn (array $p) => $p['date'].'|'.(((int) substr($p['time'], 0, 2)) < 12 ? 'am' : 'pm'));
 
@@ -112,25 +99,11 @@ it('states the deposit and the refund cut-off as a date', function () {
     $primary = $props['suggestion']['primary'];
 
     expect($primary['cost_line'])->toBe('£45.00 total, £15.00 deposit due today');
-    // 48 hours before Wednesday 26 August 09:00 is Monday 24 August, which has
-    // already passed — so there is no date to show, and the page says the
-    // deposit is not refundable rather than printing a date in the past.
     expect($primary['free_until'])->toBeNull();
 
-    // The alternatives run further out, and those do have a cut-off.
     expect($props['suggestion']['alternatives'][2]['free_until'])->not->toBeNull();
 });
 
-/*
- * The groomer's name, once, server-side.
- *
- * The booking page needs it to say "with Ana instead of Maya" when an
- * alternative is with somebody other than the groomer being proposed — the
- * `resolveStaff()` silent-reassignment behaviour recorded in DECISIONS.md, made
- * visible. The comparison is client state (accepting an alternative changes what
- * "different" means), but the *name* is formatted here, so the rule that
- * customer-facing strings are built in PHP holds where it is about formatting.
- */
 it('names staff to a customer by first name only, as its own field', function () {
     $salon = aBookingSalon();
 
@@ -139,8 +112,6 @@ it('names staff to a customer by first name only, as its own field', function ()
 
     expect($primary['staff_name'])->toBe('Ana Duarte');
     expect($primary['staff_first_name'])->toBe('Ana');
-    // The muted column on an alternative row is built from the same value, so
-    // the two can never disagree about what the groomer is called.
     expect($primary['meta'])->toContain('· Ana');
     expect($primary['meta'])->not->toContain('Duarte');
 
@@ -150,10 +121,6 @@ it('names staff to a customer by first name only, as its own field', function ()
     }
 });
 
-/*
- * Recognition, and the boundary that stops it leaking. Both salons are served
- * from one hostname, so one salon's cookie is presented to the next.
- */
 it('recognises a returning customer from the manage-link cookie', function () {
     $salon = aBookingSalon();
     $customer = Customer::factory()->create(['tenant_id' => $salon['tenant']->id, 'name' => 'Naomi Ellery']);
@@ -222,10 +189,6 @@ it('remembers the customer when they open their own manage link', function () {
         ->assertCookie(ReturningCustomer::COOKIE, $booking->public_token);
 });
 
-/*
- * The picker never shows an empty grid. A day with nothing left comes back with
- * every candidate start still in it, flagged.
- */
 it('returns taken times as well as free ones, so the picker is never empty', function () {
     $salon = aBookingSalon();
 
@@ -270,6 +233,5 @@ it('carries the salon name and town in the title, the meta and the JSON-LD', fun
         ->assertSee('<title>Willow Street Grooming — book in Hebden Bridge, HX7 8AA</title>', false)
         ->assertSee('Book with Willow Street Grooming in Hebden Bridge, HX7 8AA', false)
         ->assertSee('"@type":"LocalBusiness"', false)
-        // The whole surface is roomy: 48px controls, 44px rows, 15px fields.
         ->assertSee('data-density="roomy"', false);
 });

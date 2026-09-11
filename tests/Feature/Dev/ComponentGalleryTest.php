@@ -12,9 +12,6 @@ it('does not require a login', function () {
 });
 
 it('is registered behind an environment check so production never has the route', function () {
-    // Registration lives in SurfaceRoutes::gallery(), which returns early in
-    // production, so the route is absent from the table entirely rather than
-    // present and guarded.
     $source = (string) file_get_contents(app_path('Support/SurfaceRoutes.php'));
 
     expect($source)->toContain("if (app()->environment('production')) {")

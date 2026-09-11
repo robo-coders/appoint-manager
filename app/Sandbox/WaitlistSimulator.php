@@ -24,9 +24,7 @@ final class WaitlistSimulator
         private WaitlistOfferer $waitlist,
     ) {}
 
-    /**
-     * @return array{cancelled: int, offered: int}
-     */
+    /** @return array{cancelled: int, offered: int} */
     public function freeSlot(Tenant $tenant): array
     {
         BetaSandbox::guard($tenant);
@@ -55,9 +53,7 @@ final class WaitlistSimulator
         }
     }
 
-    /**
-     * @return array{expired: int, offered: int}
-     */
+    /** @return array{expired: int, offered: int} */
     public function expireOffer(Tenant $tenant): array
     {
         BetaSandbox::guard($tenant);

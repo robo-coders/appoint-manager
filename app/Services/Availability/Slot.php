@@ -6,17 +6,13 @@ use Carbon\CarbonImmutable;
 
 final readonly class Slot
 {
-    /**
-     * @param  list<int>  $staffIds
-     */
+    /** @param  list<int>  $staffIds */
     public function __construct(
         public CarbonImmutable $startsAt,
         public array $staffIds,
     ) {}
 
-    /**
-     * @return array{starts_at: string, staff_ids: list<int>}
-     */
+    /** @return array{starts_at: string, staff_ids: list<int>} */
     public function toArray(): array
     {
         return [

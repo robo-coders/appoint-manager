@@ -6,11 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * bookings.staff_id cascaded, so deleting a user destroyed every booking they
-     * were the staff on — including paid future ones. For a solo operator that is
-     * the entire diary, gone from one form. Refuse the delete instead.
-     */
     public function up(): void
     {
         Schema::table('bookings', function (Blueprint $table) {

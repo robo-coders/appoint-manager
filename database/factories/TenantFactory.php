@@ -6,14 +6,10 @@ use App\Models\Tenant;
 use App\Support\TenantSlug;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Tenant>
- */
+/** @extends Factory<Tenant> */
 class TenantFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         $name = fake()->unique()->company();

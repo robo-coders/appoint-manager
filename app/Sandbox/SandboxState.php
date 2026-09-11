@@ -6,9 +6,7 @@ use App\Models\Tenant;
 
 final class SandboxState
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public static function get(Tenant $tenant): array
     {
         return is_array($tenant->sandbox_state) ? $tenant->sandbox_state : [];

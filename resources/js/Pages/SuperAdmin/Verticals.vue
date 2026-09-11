@@ -14,37 +14,6 @@ import { penceToPoundsInput, poundsInputToPence } from '@/lib/money';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Business types tenants pick at signup.
- *
- * The one idea: **a new vertical is a form submit, not a deploy.** The old
- * source was `config/verticals.php`, which only ever held groomer, so adding
- * barber meant shipping PHP. This screen writes a row; registration reads it.
- *
- * What changed here:
- *
- *   - **The two JSON columns are on the form.** They were not, and
- *     `VerticalController::store` wrote `[]` into both regardless — so a
- *     vertical created here had no subject fields (the booking page asked the
- *     customer nothing about what they were bringing) and no default services
- *     (onboarding pre-filled an empty price list). Those two lists *are* the
- *     trade; a vertical without them is a word in a dropdown.
- *
- *   - **Edit and delete.** One sheet serves both, pre-filled from the row, so
- *     there is one form to keep correct rather than two that drift. A key
- *     cannot be changed — tenants store it as `type` — so in edit mode it is
- *     shown as text rather than as a field that looks editable and is not.
- *
- *   - **Delete is soft-blocked while a tenant is on the key.** `tenants.type`
- *     is a plain string with no foreign key, so the delete would succeed and
- *     take effect as a silent change to a live salon: every tenant on that key
- *     falls back to the groomer definition. The count is on screen and the
- *     dialog refuses rather than warning.
- *
- * Choices for a `select` subject field are one per line in a text field rather
- * than a repeater inside a repeater. Two levels of add/remove for a list of
- * words like "small, medium, large" is more control than the data deserves.
- */
 type SubjectField = {
     key: string;
     label: string;
@@ -76,20 +45,10 @@ type VerticalRow = {
 
 const props = defineProps<{ verticals: VerticalRow[] }>();
 
-/*
- * The sheet's own state, mirroring `Services/Index.vue`: null id is create,
- * a number is edit.
- */
 const sheetOpen = ref(false);
 const editing = ref<VerticalRow | null>(null);
 const deleting = ref<VerticalRow | null>(null);
 
-/**
- * The form's rows carry their money as pounds strings and their choices as one
- * line each, because that is what a person types. `submit` converts both back
- * to the shapes the consumers read — integer pence and a list of strings —
- * exactly as the services sheet does.
- */
 type FieldRow = { key: string; label: string; type: string; required: boolean; options: string };
 type ServiceRow = {
     name: string;
@@ -180,14 +139,6 @@ const openEdit = (vertical: VerticalRow) => {
     sheetOpen.value = true;
 };
 
-/*
- * The wire shape. `transform` rather than mutating the form fields, because the
- * inputs are bound to the human shape and rewriting them under the person's
- * cursor on every submit is how a failed save loses what they typed.
- *
- * `key` is dropped on edit: the request rule for it is `prohibited`, so sending
- * one is a validation failure rather than a silently ignored value.
- */
 const payload = (data: VerticalForm) => {
     const body = {
         key: data.key,
@@ -255,12 +206,6 @@ const confirmDelete = () => {
     });
 };
 
-/*
- * The error keys the server sends back are the wire shape's
- * (`subject_fields.0.key`), not the form's (`fields[0].key`), so a row's field
- * reads its own error by index. `form.errors` is a flat record; the index is
- * the only thing that links the two.
- */
 const errors = computed(() => form.errors as unknown as Record<string, string | undefined>);
 
 const fieldError = (index: number, key: string) => errors.value[`subject_fields.${index}.${key}`];
@@ -333,12 +278,6 @@ const rows = computed(() =>
             @close="sheetOpen = false"
         >
             <form class="space-y-4" @submit.prevent="submit">
-                <!--
-                    The key, once, and then never again. In edit mode it is the
-                    row's own key set as type rather than a disabled input:
-                    a control you cannot use is still a control, and this is a
-                    fact about the record.
-                -->
                 <TextInput
                     v-if="!editing"
                     v-model="form.key"
@@ -396,11 +335,6 @@ const rows = computed(() =>
                     />
                 </div>
 
-                <!--
-                    What the booking page asks about the subject. Read by
-                    `StorePublicBookingRequest`, `StoreManualBookingRequest` and
-                    `Public/BookingIsland.vue`.
-                -->
                 <section class="space-y-3 pt-2">
                     <div>
                         <h3 class="text-15">Subject fields</h3>
@@ -455,11 +389,6 @@ const rows = computed(() =>
                     <Button variant="secondary" @click="form.fields.push(blankField())">Add field</Button>
                 </section>
 
-                <!--
-                    The price list a new salon starts from. Read by
-                    `OnboardingController` to pre-fill the services step, and by
-                    `VerticalInterval` for the rebooking rhythm per service.
-                -->
                 <section class="space-y-3 pt-2">
                     <div>
                         <h3 class="text-15">Default services</h3>
@@ -538,11 +467,6 @@ const rows = computed(() =>
             </template>
         </SlideOver>
 
-        <!--
-            Two dialogs' worth of copy in one, because the answer depends on the
-            count and a person deleting a vertical needs to be told which case
-            they are in *before* they press the button, not after.
-        -->
         <ConfirmDialog
             :show="deleting !== null"
             :title="

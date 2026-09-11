@@ -16,9 +16,7 @@ class StoreStaffRequest extends FormRequest
         return $this->user()?->can('create', User::class) ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

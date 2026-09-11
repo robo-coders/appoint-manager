@@ -14,13 +14,6 @@ class ImportController extends Controller
     public function show(): Response
     {
         return Inertia::render('Imports/Index', [
-            /*
-             * The last run, whichever kind it was and whether or not it was
-             * committed. The screen needs all three: a result with no `kind`
-             * cannot be shown next to the import that produced it, and a result
-             * with no `committed` cannot tell "here is what would happen" from
-             * "here is what happened".
-             */
             'result' => session('import_result'),
             'columns' => [
                 'customers' => ['name', 'email', 'phone', 'subjects'],
@@ -71,8 +64,6 @@ class ImportController extends Controller
             'committed' => $committed,
             'ok' => count($ok),
             'failed' => count($failed),
-            // Every failure, and a sample of the successes. A hundred rows of
-            // "ok" is not something anybody reads; a hundred rows of "wrong" is.
             'rows' => array_merge($failed, array_slice($ok, 0, 20)),
             'sampled' => count($ok) > 20,
         ];

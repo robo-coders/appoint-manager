@@ -45,14 +45,6 @@ class CustomerController extends Controller
         if ($search !== '') {
             $like = '%'.addcslashes($search, '%_\\').'%';
 
-            /*
-             * Search covers the contact columns only for somebody allowed to
-             * read them. Left in for everybody, the box is an oracle: type an
-             * address, and whether a row comes back tells you the address is on
-             * file — which is the fact the mask exists to withhold. Names stay
-             * searchable for everybody, because a name is on every screen
-             * already.
-             */
             $query->where(function ($inner) use ($like, $contacts) {
                 $inner->where('name', 'like', $like);
 
@@ -80,8 +72,6 @@ class CustomerController extends Controller
                     return [
                         'id' => $customer->id,
                         'name' => $customer->name,
-                        // Masked in the payload, not in the template. A hidden
-                        // column is still a column that was sent.
                         'email' => $visible ? $customer->email : null,
                         'phone' => $visible ? $customer->phone : MaskedContact::phone($customer->phone),
                         'has_email' => MaskedContact::hasEmail($customer->email),
@@ -172,9 +162,7 @@ class CustomerController extends Controller
         return back(303);
     }
 
-    /**
-     * @return LengthAwarePaginator<int, array<string, mixed>>
-     */
+    /** @return LengthAwarePaginator<int, array<string, mixed>> */
     private function ledger(Customer $customer, string $timezone, Request $request): LengthAwarePaginator
     {
         $history = app(CustomerHistoryService::class);
@@ -215,21 +203,7 @@ class CustomerController extends Controller
         return $parts === [] ? null : implode(', ', $parts);
     }
 
-    /**
-     * The customer's loyalty card, or null.
-     *
-     * Null when the tenant has the feature off, and null when it is on but this
-     * customer has never booked since — in both cases the screen renders no
-     * section at all rather than an empty one. There is no customer portal, so
-     * this panel and the confirmation text are the only two places the count is
-     * ever visible; between them they are the whole of the feature's visibility.
-     *
-     * `free_sessions` is the history: the appointments that were actually paid
-     * for with stamps, newest first, which is a more useful record than
-     * `cycles_completed` on its own because it says *when*.
-     *
-     * @return array<string, mixed>|null
-     */
+    /** @return array<string, mixed>|null */
     private function loyaltyPanel(Customer $customer): ?array
     {
         $tenant = current_tenant();
@@ -269,9 +243,6 @@ class CustomerController extends Controller
             'stamps_used' => $enrolment->stamps_used,
             'remaining' => $enrolment->remaining(),
             'reward_due' => $enrolment->rewardDue(),
-            // False when the package has been switched off or deleted under
-            // them. The screen says so rather than showing a card that looks
-            // live and is not.
             'earning' => $enrolment->isEarning(),
             'cycles_completed' => $enrolment->cycles_completed,
             'free_sessions' => $free,

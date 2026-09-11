@@ -92,9 +92,7 @@ class ServiceController extends Controller
         return redirect()->route('services.index');
     }
 
-    /**
-     * @return list<array{id: int, name: string}>
-     */
+    /** @return list<array{id: int, name: string}> */
     private function assignableStaff(): array
     {
         return User::query()

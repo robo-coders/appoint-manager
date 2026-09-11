@@ -12,14 +12,10 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<Booking>
- */
+/** @extends Factory<Booking> */
 class BookingFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         $startsAt = now()->utc()->addDay()->setTime(10, 0);

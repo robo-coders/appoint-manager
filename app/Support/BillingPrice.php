@@ -4,13 +4,6 @@ namespace App\Support;
 
 use App\Models\Tenant;
 
-/**
- * One place that turns billing config (and a tenant override) into a figure.
- *
- * List price lives in `config/billing.php`. What we charge a given salon is
- * `tenants.monthly_price_override_pence` when it is set. The pricing page and
- * the register sentence read the list. Checkout reads the tenant.
- */
 final class BillingPrice
 {
     public static function listMonthlyPence(): int
@@ -33,7 +26,6 @@ final class BillingPrice
         return (int) config('billing.sms_topup_price_pence');
     }
 
-    /** Whole pounds where the price is whole pounds. `£29`, not `£29.00`. */
     public static function formatPence(int $pence): string
     {
         return '£'.($pence % 100 === 0

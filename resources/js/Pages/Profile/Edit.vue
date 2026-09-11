@@ -6,19 +6,6 @@ import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
 
-/**
- * Your own account.
- *
- * The three forms were already on the component library; what this screen still
- * had was Breeze's shape — three white cards floating on the page with no
- * heading above them, so you arrived somewhere with no title and three boxes.
- *
- * Sections separated by hairlines instead. DESIGN.md: containment is a signal
- * and it is spent once, so three cards that contain nothing but a form each are
- * three signals that mean nothing. The page has one heading and three parts.
- *
- * The Breeze *typography* is phase 8's; the structure is this one's.
- */
 defineProps<{
     mustVerifyEmail?: boolean;
     status?: string;

@@ -20,15 +20,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
-/**
- * "Reset my shop". See BETA_SANDBOX.md.
- *
- * The dialog in front of this button makes a promise in two halves — "this
- * deletes all customers, bookings and waitlist entries" and "your login and
- * shop settings stay" — and both halves are worth a test, because a reset that
- * over-deletes is indistinguishable from account deletion to the person it
- * happens to.
- */
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-09-08 09:00:00', 'Europe/London'));
     Mail::fake();
@@ -71,17 +62,14 @@ it('keeps the shop itself, and everything the owner set up', function () {
     app(SampleData::class)->load($tenant);
     app(SandboxReset::class)->run($tenant);
 
-    // The shop, and the way in.
     expect(Tenant::query()->find($tenantId))->not->toBeNull();
     expect(User::withoutGlobalScopes()->where('tenant_id', $tenantId)->count())->toBeGreaterThan(0);
 
-    // Everything configured on a settings screen.
     expect(Service::withoutGlobalScopes()->where('tenant_id', $tenantId)->count())->toBeGreaterThan(0);
     expect(AvailabilityRule::withoutGlobalScopes()->where('tenant_id', $tenantId)->count())->toBeGreaterThan(0);
     expect(TimeOff::withoutGlobalScopes()->where('tenant_id', $tenantId)->count())->toBe(1);
     expect(LoyaltyPackage::withoutGlobalScopes()->whereKey($package->id)->exists())->toBeTrue();
 
-    // Billing, which is the difference between a reset and a cancellation.
     $fresh = Tenant::query()->find($tenantId);
     expect($fresh->subscription_status)->toBe($tenant->subscription_status);
     expect($fresh->trial_ends_at->toDateTimeString())->toBe($tenant->trial_ends_at->toDateTimeString());
@@ -113,24 +101,11 @@ it('leaves a working shop that can be filled again immediately', function () {
     expect($counts['customers'])->toBe(24);
     expect($counts['bookings'])->toBeGreaterThan(50);
 
-    // And the app still renders for the owner afterwards, which is the real
-    // test of "function normally" — a reset that leaves a screen throwing is
-    // not a reset anybody can use.
     actingAsTenant($salon['staff'])->get(route('dashboard'))->assertOk();
     actingAsTenant($salon['staff'])->get(route('customers.index'))->assertOk();
     actingAsTenant($salon['staff'])->get(route('diary.index'))->assertOk();
 });
 
-/**
- * The half-wiped shop is the outcome nobody could recover from, so the
- * transaction is asserted rather than assumed.
- *
- * The failure is injected through a query listener that throws the moment the
- * last table in the delete order is touched — by then customers, bookings and
- * the rest have all been deleted inside the transaction. If the wipe were not
- * atomic the shop would be left with staff, services and no clients; because it
- * is, every row is still there.
- */
 it('rolls back completely when the wipe fails partway through', function () {
     $salon = aBetaSalon();
     $tenantId = $salon['tenant']->id;
@@ -154,13 +129,6 @@ it('rolls back completely when the wipe fails partway through', function () {
     expect(WaitlistEntry::withoutGlobalScopes()->where('tenant_id', $tenantId)->count())->toBe(4);
 });
 
-/**
- * A shop that has actually been *used* has rows the sample loader never writes:
- * slot offers made when a cancellation freed an hour, cancelled bookings, and a
- * send log. Those are the rows whose foreign keys decide whether the delete
- * order in `SandboxTables::transactional()` is right, so the wipe is asserted
- * against a shop that has been through a fast-forward rather than a fresh one.
- */
 it('empties a shop that has been lived in, not just one that was seeded', function () {
     $salon = aBetaSalon();
     $tenantId = $salon['tenant']->id;

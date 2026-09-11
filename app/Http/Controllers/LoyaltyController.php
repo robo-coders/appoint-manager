@@ -13,20 +13,6 @@ use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * Loyalty packages, in settings.
- *
- * A fourth settings tab rather than a toggle buried on the business screen: the
- * feature is a switch *and* a definition — a count and a reward — and a form
- * that only exists when a switch is on does not belong halfway down a page about
- * the salon's postcode.
- *
- * **Off is the default and off is inert.** The flag lives in
- * `tenants.settings['loyalty']['enabled']`, beside `notifications.sms_enabled`,
- * so switching it on needed no migration. Everything downstream asks
- * `Loyalty::enabled()` first, so a tenant that has never opened this screen has
- * the feature absent rather than merely hidden.
- */
 class LoyaltyController extends Controller
 {
     public function __construct(private Loyalty $loyalty) {}
@@ -38,10 +24,6 @@ class LoyaltyController extends Controller
         abort_unless($tenant, 403);
 
         $package = $this->loyalty->activePackage($tenant)
-            // `activePackage()` returns null when the feature is off, which
-            // would empty the form the moment somebody switched it off — so the
-            // screen reads the row directly and lets the toggle decide what is
-            // shown. Turning it off and on again keeps what was typed.
             ?? LoyaltyPackage::query()->where('is_active', true)->latest('id')->first();
 
         return Inertia::render('Settings/Loyalty', [
@@ -55,11 +37,6 @@ class LoyaltyController extends Controller
                 'auto_enrol' => $package?->auto_enrol ?? true,
                 'auto_apply_reward' => $package?->auto_apply_reward ?? true,
                 'show_visit_date' => $package?->show_visit_date ?? true,
-                /*
-                 * How many customers are part-way through. It is the one number
-                 * that makes switching the feature off a decision rather than a
-                 * click — those cards stop filling.
-                 */
                 'enrolled' => LoyaltyEnrolment::query()->count(),
             ],
             'services' => Service::query()
@@ -106,14 +83,6 @@ class LoyaltyController extends Controller
         if ((bool) $data['enabled']) {
             $current = LoyaltyPackage::query()->where('is_active', true)->latest('id')->first();
 
-            /*
-             * One active package per tenant in v1, so this updates the existing
-             * row rather than adding a second. `updateOrCreate` on `is_active`
-             * is what keeps that true through a rename: a salon changing five
-             * sessions to six is editing its scheme, not starting a new one, and
-             * every customer's progress is against the row rather than the
-             * number.
-             */
             $package = LoyaltyPackage::query()->updateOrCreate(
                 ['tenant_id' => $tenant->id, 'is_active' => true],
                 [

@@ -2,45 +2,11 @@
 
 namespace App\Support;
 
-/**
- * The marketing site's questions and answers, written once.
- *
- * **This exists because an FAQ has to be published twice.** Once as readable
- * HTML for a person, and once as `FAQPage` JSON-LD for an answer engine — and
- * Google's structured-data policy is explicit that the markup must match the
- * visible text. Two copies of the same paragraph in two formats is the exact
- * shape of drift this repository already refuses for prices (see
- * `MarketingFigures`): the page would be edited, the markup would not, and the
- * version quoted back at a searcher would be the stale one.
- *
- * So the questions live here, the Blade partial renders them, and
- * `MarketingSchema` serialises the same array. There is one place to edit an
- * answer and no way to edit only half of it.
- *
- * Every figure inside an answer comes off `MarketingFigures`, so a price change
- * moves the FAQ and its structured data at the same time.
- *
- * **Answers may contain a link and nothing else.** They are rendered unescaped,
- * which is safe here and only here: this file is author-written source, there is
- * no user input anywhere near it, and `schema.org` permits HTML in
- * `acceptedAnswer.text`. Anything richer than an `<a>` belongs on the page as
- * prose, not in an answer.
- */
 final class MarketingFaq
 {
     public function __construct(private MarketingFigures $figures) {}
 
-    /**
-     * The home page's questions.
-     *
-     * Written for the two readers at once: a groomer deciding whether this is
-     * for her, and an answer engine being asked "what software refills a
-     * cancelled appointment". Each question is the phrasing somebody would
-     * actually type, and each answer's first sentence is the whole answer — the
-     * rest is detail an engine can drop without making it wrong.
-     *
-     * @return list<array{question: string, answer: string}>
-     */
+    /** @return list<array{question: string, answer: string}> */
     public function home(): array
     {
         $product = (string) config('product.name');
@@ -101,15 +67,7 @@ final class MarketingFaq
         ];
     }
 
-    /**
-     * The pricing page's questions.
-     *
-     * These were written on the page itself and are unchanged in wording. They
-     * moved here so that the same five are also published as structured data,
-     * which is the whole reason this class exists.
-     *
-     * @return list<array{question: string, answer: string}>
-     */
+    /** @return list<array{question: string, answer: string}> */
     public function pricing(): array
     {
         $product = (string) config('product.name');

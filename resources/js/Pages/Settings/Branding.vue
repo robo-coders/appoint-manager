@@ -8,18 +8,7 @@ import SwatchGroup from '@/Components/ui/SwatchGroup.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-/**
- * Settings -> Branding.
- *
- * One decision on the whole screen, so the screen is built around making that
- * decision confidently rather than around filling in a form: swatches, then the
- * page they change, at the size they change it.
- *
- * Everything here is a library component. There is no allow-list entry for this
- * file in `scripts/check-components.mjs` and there must not be one.
- */
 const props = defineProps<{
-    /** The six preset names, read from tokens.css server-side. Never hex. */
     presets: string[];
     current: string | null;
     businessName: string;
@@ -29,18 +18,6 @@ const form = useForm({ brand_colour: props.current });
 
 const display = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
-/*
- * The preview's own `--brand`, scoped to the preview element and nowhere else.
- *
- * `undefined` rather than a value when nothing is chosen: that lets --brand
- * resolve to the ink default tokens.css sets, which is exactly what an
- * unbranded booking page does. The empty state is therefore the real thing, not
- * a drawing of it.
- *
- * This is also the ONLY place the operator app paints with a tenant's colour.
- * She is in this app forty times a day; a colour chosen for her customers
- * becomes noise as chrome. It is confined to a picture of another page.
- */
 const previewStyle = computed(() =>
     form.brand_colour ? { '--brand': `var(--brand-${form.brand_colour})` } : {},
 );
@@ -68,12 +45,6 @@ const submit = () => form.patch(route('settings.branding.update'), { preserveScr
             <Card title="Colour">
                 <SwatchGroup v-model="form.brand_colour" :options="presets" label="Booking page colour" />
 
-                <!--
-                    The choice in words as well as in paint. A tick on a swatch
-                    is the visual cue; this is the one that survives being
-                    colour-blind, and it is a single atomic status message
-                    rather than a live region per swatch.
-                -->
                 <p class="mt-3 text-13 text-ink-2" role="status">{{ chosen }}</p>
 
                 <p v-if="form.errors.brand_colour" class="mt-2 text-13 text-danger">{{ form.errors.brand_colour }}</p>
@@ -91,16 +62,6 @@ const submit = () => form.patch(route('settings.branding.update'), { preserveScr
             </Card>
 
             <Card title="Preview">
-                <!--
-                    A picture of the booking page, not a second copy of it.
-
-                    `inert` is what keeps it a picture: the button inside is a
-                    real button and would otherwise be tabbable, clickable and
-                    announced, putting a decoy primary action on a settings
-                    screen. `inert` removes it from the tab order and from the
-                    accessibility tree in one attribute, which is exactly the
-                    intent — this is scenery.
-                -->
                 <div
                     class="overflow-hidden rounded border border-rule"
                     :style="previewStyle"

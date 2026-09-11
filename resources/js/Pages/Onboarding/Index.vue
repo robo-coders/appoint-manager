@@ -17,30 +17,6 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import QRCode from 'qrcode';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
-/**
- * Setting up a business: five steps, one component, one page.
- *
- * **The step is client state, and the server is the record.** `props.step` says
- * where the person actually is according to what has been saved; `step` below
- * is what is on screen. They are the same on load and after every save, and
- * they come apart in exactly one place — pressing Back, which moves the screen
- * without asking the server anything. That is the whole reason for the split:
- * Back has to be free, and a Back that costs a round trip is a Back that can
- * lose what you typed on the step you are leaving.
- *
- * Everything a person has entered lives in `form`, one object for all five
- * steps, created once. So going back to step one and forward again finds step
- * four exactly as it was left, including the parts that were never saved —
- * which is what the staff step needs, since skipping it saves nothing at all.
- *
- * **A refresh is the other half of that bargain.** `form` is not persisted, so
- * reopening the tab rebuilds it from props — that is, from the last step the
- * server accepted. A step you completed comes back filled in; a step you were
- * mid-way through comes back at its defaults. Saving on continue is what makes
- * the first of those true, and it is why each step posts rather than the flow
- * posting once at the end.
- */
-
 type Hour = { weekday: number; open: boolean; start_time: string; end_time: string };
 
 const props = defineProps<{
@@ -79,13 +55,6 @@ const errors = computed(() => (page.props.errors ?? {}) as Record<string, string
 const step = ref(props.step);
 const saving = ref(false);
 
-/*
- * Set when a save did not reach the server or came back as something other than
- * a validation failure — a dropped connection, a 500. Distinct from `errors`,
- * which is the server telling us it read the request and disagreed with it. The
- * banner is retryable and nothing is cleared, so the fix is one click and the
- * form is exactly as it was left.
- */
 const transportError = ref('');
 const retry = ref<(() => void) | null>(null);
 
@@ -117,8 +86,6 @@ const form = ref({
     staffCanSeeContacts: true,
 });
 
-/* ---------------------------------------------------------------- chrome -- */
-
 const index = computed(() => Math.max(0, props.onboardingSteps.indexOf(step.value)));
 const total = computed(() => props.onboardingSteps.length);
 const label = computed(() => props.steps.find((s) => s.key === step.value)?.label ?? '');
@@ -140,14 +107,6 @@ const goBack = () => {
     step.value = props.onboardingSteps[Math.max(0, index.value - 1)];
 };
 
-/* -------------------------------------------------------------- the save -- */
-
-/**
- * One submit for every step. The server redirects to the next step and the
- * screen follows it; on a validation failure the visit comes back to the same
- * page with `errors` populated and `step` untouched, so the person stays where
- * they are with their answers still in the fields.
- */
 const submit = (method: 'patch' | 'post', url: string, data: Record<string, FormDataConvertible>) => {
     const send = () => {
         saving.value = true;
@@ -156,13 +115,6 @@ const submit = (method: 'patch' | 'post', url: string, data: Record<string, Form
         router[method](url, data, {
             preserveScroll: true,
             preserveState: true,
-            /*
-             * The step comes off the page that came back, not off `props` —
-             * `props` still holds the old value inside this callback. The
-             * watcher below cannot stand in for it either: going Back into a
-             * step and forward again returns the same step the server last
-             * sent, and a watcher does not fire on an unchanged value.
-             */
             onSuccess: (page) => {
                 retry.value = null;
                 step.value = (page.props as unknown as { step: string }).step;
@@ -177,12 +129,6 @@ const submit = (method: 'patch' | 'post', url: string, data: Record<string, Form
     send();
 };
 
-/*
- * `props.step` is the server's answer to "where are they". After a save it
- * changes to the step the controller redirected to, and the screen follows.
- * Back moves `step` on its own and does not touch this, which is the one time
- * the two are allowed to disagree.
- */
 watch(
     () => props.step,
     (value) => {
@@ -190,11 +136,6 @@ watch(
     },
 );
 
-/*
- * A transport failure never arrives through `onError` — that is validation.
- * These two events are Inertia's "the request did not come back as a page":
- * a thrown error, or a response that was not an Inertia response at all.
- */
 onMounted(() => {
     const stopException = router.on('exception', () => {
         saving.value = false;
@@ -213,11 +154,8 @@ onMounted(() => {
     });
 });
 
-/* --------------------------------------------------------------- basics --- */
-
 const slugState = ref<'idle' | 'checking' | 'free' | 'taken'>('idle');
 const slugSuggestion = ref<string | null>(null);
-/** True once the slug has been typed in, after which the name stops driving it. */
 const slugEdited = ref(false);
 
 const slugify = (value: string) =>
@@ -230,12 +168,6 @@ const slugify = (value: string) =>
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-/*
- * The name drives the slug until somebody edits the slug, and then it stops.
- * A field that keeps rewriting itself under you is worse than one that never
- * fills itself in, and "Paws & Whiskers" typing over `paws-and-whiskers-2`
- * — the suggestion you just accepted — is exactly that.
- */
 watch(
     () => form.value.name,
     (value) => {
@@ -282,12 +214,6 @@ watch(
                 slugState.value = body.available ? 'free' : 'taken';
                 slugSuggestion.value = body.suggestion;
             } catch {
-                /*
-                 * The check is advisory. If it cannot run — offline, throttled
-                 * — the field goes quiet rather than red: the save validates
-                 * against the unique index anyway, and a scary message about a
-                 * name that is probably fine is worse than no message.
-                 */
                 slugState.value = 'idle';
             }
         }, 350);
@@ -296,14 +222,6 @@ watch(
 
 onUnmounted(() => clearTimeout(slugTimer));
 
-/*
- * The trade picker. The mockup drew this as a grid of six cards, but a card
- * grid here is a radio group wearing a costume: one answer, from a set small
- * enough to read in full, saved with the rest of the step. `ui/RadioGroup` is
- * that control, it carries the per-option note as its `hint`, and it arrives
- * with the keyboard behaviour and the error binding six hand-rolled `<button>`s
- * would each have had to reimplement.
- */
 const verticalOptions = computed(() =>
     props.verticals.map((vertical) => ({
         value: vertical.value,
@@ -328,8 +246,6 @@ const submitBasics = () =>
         hours: form.value.hours,
     });
 
-/* ------------------------------------------------------------- business --- */
-
 const submitBusiness = () =>
     submit('patch', route('onboarding.business'), {
         timezone: form.value.timezone,
@@ -342,18 +258,10 @@ const submitBusiness = () =>
         request_requires_deposit: form.value.request_requires_deposit,
     });
 
-/* ------------------------------------------------------------- services --- */
-
 const priceInPence = computed(() => poundsInputToPence(form.value.service.price));
 const depositInPence = computed(() => poundsInputToPence(form.value.service.deposit_amount));
 const durationInMinutes = computed(() => parseInt(form.value.service.duration_minutes, 10) || 0);
 
-/*
- * Checked on blur as well as on submit, because the deposit and the price are
- * two fields whose relationship only exists once both are filled in — and the
- * moment to say "that is more than the price" is while the person is still
- * looking at the two numbers, not after they have pressed Continue.
- */
 const touched = ref<Record<string, boolean>>({});
 const touch = (field: string) => {
     touched.value[field] = true;
@@ -390,8 +298,6 @@ const submitService = () =>
         deposit_amount: depositInPence.value,
     });
 
-/* ---------------------------------------------------------------- staff --- */
-
 const hasStaffEntry = computed(
     () => form.value.staffName.trim() !== '' || form.value.staffEmail.trim() !== '',
 );
@@ -408,14 +314,7 @@ const submitStaff = (skip = false) =>
                   },
     });
 
-/*
- * Skip does not clear the fields. Somebody who types half a name, skips, then
- * comes back through Back finds it still there — `form` outlives the step, and
- * the only thing skipping does is decline to send it.
- */
 const skip = () => submitStaff(true);
-
-/* ----------------------------------------------------------------- link --- */
 
 const liveBookingUrl = computed(() =>
     props.bookingUrl.replace(/\/[^/]*$/, `/${form.value.slug || props.basics.slug}`),
@@ -426,15 +325,6 @@ const displayUrl = computed(() => liveBookingUrl.value.replace(/^https?:\/\//, '
 const copyState = ref<'idle' | 'manual'>('idle');
 const urlEl = ref<HTMLElement | null>(null);
 
-/**
- * Copy, and a real answer when copying is not available.
- *
- * `navigator.clipboard` is undefined on a page that is not a secure context and
- * throws when the browser refuses the permission — both of which are ordinary
- * rather than exotic, and neither of which should end with a button that looks
- * like it worked. The fallback selects the URL so the keyboard shortcut is one
- * press away, and the label says so.
- */
 const copy = async () => {
     try {
         if (!navigator.clipboard?.writeText) {
@@ -468,12 +358,6 @@ const copyLabel = computed(() => (copyState.value === 'manual' ? 'Selected' : 'C
 
 const qr = ref('');
 
-/*
- * A real encoded QR, drawn at render time from the URL the person is actually
- * being given. The colours are read off the document rather than written here,
- * because `qrcode` wants literal hex and every literal colour in this codebase
- * comes from `tokens.css`.
- */
 const drawQr = async () => {
     const styles = getComputedStyle(document.documentElement);
 
@@ -510,12 +394,6 @@ const finish = () =>
         first_booking: null,
     });
 
-/*
- * A slug collision is only reported at the end if somebody took the address
- * while this person was filling in the middle three steps. It is not fixable
- * here — the field and its availability check live on step one — so the error
- * carries the screen back with it.
- */
 watch(
     () => errors.value.slug,
     (message) => {
@@ -570,7 +448,6 @@ const onNext = () => {
                 </template>
             </Callout>
 
-            <!-- ------------------------------------------------- 1. basics -->
             <section v-if="step === 'basics'">
                 <h1 class="text-34 tracking-34">Tell us about the business</h1>
                 <p class="mt-2 max-w-measure text-14 text-ink-2">
@@ -675,7 +552,6 @@ const onNext = () => {
                 </fieldset>
             </section>
 
-            <!-- ----------------------------------------------- 2. business -->
             <section v-else-if="step === 'business'">
                 <h1 class="text-34 tracking-34">Where and when you trade</h1>
                 <p class="mt-2 max-w-measure text-14 text-ink-2">
@@ -719,7 +595,6 @@ const onNext = () => {
                 </div>
             </section>
 
-            <!-- ----------------------------------------------- 3. services -->
             <section v-else-if="step === 'services'">
                 <h1 class="text-34 tracking-34">Add your first service</h1>
                 <p class="mt-2 max-w-measure text-14 text-ink-2">
@@ -798,7 +673,6 @@ const onNext = () => {
                 </div>
             </section>
 
-            <!-- -------------------------------------------------- 4. staff -->
             <section v-else-if="step === 'staff'">
                 <h1 class="text-34 tracking-34">Anyone else taking appointments?</h1>
                 <p class="mt-2 max-w-measure text-14 text-ink-2">
@@ -846,7 +720,6 @@ const onNext = () => {
                 </div>
             </section>
 
-            <!-- --------------------------------------------------- 5. link -->
             <section v-else-if="step === 'link'">
                 <p class="eyebrow text-accent">Live now</p>
                 <h1 class="mt-3 text-34 tracking-34">Share your booking link</h1>
@@ -901,11 +774,6 @@ const onNext = () => {
 </template>
 
 <style scoped>
-/*
- * `qrcode` emits a bare `<svg viewBox="…">` with no width or height, which
- * without this sizes itself as a 300x150 replaced element rather than filling
- * the box it was given.
- */
 .qr :deep(svg) {
     display: block;
     width: 100%;

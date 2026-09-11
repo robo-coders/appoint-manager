@@ -5,10 +5,6 @@ namespace App\Exceptions;
 use RuntimeException;
 use Throwable;
 
-/**
- * We could not set up the card payment for a booking, so the hold was released.
- * The customer has not been charged anything.
- */
 class PaymentSetupFailedException extends RuntimeException
 {
     public static function forBooking(?Throwable $previous = null): self
@@ -20,14 +16,6 @@ class PaymentSetupFailedException extends RuntimeException
         );
     }
 
-    /**
-     * The same outcome, told honestly.
-     *
-     * "Try again in a moment" is the right sentence for a Stripe outage and the
-     * wrong one for a platform with no Stripe credentials at all: the second
-     * customer would retry all afternoon. Both release the slot and charge
-     * nothing; only one of them is worth waiting for.
-     */
     public static function notConfigured(?Throwable $previous = null): self
     {
         return new self(

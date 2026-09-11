@@ -72,15 +72,6 @@ it('does not overwrite an existing customer name and phone from a public booking
         ->and($customer->phone)->toBe('+447700900123');
 });
 
-/*
- * AUDIT C10 asks for two failures, not one: unauthenticated *and* wrong-tenant.
- * The anonymous lookup is gone (above), so what is left is every URL that still
- * returns customer data — and each has to fail for both.
- *
- * `$this->get()` with no `actingAs` is the unauthenticated case; a user from
- * another salon is the wrong-tenant case. A 404 rather than a 403 is the right
- * answer for the second: whether a customer id exists is itself information.
- */
 function aRivalOwner(): User
 {
     $rival = Tenant::factory()->create(['slug' => 'rival-salon']);
@@ -116,8 +107,6 @@ foreach ($customerUrls as $name => $url) {
 
         $response = actingAsTenant(aRivalOwner())->get($url($customer));
 
-        // The list and the search are legitimate pages for a rival owner —
-        // they must simply be empty of anybody else's customers.
         expect($response->getContent())->not->toContain('Priya Raman');
         expect($response->getContent())->not->toContain('priya@example.com');
     });
@@ -132,11 +121,6 @@ it('deletes nothing when a rival owner asks', function () {
     expect(Customer::withoutGlobalScopes()->whereKey($customer->id)->exists())->toBeTrue();
 });
 
-/*
- * The booking host serves every salon from one origin, so one salon's manage
- * cookie is presented to the next. A token is a capability for one booking at
- * one tenant and must not identify its holder anywhere else.
- */
 it('will not let one salon manage-link identify a visitor at another salon', function () {
     $salon = aSalon();
     $other = aSalon(['tenant' => ['slug' => 'other-salon']]);

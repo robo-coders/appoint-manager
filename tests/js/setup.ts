@@ -2,31 +2,6 @@ import { config } from '@vue/test-utils';
 import { vi } from 'vitest';
 import { reactive } from 'vue';
 
-/**
- * The three globals a page component expects to exist, and nothing else.
- *
- * A component test that has to boot Inertia, Ziggy and a Laravel route list is
- * a component test nobody writes. These stubs are the smallest thing that lets
- * a real component render: `route()` returns a path, `usePage()` returns props
- * a test can set, and `<Link>` is an anchor.
- *
- * They are *stubs*, not mocks of behaviour. Nothing here asserts that Inertia
- * was called correctly — that is what the Playwright suite is for. These exist
- * so the markup can be rendered and looked at.
- */
-
-// ---------------------------------------------------------------------------
-// Ziggy
-// ---------------------------------------------------------------------------
-
-/**
- * `route('diary.index', { date: '2026-08-19' })` -> `/diary?date=2026-08-19`.
- *
- * The real app now generates *relative* URLs so a login opened on 127.0.0.1
- * cannot post to localhost. The stub still returns absolute URLs: that is how
- * `AppLayout.isCurrent()` used to fail (absolute vs path), and pathOf() has
- * to keep handling both.
- */
 const routeStub = (name: string, params?: unknown): string => {
     const path = `/${name.replace(/\./g, '/').replace(/\/index$/, '')}`;
     const origin = 'http://localhost';
@@ -48,23 +23,9 @@ const routeStub = (name: string, params?: unknown): string => {
 
 (globalThis as unknown as { route: typeof routeStub }).route = routeStub;
 
-/*
- * And on the component instance, which is where a *template* looks.
- *
- * `route()` in a `<script>` block resolves to the global above; the same call
- * in a template compiles to `_ctx.route` and finds nothing, so a page with
- * `:href="route('login')"` in it died on mount with "route is not a function"
- * and no test could reach it. `resources/js/app.ts` registers both — a global
- * property and an injection — so this registers both too.
- */
 config.global.mocks = { route: routeStub };
 config.global.provide = { route: routeStub };
 
-// ---------------------------------------------------------------------------
-// Inertia
-// ---------------------------------------------------------------------------
-
-/** Page props the test controls. Reset between tests by `setPageProps`. */
 export const pageProps: Record<string, unknown> = {};
 
 export const setPageProps = (props: Record<string, unknown>) => {
@@ -82,14 +43,6 @@ export const router = {
     on: vi.fn(() => () => {}),
 };
 
-/**
- * Every form `useForm` has handed out this test, in creation order.
- *
- * A page's form is internal to it — `<script setup>` exposes nothing — so
- * without this a test can fill in fields and click things but can never say
- * "and now the server rejects it", which is the half of a form that has the
- * bugs in it. `forms[0].setError(...)` is a test standing in for a 422.
- */
 export const forms: FormStub[] = [];
 
 type FormStub = Record<string, unknown> & {
@@ -104,15 +57,6 @@ type FormStub = Record<string, unknown> & {
     delete: ReturnType<typeof vi.fn>;
 };
 
-/*
- * Reactive, and with `setError`/`clearErrors` that actually do something.
- *
- * The stub used to be a plain object literal, which meant two things silently:
- * a component that set an error re-rendered nothing, and `setError` was not
- * defined at all — so a page doing its own client-side validation could not be
- * tested, and the failure looked like "is not a function" rather than like a
- * missing stub.
- */
 const makeForm = (initial: Record<string, unknown>): FormStub => {
     const form = reactive({
         ...initial,
@@ -156,16 +100,6 @@ vi.mock('@inertiajs/vue3', () => ({
     useForm: (initial: Record<string, unknown>) => makeForm(initial),
 }));
 
-// ---------------------------------------------------------------------------
-// jsdom gaps
-// ---------------------------------------------------------------------------
-
-/*
- * jsdom implements neither. `NavRail` reads `matchMedia` through `AppLayout`
- * and `Combobox` uses `ResizeObserver`; without these a component that is
- * perfectly correct throws on mount and the failure says nothing about the
- * markup.
- */
 if (!window.matchMedia) {
     window.matchMedia = ((query: string) => ({
         matches: false,
@@ -187,11 +121,6 @@ if (!globalThis.ResizeObserver) {
     } as unknown as typeof ResizeObserver;
 }
 
-/*
- * `Teleport to="body"` renders nothing findable in a wrapper by default. Modal,
- * SlideOver and ConfirmDialog all use it, so stubbing it keeps their content
- * inside the wrapper where a test can look at it.
- */
 config.global.stubs = {
     Teleport: true,
     transition: false,

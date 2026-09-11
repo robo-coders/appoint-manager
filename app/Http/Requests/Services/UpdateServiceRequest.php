@@ -14,9 +14,7 @@ class UpdateServiceRequest extends FormRequest
         return $this->user()?->can('update', $this->route('service')) ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

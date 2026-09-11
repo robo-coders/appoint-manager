@@ -4,14 +4,6 @@ use App\Models\Customer;
 use App\Models\Tenant;
 use App\Models\User;
 
-/**
- * The import screen's contract with its controller.
- *
- * The screen has to be able to tell four things apart that the old payload
- * could not: which importer ran, whether it was a dry run or the real thing,
- * how many rows survived, and which ones did not. `import_preview` was a flat
- * list of rows and none of those four facts were in it.
- */
 function anImportingOwner(): User
 {
     $tenant = Tenant::factory()->create();
@@ -40,12 +32,9 @@ it('answers a dry run with counts, the kind, and every failure', function () {
     expect($result['ok'])->toBe(2);
     expect($result['failed'])->toBe(1);
 
-    // Failures first, and all of them: a hundred rows of "ok" is not something
-    // anybody reads, a hundred rows of "wrong" is.
     expect($result['rows'][0]['ok'])->toBeFalse();
     expect($result['rows'][0]['row'])->toBe(3);
 
-    // And nothing was written.
     expect(Customer::withoutGlobalScopes()->count())->toBe(0);
 });
 

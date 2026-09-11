@@ -33,15 +33,6 @@ use InvalidArgumentException;
 
 class PublicBookingController extends Controller
 {
-    /**
-     * The proposal.
-     *
-     * There is no calendar on this page any more. `AppointmentSuggester` decides
-     * one finished appointment and three spread ways out of it, and every one of
-     * them carries the phrase that justifies it — see that class, and phase 4 in
-     * DECISIONS.md. The date picker still exists, reachable from the quietest
-     * control on the page, for the customer whose answer is none of the four.
-     */
     public function show(Request $request, AppointmentSuggester $suggester): Response
     {
         $tenant = $this->tenant($request);
@@ -55,8 +46,6 @@ class PublicBookingController extends Controller
             ->map(fn (Service $service) => ServicePayload::toArray($service))
             ->values();
 
-        // Recognised by the manage-link cookie or a reminder link, never by a
-        // typed-in email address. See ReturningCustomer.
         $customer = ReturningCustomer::forRequest($request, $tenant);
 
         $requested = $request->filled('service')
@@ -99,11 +88,6 @@ class PublicBookingController extends Controller
             ],
         ]);
 
-        /*
-         * A reminder link carried the token in the URL. Remember it, so the next
-         * visit is recognised without one — and so the token stops travelling in
-         * a URL that ends up in a browser history and a referrer header.
-         */
         if ($customer !== null && is_string($request->query('ref'))) {
             $response->withCookie(ReturningCustomer::remember(
                 ReturningCustomer::token($request),
@@ -137,13 +121,6 @@ class PublicBookingController extends Controller
             $from = CarbonImmutable::parse($fromDate.' 00:00:00', $tenant->timezone)->utc();
             $to = CarbonImmutable::parse($toDate.' 00:00:00', $tenant->timezone)->addDay()->utc();
 
-            /*
-             * Two questions, two answers: what the day is, and what is left of
-             * it. The picker draws every candidate start and strikes through the
-             * ones that have gone, because a grid with three times in it cannot
-             * tell a customer whether the salon is busy or shut, and a grid with
-             * none in it reads as a broken page.
-             */
             $free = $engine->slotsFor($tenant, $service, $from, $to, $staff);
             $grid = $engine->gridFor($tenant, $service, $from, $to, $staff);
 
@@ -171,7 +148,6 @@ class PublicBookingController extends Controller
                     'starts_at_local' => $local->format('H:i'),
                     'staff_ids' => $available ? $freeIds[$stamp] : [],
                     'available' => $available,
-                    // Morning and afternoon, which is how the picker groups.
                     'half' => $local->hour < 12 ? 'am' : 'pm',
                 ];
             }
@@ -314,14 +290,6 @@ class PublicBookingController extends Controller
         return User::query()->where('tenant_id', $tenant->id)->findOrFail($ids[0]);
     }
 
-    /**
-     * Matched on email only, and never updated from here.
-     *
-     * A public booking is unauthenticated: whoever typed this address may not be the
-     * person who owns it. Writing the submitted name or phone onto an existing record
-     * would let a stranger rewrite a real customer's contact details, so an existing
-     * record is returned untouched and the submitted details stay on the booking.
-     */
     private function findOrCreateCustomer(Tenant $tenant, string $name, string $email, string $phone): Customer
     {
         return app(CustomerResolver::class)->resolve(

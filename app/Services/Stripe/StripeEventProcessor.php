@@ -26,12 +26,6 @@ final class StripeEventProcessor
         };
     }
 
-    /**
-     * A Connect endpoint receives events from every connected account, and a
-     * connected account controls the metadata on its own PaymentIntents. So the
-     * booking named in metadata is a claim, not a fact: it is only believed when
-     * the reporting account owns that booking and the money actually matches.
-     */
     private function paymentSucceeded(StripeEvent $event): void
     {
         $object = $this->object($event);
@@ -155,7 +149,6 @@ final class StripeEventProcessor
             return;
         }
 
-        // An account.updated may only speak for the account that sent it.
         if ($event->account_id !== null && ! hash_equals((string) $event->account_id, $accountId)) {
             $this->reject($event, sprintf(
                 'Account %s reported an update for account %s.',
@@ -179,10 +172,6 @@ final class StripeEventProcessor
         ])->save();
     }
 
-    /**
-     * Direct charges always carry the connected account. An event with no account
-     * is a platform event and can never speak for a tenant's booking.
-     */
     private function accountOwns(StripeEvent $event, Tenant $tenant): bool
     {
         $eventAccount = (string) ($event->account_id ?? '');
@@ -208,9 +197,7 @@ final class StripeEventProcessor
         report(new StripeEventRejected($reason));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function object(StripeEvent $event): array
     {
         $payload = $event->payload ?? [];

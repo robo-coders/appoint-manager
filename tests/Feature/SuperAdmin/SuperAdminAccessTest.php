@@ -4,7 +4,6 @@ use App\Enums\UserRole;
 use App\Models\Tenant;
 use App\Models\User;
 
-/** A super admin whose own tenant has not finished onboarding. */
 function superAdmin(array $tenantOverrides = []): User
 {
     $tenant = Tenant::factory()->create(array_merge([

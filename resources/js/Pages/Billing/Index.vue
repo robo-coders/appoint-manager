@@ -11,18 +11,6 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-/**
- * Billing, on the component library.
- *
- * Invoices are a list, so they are the shared table with their money right and
- * mono. The plan is a summary line and a badge rather than five labelled
- * key-value pairs, because "what am I on and what happens next" is one
- * sentence, not a database dump.
- *
- * Cancelling goes through `ui/ConfirmDialog` — it was a bare submit button
- * beside a textarea, one press from ending a subscription with no confirmation
- * at all.
- */
 const props = defineProps<{
     billing: {
         plan: string | null;
@@ -99,8 +87,6 @@ const invoices = computed(() => props.billing.invoices.map((invoice) => ({ ...in
         <PageHeader title="Billing" description="Your subscription. Card details never touch this app — they stay with Stripe." />
 
         <div class="max-w-measure space-y-8">
-            <!-- Read-only is the state that costs money to ignore, so it is the
-                 first thing on the screen and it says what still works. -->
             <Callout v-if="billing.read_only" tone="danger" title="The diary is read-only">
                 Your booking page is still live and still taking bookings — nothing has been lost. Subscribing turns
                 writing back on immediately.

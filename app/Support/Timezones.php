@@ -4,9 +4,7 @@ namespace App\Support;
 
 class Timezones
 {
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public static function identifiers(): array
     {
         $zones = timezone_identifiers_list();

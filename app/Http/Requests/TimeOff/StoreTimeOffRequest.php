@@ -15,9 +15,7 @@ class StoreTimeOffRequest extends FormRequest
         return $this->user()?->can('create', TimeOff::class) ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

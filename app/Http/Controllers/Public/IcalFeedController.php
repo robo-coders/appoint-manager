@@ -59,9 +59,7 @@ class IcalFeedController extends Controller
         ]);
     }
 
-    /**
-     * @return Collection<int, Booking>
-     */
+    /** @return Collection<int, Booking> */
     private function bookings(CalendarFeedToken $feed): Collection
     {
         return Booking::query()

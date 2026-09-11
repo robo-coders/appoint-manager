@@ -4,14 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * The one permission the staff step in onboarding asks about.
- *
- * Default true, because that is what every existing member of staff already
- * has: nothing in the product hides a customer's phone number today, so
- * defaulting to false would silently take something away from people who were
- * created before the column existed.
- */
 return new class extends Migration
 {
     public function up(): void

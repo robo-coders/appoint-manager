@@ -7,9 +7,7 @@ use Illuminate\Validation\Validator;
 
 trait ValidatesAvailabilityRanges
 {
-    /**
-     * @param  list<array{weekday?: mixed, start_time?: mixed, end_time?: mixed}>  $ranges
-     */
+    /** @param  list<array{weekday?: mixed, start_time?: mixed, end_time?: mixed}>  $ranges */
     protected function validateNoOverlaps(Validator $validator, array $ranges, string $attribute = 'ranges'): void
     {
         $grouped = [];

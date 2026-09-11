@@ -25,9 +25,7 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-09-10 12:00:00', 'Europe/London'));
 });
 
-/**
- * @return array{tenant: Tenant, owner: User, staff: User, service: Service, customer: Customer}
- */
+/** @return array{tenant: Tenant, owner: User, staff: User, service: Service, customer: Customer} */
 function aCustomerRecord(array $overrides = []): array
 {
     $tenant = Tenant::factory()->create(['timezone' => 'Europe/London', 'country' => 'GB']);
@@ -62,9 +60,7 @@ function aCustomerRecord(array $overrides = []): array
     return compact('tenant', 'owner', 'staff', 'service', 'customer');
 }
 
-/**
- * @param  array{tenant: Tenant, staff: User, service: Service, customer: Customer}  $salon
- */
+/** @param  array{tenant: Tenant, staff: User, service: Service, customer: Customer}  $salon */
 function aVisit(array $salon, string $day, BookingStatus $status, array $overrides = []): Booking
 {
     $starts = CarbonImmutable::parse($day.' 09:30:00', 'Europe/London');

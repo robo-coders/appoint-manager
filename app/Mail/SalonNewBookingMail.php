@@ -23,18 +23,6 @@ class SalonNewBookingMail extends Mailable
         return new Envelope(subject: 'New online booking');
     }
 
-    /**
-     * Every string on the page, built here.
-     *
-     * The copy is in PHP because that is the standing rule for anything a
-     * customer reads, and because each of these messages has to be written
-     * twice — once in HTML and once in plain text. Two templates composing the
-     * same sentence is two sentences that will eventually disagree.
-     *
-     * The plaintext part is not an afterthought. Somebody reads it: a phone on a
-     * bad signal, a client set to text-only, a screen reader that prefers it,
-     * and every spam filter that scores a message carrying no text alternative.
-     */
     public function content(): Content
     {
         $rows = MailCopy::bookingRows($this->booking, $this->tenant);

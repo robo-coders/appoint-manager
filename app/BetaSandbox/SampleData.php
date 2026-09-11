@@ -24,44 +24,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * "Load sample data" — a lived-in shop, invented on the spot.
- *
- * A beta tester's first problem is that an empty diary teaches nothing. You
- * cannot tell whether the week view is legible, whether the overdue list finds
- * the right people, or what a cancellation does to the waitlist, against a shop
- * with no customers in it. This fills one with about two months of plausible
- * history and three weeks of what is still to come.
- *
- * **Replace on run, not additive.** Pressing it twice does not double anything:
- * it clears the shop's transactional data first — the same wipe "Reset my shop"
- * performs, from the same list — and lays down a fresh set. The alternative,
- * adding another cohort each time, degrades exactly as you would expect: the
- * third press leaves seventy-two customers and four hundred bookings in a
- * diary that is supposed to be readable, and the owner has no way back short of
- * a reset anyway. Because it deletes, the button carries a confirmation dialog
- * that says what it will replace.
- *
- * **It builds on the shop's real setup and never invents any.** The staff, the
- * services, the opening hours and the prices are the owner's own, so the sample
- * week is the week their salon would actually have. If there is no active
- * service or nobody bookable it refuses with a sentence saying so, rather than
- * quietly producing an empty diary or inventing services the owner would then
- * have to delete.
- *
- * **Deterministic per tenant.** The random stream is seeded from the tenant id,
- * so a reload produces the same shop — which is what makes "does this look
- * right?" a question you can ask twice.
- *
- * **Nothing is sent.** The whole run happens inside `SandboxMute`, phone
- * numbers come from Ofcom's reserved 07700 900xxx drama range, and email
- * addresses are on the reserved `.test` domain. Rows are written directly
- * rather than through `BookingService`, so no confirmation, no reminder and no
- * loyalty stamp is triggered by the load itself.
- */
 final class SampleData
 {
-    /** Ofcom reserves 07700 900000-900999 for drama. No handset is ever on one. */
     private const PHONE_PREFIX = '07700900';
 
     public const DECLINE_LABEL = 'Always declines — test card';
@@ -72,7 +36,6 @@ final class SampleData
         'busy' => ['customers' => 64, 'bookings' => 320, 'waitlist' => 8],
     ];
 
-    /** Marks a row as invented, on the one screen an owner would wonder about. */
     private const LABEL = 'Sample data.';
 
     private const FIRST_NAMES = [
@@ -95,9 +58,7 @@ final class SampleData
 
     public function __construct(private SandboxReset $reset, private Loyalty $loyalty) {}
 
-    /**
-     * @return list<array{key: string, label: string, customers: int, bookings: int}>
-     */
+    /** @return list<array{key: string, label: string, customers: int, bookings: int}> */
     public static function sizeOptions(): array
     {
         return [
@@ -110,8 +71,6 @@ final class SampleData
     /**
      * @param  'quiet'|'typical'|'busy'  $size
      * @return array{customers: int, bookings: int, waitlist: int, loyalty: int}
-     *
-     * @throws SandboxNotReady when the shop has nothing to build a diary from.
      */
     public function load(Tenant $tenant, string $size = 'typical'): array
     {
@@ -132,19 +91,7 @@ final class SampleData
                     throw SandboxNotReady::forTenant();
                 }
 
-                /*
-                 * One transaction around the wipe *and* the rebuild. They are
-                 * separate operations with separate reasons to fail, and the
-                 * outcome nobody can recover from is the one in between: a shop
-                 * emptied by a load that then threw. Either the owner gets the
-                 * new sample shop or they keep the one they had.
-                 *
-                 * `SandboxReset::run` opens a transaction of its own; nested,
-                 * that is a savepoint, so it commits with this one or not at all.
-                 */
                 return DB::transaction(function () use ($tenant, $staff, $services, $size): array {
-                    // Replace, never accumulate. Same list as "Reset my shop",
-                    // so there is one definition of what a shop's data is.
                     $this->reset->run($tenant);
 
                     return $this->build($tenant, $staff, $services, $size);
@@ -163,10 +110,6 @@ final class SampleData
      */
     private function build(Tenant $tenant, array $staff, array $services, string $size): array
     {
-        /*
-         * Seeded from the tenant id, so the same shop reloads to the same shop
-         * and two beta salons do not get an identical diary.
-         */
         mt_srand(20260906 + $tenant->id + (ord($size[0]) * 17));
 
         $today = CarbonImmutable::now($tenant->timezone)->startOfDay();
@@ -178,11 +121,6 @@ final class SampleData
         $this->sendLog($pairs, $bookings);
         $loyalty = $this->loyalty($tenant, $pairs);
 
-        /*
-         * People, not customer-and-pet pairs. A few clients have two pets, so
-         * `count($pairs)` is larger than the number of customers — and this
-         * figure is read straight out onto the screen as "24 customers".
-         */
         $people = count(array_unique(array_map(
             fn (array $pair): int => (int) $pair['customer']->id,
             $pairs,
@@ -196,11 +134,7 @@ final class SampleData
         ];
     }
 
-    /**
-     * Clients and their pets, including one whose card is a known Stripe decline.
-     *
-     * @return list<array{customer: Customer, subject: Subject}>
-     */
+    /** @return list<array{customer: Customer, subject: Subject}> */
     private function customers(int $count): array
     {
         $pairs = [];
@@ -215,9 +149,6 @@ final class SampleData
 
             $customer = Customer::query()->create([
                 'name' => $name,
-                // `.test` is reserved by RFC 6761 and resolves nowhere, so an
-                // address here cannot reach a real inbox even if something one
-                // day tries to send to it.
                 'email' => Str::slug($name, '.').'.'.$i.'@example.test',
                 'phone' => self::PHONE_PREFIX.str_pad((string) $i, 3, '0', STR_PAD_LEFT),
                 'notes' => $decline
@@ -250,15 +181,6 @@ final class SampleData
     }
 
     /**
-     * Five weeks behind and three ahead, on the shop's own services and staff.
-     *
-     * The spread of outcomes is the point. Past days are mostly completed with
-     * a real tail of cancellations and no-shows, because a dashboard whose
-     * no-show rate is zero tells an owner nothing about the feature they are
-     * being asked to evaluate. Future days are mostly confirmed with a few
-     * still pending, which is what makes "release expired holds" and the
-     * request queue visible after a fast-forward.
-     *
      * @param  list<User>  $staff
      * @param  list<Service>  $services
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
@@ -360,15 +282,7 @@ final class SampleData
         return $created;
     }
 
-    /**
-     * The mix of outcomes, by whether the day has happened.
-     *
-     * Today is treated as the past for statuses — a diary whose morning is
-     * still "confirmed" at four in the afternoon is the one thing an owner
-     * looking at today would notice immediately.
-     *
-     * @param  array{customer: Customer, subject: Subject}  $pair
-     */
+    /** @param  array{customer: Customer, subject: Subject}  $pair */
     private function booking(
         User $staff,
         Service $service,
@@ -403,20 +317,10 @@ final class SampleData
             'cancelled_at' => $status === BookingStatus::Cancelled ? $starts->subDay()->utc() : null,
             'cancellation_reason' => $status === BookingStatus::Cancelled ? 'Client cancelled' : null,
             'source' => mt_rand(0, 2) === 0 ? BookingSource::Manual : BookingSource::Online,
-            /*
-             * A pending future booking is a *checkout hold*, not a request:
-             * `request_expires_at` stays null so `bookings:release-expired` is
-             * the automation that picks it up after a fast-forward. Its age is
-             * what that command measures, and a row created just now is not yet
-             * old enough — which is exactly the point: it becomes old enough
-             * when time moves.
-             */
         ]);
     }
 
     /**
-     * Four people waiting, on services and days the shop actually offers.
-     *
      * @param  list<Service>  $services
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
      */
@@ -436,8 +340,6 @@ final class SampleData
                 'preferred_times' => $preferred,
                 'notes' => self::LABEL,
                 'is_active' => true,
-                // Inside the sandbox's own fast-forward reach: one press of
-                // "Skip 1 week" retires the first two and leaves the rest.
                 'expires_at' => $today->addDays(3 + $i * 4)->utc(),
             ]);
         }
@@ -469,13 +371,6 @@ final class SampleData
     }
 
     /**
-     * A few rows in the send log, so it is not the one empty screen.
-     *
-     * Written directly rather than by asking `Notifier` to send them. These
-     * describe messages that went out weeks ago, in a shop that did not exist
-     * until a moment ago; routing them through the notifier would mean
-     * inventing a delivery that never happened and then muting it.
-     *
      * @param  list<array{customer: Customer, subject: Subject}>  $pairs
      * @param  list<Booking>  $bookings
      */
@@ -510,17 +405,7 @@ final class SampleData
         }
     }
 
-    /**
-     * One regular, three quarters of the way to a free session.
-     *
-     * Only when the shop has loyalty switched on and a package configured — the
-     * feature is opt-in and a sandbox must not make it look otherwise. The
-     * enrolment is written at a count rather than earned by completing
-     * appointments, because a stamp is earned on the *transition* to completed
-     * and these bookings are created completed.
-     *
-     * @param  list<array{customer: Customer, subject: Subject}>  $pairs
-     */
+    /** @param  list<array{customer: Customer, subject: Subject}>  $pairs */
     private function loyalty(Tenant $tenant, array $pairs): int
     {
         $package = $this->loyalty->activePackage($tenant);

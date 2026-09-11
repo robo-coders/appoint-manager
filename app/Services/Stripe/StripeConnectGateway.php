@@ -127,36 +127,16 @@ final class StripeConnectGateway implements StripeGateway
         return [
             'id' => $event->id,
             'type' => $event->type,
-            // Present on Connect events; the account that actually reported this.
             'account' => isset($event->account) ? (string) $event->account : null,
             'data' => $event->data->toArray(),
         ];
     }
 
-    /**
-     * The Stripe client for a call made on behalf of `$tenant`.
-     *
-     * **BetaSandbox integration point — the one this feature has in the payment
-     * path.** `StripeTestMode::secretFor()` returns the platform's configured
-     * secret for every ordinary tenant, and for a beta tenant returns a test-mode
-     * key or refuses outright. It is here, and only here, because this method is
-     * the single place in the product where a Stripe credential is chosen: a
-     * guard in a controller could be routed around by the next caller, and one
-     * per public method would be seven copies of the same rule.
-     *
-     * See `App\BetaSandbox\StripeTestMode` and BETA_SANDBOX.md. Removing the
-     * beta sandbox means putting `config('services.stripe.secret')` back here
-     * and deleting the two arguments this method and `clientForAccount()` take.
-     */
     private function client(?Tenant $tenant = null): StripeClient
     {
         return new StripeClient(StripeTestMode::secretFor($tenant));
     }
 
-    /**
-     * The same decision, for the three calls that are handed a connected
-     * account id rather than a tenant. See `StripeTestMode::secretForAccount`.
-     */
     private function clientForAccount(?string $accountId): StripeClient
     {
         return new StripeClient(StripeTestMode::secretForAccount($accountId));

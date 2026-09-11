@@ -3,19 +3,9 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
-use App\Services\Rebooking\RebookAttempts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * One rebooking chase we have committed to sending.
- *
- * A row here is a claim on a (subject, due cycle, attempt) slot. It exists
- * before the message is queued and it is deleted if the provider rejects the
- * send, so tomorrow's run retries rather than skipping the subject forever.
- *
- * @see RebookAttempts
- */
 class RebookSend extends Model
 {
     use BelongsToTenant;
@@ -30,9 +20,7 @@ class RebookSend extends Model
         'sent_at',
     ];
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -43,17 +31,13 @@ class RebookSend extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Subject, $this>
-     */
+    /** @return BelongsTo<Subject, $this> */
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
     }
 
-    /**
-     * @return BelongsTo<Message, $this>
-     */
+    /** @return BelongsTo<Message, $this> */
     public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);

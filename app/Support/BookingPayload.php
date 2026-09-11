@@ -8,10 +8,6 @@ class BookingPayload
 {
     /**
      * @param  array<string, mixed>  $extra  Screen-specific keys merged over the base
-     *                                       payload — the diary's freed-slot
-     *                                       annotation, for one. Kept out of the base
-     *                                       so every caller does not pay for a
-     *                                       waitlist query it will not read.
      * @return array<string, mixed>
      */
     public static function toArray(Booking $booking, string $timezone, array $extra = []): array
@@ -38,8 +34,6 @@ class BookingPayload
             'price_at_booking' => $booking->price_at_booking->toArray(),
             'deposit_at_booking' => $booking->deposit_at_booking->toArray(),
             'source' => $booking->source->value,
-            // The free one. Every screen that lists a booking needs to be able
-            // to say why a £0 appointment is £0.
             'is_loyalty_reward' => (bool) $booking->is_loyalty_reward,
             'public_token' => $booking->public_token,
             'cancellation_reason' => $booking->cancellation_reason,

@@ -163,9 +163,7 @@ class BillingEventProcessor
         ])->save();
     }
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     private function resolveFailures(Tenant $tenant, array $invoice): void
     {
         $invoiceId = (string) ($invoice['id'] ?? '');
@@ -181,9 +179,7 @@ class BillingEventProcessor
             ->update(['resolved_at' => now()]);
     }
 
-    /**
-     * @param  array<string, mixed>  $invoice
-     */
+    /** @param  array<string, mixed>  $invoice */
     private function periodEndFromInvoice(array $invoice): ?CarbonImmutable
     {
         $end = data_get($invoice, 'lines.data.0.period.end')
@@ -192,9 +188,7 @@ class BillingEventProcessor
         return $end ? CarbonImmutable::createFromTimestamp((int) $end) : null;
     }
 
-    /**
-     * @param  array<string, mixed>  $object
-     */
+    /** @param  array<string, mixed>  $object */
     private function tenantFrom(array $object): ?Tenant
     {
         $tenantId = (int) data_get($object, 'metadata.tenant_id', 0);
@@ -215,9 +209,7 @@ class BillingEventProcessor
         return Tenant::query()->where('stripe_customer_id', $customerId)->first();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function object(BillingEvent $event): array
     {
         $payload = $event->payload ?? [];

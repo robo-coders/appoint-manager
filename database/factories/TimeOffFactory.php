@@ -6,14 +6,10 @@ use App\Models\TimeOff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<TimeOff>
- */
+/** @extends Factory<TimeOff> */
 class TimeOffFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         $startsAt = now()->utc()->addDay()->setTime(9, 0);

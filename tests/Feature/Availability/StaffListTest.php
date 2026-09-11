@@ -10,24 +10,14 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 
-/**
- * The staff row.
- *
- * Every part of it is a fact the server works out — the hours line, the week's
- * total and the load — so this is where they are checked. The hours line in
- * particular is a summary, and a summary that is wrong is worse than a column of
- * raw ranges: it reads as authoritative.
- */
 function aStaffList(): array
 {
-    // A Wednesday, so "this week" has days either side of it.
     test()->travelTo(CarbonImmutable::parse('2026-03-18 09:00:00', 'Europe/London'));
 
     $salon = aSalon(['staff' => ['name' => 'Rosa Adeyemi']]);
     $owner = $salon['staff'];
     $owner->forceFill(['role' => UserRole::Owner])->save();
 
-    // `aSalon` gives the owner a Tuesday. Clear it so each test states its own.
     app(TenantContext::class)->set($salon['tenant']);
     AvailabilityRule::query()->where('user_id', $owner->id)->delete();
     app(TenantContext::class)->clear();
@@ -110,14 +100,11 @@ it('counts the week she is looking at, and not the appointments nobody is coming
         ]);
     };
 
-    // The week of Wednesday 18 March 2026 runs Mon 16 to Sun 22.
     $make('2026-03-16', BookingStatus::Completed);
     $make('2026-03-18', BookingStatus::Confirmed);
     $make('2026-03-20', BookingStatus::Pending);
-    // Nobody is coming to these two.
     $make('2026-03-19', BookingStatus::Cancelled);
     $make('2026-03-17', BookingStatus::NoShow);
-    // Next week.
     $make('2026-03-24', BookingStatus::Confirmed);
 
     app(TenantContext::class)->clear();

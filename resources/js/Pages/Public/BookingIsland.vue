@@ -12,38 +12,6 @@ import { sentenceCase } from '@/lib/copy';
 import axios from 'axios';
 import { computed, nextTick, reactive, ref } from 'vue';
 
-/**
- * The public booking page. **No calendar.**
- *
- * A calendar makes a customer assemble an appointment out of two independent
- * choices and hold the constraint in their head while they do it: "90 minutes,
- * with Ana, some morning, and it has to be after the school run." This page
- * states a finished appointment — decided by `AppointmentSuggester`, with the
- * phrase that justifies it — and asks them to accept it. Nine visible elements,
- * one column, no card, no wizard, no step counter.
- *
- * The pieces, in order down the page:
- *
- *   1. the salon mark and name (in the Blade shell, not here)
- *   2. the context line, which leads with the *reason* for this appointment
- *   3. the appointment, at 34px, the largest thing on screen by a wide margin
- *   4. the cost, as one line
- *   5. the primary action, whose label names the outcome
- *   6. the refund line, as a date she can act on
- *   7. `Or`, on a hairline
- *   8. three alternatives, each a complete appointment
- *   9. `Pick another day` — the quietest thing here
- *
- * Details are asked for **after** the appointment is accepted, revealed inline
- * beneath a proposal that stays on screen. That is disclosure, not a step: a
- * new customer is never asked to fill in a form for an appointment they have
- * not yet agreed to, and nothing has to be re-entered when they change their
- * mind about the time.
- *
- * A returning customer — recognised by the manage-link cookie or a reminder
- * link, never by a typed-in email — skips the form entirely. One tap books.
- */
-
 type Money = { amount: number; formatted: string; currency: string };
 
 type ProposalPayload = {
@@ -59,7 +27,6 @@ type ProposalPayload = {
     deposit: Money;
     staff_id: number;
     staff_name: string;
-    /** "Ana" — how the salon names its staff to a customer. Built server-side. */
     staff_first_name: string;
     staff_ids: number[];
     subject_id: number | null;
@@ -114,12 +81,6 @@ const props = defineProps<{
     urls: { page: string; availability: string; store: string; waitlist: string };
 }>();
 
-/*
- * One flat state, deliberately not a step machine. `proposal` is always the
- * appointment currently on offer; everything else is a panel that is either
- * revealed or not. There is no state in which the proposal is off screen, which
- * is what stops this becoming the wizard it replaced.
- */
 const proposal = ref<ProposalPayload | null>(props.suggestion.primary);
 const alternatives = ref<ProposalPayload[]>(props.suggestion.alternatives);
 const context = ref(props.suggestion.context ?? '');
@@ -144,19 +105,8 @@ const messageHref = computed(() => (props.tenant.phone ? `sms:${props.tenant.pho
 const isRequestMode = computed(() => props.tenant.booking_mode === 'request');
 const requestAction = 'Request this time';
 
-/*
- * A notice is not an error.
- *
- * "That time was just taken" describes the system working — somebody else was a
- * second faster — and it has to survive the picker opening underneath it. It
- * used to live in `error`, which `loadDays()` clears on every call, so the
- * customer who lost a race watched the page rearrange itself with no
- * explanation at all. Found by the end-to-end race test, which is the only
- * thing that can be in two browsers at once.
- */
 const notice = ref('');
 
-// The inline picker's own state.
 const weekStart = ref(props.suggestion.primary?.date ?? props.today);
 const days = ref<Record<string, Slot[]>>({});
 const loadingDays = ref(false);
@@ -171,7 +121,6 @@ const details = reactive({
 });
 const fieldErrors = reactive<Record<string, string>>({});
 
-// Stripe, only if a deposit is actually taken.
 const clientSecret = ref('');
 const stripeAccount = ref('');
 const manageUrl = ref('');
@@ -186,7 +135,6 @@ const shiftDays = (iso: string, amount: number) => {
     return [next.getFullYear(), String(next.getMonth() + 1).padStart(2, '0'), String(next.getDate()).padStart(2, '0')].join('-');
 };
 
-/** Monday-first, so the rail reads the way a British week does. */
 const week = computed(() => {
     const [y, m, d] = weekStart.value.split('-').map(Number);
     const anchor = new Date(y, m - 1, d);
@@ -220,7 +168,6 @@ const openPicker = async () => {
     await loadDays();
 };
 
-/** Choosing anything is an answer to the notice, so the notice goes. */
 const clearNotice = () => (notice.value = '');
 
 const shiftWeek = async (direction: number) => {
@@ -230,18 +177,8 @@ const shiftWeek = async (direction: number) => {
 
 const pickDay = (iso: string) => {
     weekStart.value = iso;
-    // Selecting a day alone changes nothing about the proposal — a day is half
-    // an appointment, and half an appointment is what this page exists to avoid.
 };
 
-/**
- * Picking a time rewrites the proposal and collapses the picker.
- *
- * The reason line becomes "You chose this time" rather than keeping whatever
- * `AppointmentSuggester` said about a slot the customer has now overruled.
- * Leaving "your usual Tuesday" above a Thursday she picked herself would be the
- * page lying about its own reasoning.
- */
 const pickSlot = (slot: Slot) => {
     const base = proposal.value;
     if (!base) return;
@@ -264,9 +201,6 @@ const pickSlot = (slot: Slot) => {
         action_label: isRequestMode.value
             ? requestAction
             : `Reserve ${local.toLocaleDateString(undefined, { weekday: 'long' })} at ${slot.starts_at_local}`,
-        // The refund cut-off moves with the appointment and this page cannot
-        // recompute the salon's own window, so it is dropped rather than shown
-        // as a date that is no longer true.
         free_until: null,
     };
 
@@ -274,41 +208,10 @@ const pickSlot = (slot: Slot) => {
     pickerOpen.value = false;
 };
 
-/**
- * A different service is a different appointment, so the server re-proposes it.
- *
- * Everything about the proposal — the duration, the staff who can do it, the
- * price, the deposit and the reason — is the suggester's answer for one
- * service. Rewriting it in the browser would be re-implementing the ranking in
- * TypeScript, badly, and it would be the second copy of it.
- */
 const switchService = (id: number) => {
     window.location.href = `${props.urls.page}?service=${id}`;
 };
 
-/**
- * "with Ana instead of Maya", or nothing.
- *
- * `AppointmentSuggester` ranks *appointments*, and an appointment is a time and
- * a person. So an alternative at a time the proposed groomer cannot work is an
- * alternative with somebody else — and until now the page said so only by
- * putting a different first name in the muted column, three rows below a context
- * line naming the groomer being proposed. A customer scanning four rows that all
- * look alike had to hold "Maya" in their head and compare. Most did not, which
- * makes this the page hiding a substitution rather than offering one.
- *
- * The booking behaviour is unchanged and deliberately so — `resolveStaff()`
- * reassigning silently is a product question recorded in DECISIONS.md, not a
- * rendering one. What changes is that the page stops being quiet about it.
- *
- * Composed here rather than in `ProposalPayload` because the comparison is
- * against the appointment *currently* on offer, which is client state: accepting
- * an alternative makes it the proposal and pushes the old proposal back into
- * this list, at which point a note baked in server-side would be describing a
- * groomer nobody is being offered any more. The names themselves are still
- * formatted server-side — `staff_first_name` — so the rule that customer-facing
- * strings are built in PHP holds where it was actually about formatting.
- */
 const staffChange = (alternative: ProposalPayload): string | undefined => {
     const current = proposal.value;
 
@@ -347,14 +250,6 @@ const validate = () => {
     return Object.keys(fieldErrors).length === 0;
 };
 
-/**
- * The one forward action.
- *
- * A returning customer books straight away. A new one is asked for their
- * details first, in fields that appear under the proposal they have just
- * accepted — and the button keeps the same label, because it is still the same
- * outcome.
- */
 const reserve = async () => {
     if (!proposal.value) return;
 
@@ -419,8 +314,6 @@ const reserve = async () => {
 
         if (status === 409) {
             await openPicker();
-            // After `openPicker`, which clears `error` on its way through
-            // `loadDays`. A notice is not an error and does not share its slot.
             notice.value = 'That time was just taken. Here is what is still free.';
         } else if (status === 503) {
             error.value = message ?? 'We couldn’t reach payments. Nothing has been charged — please try again in a moment.';
@@ -442,7 +335,6 @@ const reserve = async () => {
     }
 };
 
-// ---- Stripe ------------------------------------------------------------
 const loadStripeJs = async () => {
     if ((window as unknown as { Stripe?: unknown }).Stripe) return;
 
@@ -533,17 +425,8 @@ const joinWaitlist = async () => {
     <div>
         <p v-if="error" class="mb-4 text-15 text-danger" role="alert">{{ error }}</p>
 
-        <!--
-            Not `--danger`. Losing a race is the mechanic working, and colouring
-            it as a failure tells a customer they did something wrong when the
-            only thing that happened is that somebody else was faster.
-            `role="status"` rather than `alert` for the same reason.
-        -->
         <p v-if="notice" class="mb-4 text-15" role="status">{{ notice }}</p>
 
-        <!-- ============================================================
-             Paid. The deposit is the last thing between here and booked.
-             ============================================================ -->
         <section v-if="clientSecret" class="space-y-4">
             <h1 class="text-20 font-medium">{{ isRequestMode ? 'Hold the deposit' : 'Pay the deposit' }}</h1>
             <p class="text-15 text-ink-2">
@@ -586,10 +469,6 @@ const joinWaitlist = async () => {
             </p>
         </section>
 
-        <!-- ============================================================
-             The business has not finished setting up online booking. Not the
-             same screen as a full diary, and deliberately not the waitlist.
-             ============================================================ -->
         <section v-else-if="setupIncomplete" class="space-y-4">
             <h1 class="text-24 font-medium">{{ setupHeading }}</h1>
             <p class="text-15 text-ink-2">{{ suggestion.setup_note }}</p>
@@ -604,10 +483,6 @@ const joinWaitlist = async () => {
             </p>
         </section>
 
-        <!-- ============================================================
-             Nothing bookable at all. The one screen where the waitlist is
-             the primary action rather than a footnote.
-             ============================================================ -->
         <section v-else-if="!proposal" class="space-y-4">
             <h1 class="text-24 font-medium">{{ tenant.name }} is fully booked</h1>
             <p class="text-15 text-ink-2">
@@ -626,9 +501,6 @@ const joinWaitlist = async () => {
             </div>
         </section>
 
-        <!-- ============================================================
-             The proposal. Everything above is an outcome; this is the page.
-             ============================================================ -->
         <template v-else>
             <template v-if="pickerOpen">
                 <SlotPicker
@@ -643,15 +515,6 @@ const joinWaitlist = async () => {
                     @shift-week="shiftWeek"
                 />
 
-                <!--
-                    A customer who has opened the picker is a customer who is
-                    browsing, so the price list belongs here too — at the foot of
-                    it, under the week, because they came here for a time.
-
-                    The proposal view has its own way in now (see "A different
-                    service" below); this is the same list from the same
-                    component, not a second copy of it.
-                -->
                 <ServiceChoiceList
                     v-if="services.length > 1"
                     class="mt-8"
@@ -682,7 +545,6 @@ const joinWaitlist = async () => {
                     </Button>
                 </div>
 
-                <!-- The refund window as a date, not as arithmetic. -->
                 <p v-if="proposal.free_until" class="mt-3 text-center text-13 text-ink-2">
                     Free to cancel or move until {{ proposal.free_until }}
                 </p>
@@ -690,7 +552,6 @@ const joinWaitlist = async () => {
                     This is inside the cancellation window, so the deposit is not refundable
                 </p>
 
-                <!-- ---- the details, revealed under the proposal ---- -->
                 <section v-if="detailsOpen" class="appear mt-8 space-y-3">
                     <h2 class="caption">Just your details, and it’s yours</h2>
                     <TextInput
@@ -744,7 +605,6 @@ const joinWaitlist = async () => {
                     </template>
                 </section>
 
-                <!-- ---- Or, on a hairline ---- -->
                 <div v-if="alternatives.length" class="mt-8 flex items-center gap-3" aria-hidden="true">
                     <span class="block flex-1 border-t border-t-rule"></span>
                     <span class="text-13 text-ink-2">Or</span>
@@ -755,15 +615,6 @@ const joinWaitlist = async () => {
                     <h2 class="sr-only">Other times</h2>
                     <ul class="mt-2">
                         <li v-for="alternative in alternatives" :key="alternative.starts_at">
-                            <!--
-                                No aria-label. The visible text is the
-                                accessible name, which is what WCAG 2.5.3
-                                (Label in Name) asks for: a speech-input user
-                                saying "Wednesday morning" activates the row
-                                they can see. An aria-label that reworded it
-                                into "Wednesday 2 September at 09:15" read
-                                better and matched nothing.
-                            -->
                             <ChoiceRow
                                 :label="alternative.reason"
                                 :note="staffChange(alternative)"
@@ -774,29 +625,6 @@ const joinWaitlist = async () => {
                     </ul>
                 </template>
 
-                <!--
-                    ---- a different service, revealed in place ----
-
-                    The page had no visible way to change service at all. It
-                    picks one — the customer's usual, or the salon's first — and
-                    the only route to the other eight was to open the day picker
-                    and scroll past a week grid to a list headed "Something
-                    else". A customer whose dog needs a hand strip could not find
-                    that, and the page was quietly answering a question it had
-                    not asked.
-
-                    So: a list, not a form, and not a select. Nine appointments
-                    at nine prices is exactly what the alternatives below are —
-                    complete choices on hairline rows — and reusing that row is
-                    what keeps this from reading as a control panel bolted to a
-                    proposal.
-
-                    It stays shut by default and it is opened from the quietest
-                    line on the page, so the proposal is still the only thing
-                    competing for attention when the page loads. Choosing one
-                    hands the decision back to `AppointmentSuggester` rather than
-                    re-ranking anything here — see `switchService`.
-                -->
                 <ServiceChoiceList
                     v-if="servicesOpen && services.length > 1"
                     id="service-list"
@@ -807,14 +635,6 @@ const joinWaitlist = async () => {
                     @pick="switchService"
                 />
 
-                <!--
-                    ---- the quietest things on the page ----
-
-                    Two controls on one line rather than two stacked lines. Both
-                    are ways of saying "not this one", they are the last thing
-                    down the page, and giving each its own row would make the
-                    bottom of the page as tall as the alternatives above it.
-                -->
                 <p class="mt-6 flex flex-wrap items-center justify-center">
                     <QuietAction @click="openPicker">Pick another day</QuietAction>
                     <template v-if="services.length > 1">

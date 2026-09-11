@@ -14,29 +14,6 @@ import { Head, router, useForm } from '@inertiajs/vue3';
 import { toast } from '@/lib/toast';
 import { computed, ref, watch } from 'vue';
 
-/**
- * Every tenant on the platform. Our screen, at 2am.
- *
- * It does not have to seduce anybody, so it does not: dense is the right answer
- * here and `data-density="console"` — set on the admin surface's root in
- * `app.blade.php`, and never set anywhere before this phase — is what makes the
- * rows 28px instead of 34px. Dense is not the same as sloppy, and what it was
- * was sloppy: a hand-rolled `<table>` with six unlabelled `<th>`s, five bare
- * underlined `<button>`s per row, two placeholder-only `<input>`s with no
- * labels at all, and a `plan status comped` cell that concatenated three
- * different facts into one string with spaces.
- *
- * The one idea: **this screen answers "who is in trouble" before it answers
- * anything else.** Sorted by name it answered nothing — a hundred salons in
- * alphabetical order is a directory, not a console. The default sort is now
- * whichever tenants need looking at, and the state that puts them there is
- * spelled out in words in its own column rather than inferred from three
- * booleans in a string.
- *
- * Impersonation is the dangerous one and it is treated as such: it is not a
- * link in a row of five identical links, it is behind a confirm that names the
- * salon and the person whose session is about to be borrowed. See below.
- */
 type Tenant = {
     id: number;
     name: string;
@@ -46,7 +23,6 @@ type Tenant = {
     trial_ends_at: string | null;
     trial_days_left: number | null;
     is_comped: boolean;
-    /** BetaSandbox — see BETA_SANDBOX.md. */
     is_beta: boolean;
     booking_page_live: boolean;
     bookings_this_month: number;
@@ -95,11 +71,6 @@ const columns: Column[] = [
     { key: 'last_seen_label', label: 'Last seen', sortable: true, width: 'when', secondary: true },
 ];
 
-/*
- * Trouble first, then quiet, then everybody else — and alphabetical inside each
- * band so the list is still findable by eye. `Table` sorts itself once a column
- * header is clicked; this is only what it opens on.
- */
 const rows = computed(() =>
     [...props.tenants]
         .map((tenant) => ({
@@ -117,20 +88,6 @@ const rows = computed(() =>
 
 const attention = computed(() => props.tenants.filter((tenant) => tenant.needs_attention).length);
 
-/* ----------------------------------------------------------- impersonation */
-
-/**
- * The dangerous action on this surface, and the only one behind a confirm.
- *
- * Everything else here is reversible and ours: extending a trial, comping an
- * account, publishing a booking page. Impersonation is neither — it puts us
- * inside a real business's real diary as its owner, where every write is theirs
- * and not ours, and the audit row it leaves has that owner's name on it.
- *
- * So it is not a fifth underlined word in a row of five. It is `danger` in the
- * row menu, it names the salon *and the person* before it happens, and its
- * confirm button says what it is about to do rather than "Confirm".
- */
 const impersonating = ref<Tenant | null>(null);
 
 const startImpersonating = () => {
@@ -140,8 +97,6 @@ const startImpersonating = () => {
     impersonating.value = null;
     router.post(route('super-admin.impersonate', tenant.id));
 };
-
-/* ------------------------------------------------------------ copy a setup */
 
 const cloneOpen = ref(false);
 const clone = useForm({ from_tenant_id: '', to_tenant_id: '' });
@@ -161,7 +116,6 @@ const allowance = ref('');
 const ceiling = ref('');
 const credit = ref('200');
 const pricePence = ref('');
-/* BetaSandbox — see BETA_SANDBOX.md. */
 const beta = ref(false);
 
 const openControls = (tenant: Tenant) => {
@@ -175,11 +129,6 @@ const openControls = (tenant: Tenant) => {
     pricePence.value = tenant.monthly_price_override_pence === null ? '' : String(tenant.monthly_price_override_pence);
 };
 
-/*
- * The panel holds a copy of the row from when it opened. A save reloads the
- * tenant list but used to leave this copy stale, so "Set allowance" wrote 250
- * and the panel still said 200. Keep the open row in sync with the list.
- */
 watch(
     () => props.tenants,
     (tenants) => {
@@ -228,11 +177,6 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
             <Button variant="secondary" @click="cloneOpen = true">Copy a setup</Button>
         </PageHeader>
 
-        <!--
-            The one thing worth saying before the table. Not a stat band: this is
-            a console, and a figure that is usually zero should be absent when it
-            is zero rather than reserving space to say so.
-        -->
         <Callout v-if="attention > 0" tone="danger" class="mb-4">
             {{ attention }} {{ attention === 1 ? 'salon needs' : 'salons need' }} looking at — expired trials,
             failed payments and lapsed subscriptions are at the top of the list.
@@ -251,12 +195,6 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
                 <span class="ml-2 font-mono text-12 text-ink-2">{{ row.slug }}</span>
             </template>
 
-            <!--
-                The state in words. It used to be `plan + status + comped` — three facts joined by spaces,
-                so "trial past_due" and "pro active comped" were both one cell
-                you had to parse. `Badge` carries its own label, so the meaning
-                is never in the colour.
-            -->
             <template #cell:state="{ row }">
                 <Badge :tone="row.needs_attention ? 'cancelled' : row.state === 'Trial' ? 'pending' : 'confirmed'">
                     {{ row.state }}
@@ -295,11 +233,6 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
             </template>
         </Table>
 
-        <!--
-            Names the salon and the person. "Are you sure?" would be the wrong
-            question: the thing worth checking is *whose* diary, and there are a
-            hundred rows in that table.
-        -->
         <ConfirmDialog
             :show="impersonating !== null"
             title="Sign in as this salon's owner"
@@ -422,16 +355,6 @@ const cloneTo = computed(() => tenantById(clone.to_tenant_id));
                     </form>
                 </section>
 
-                <!--
-                    BetaSandbox — see BETA_SANDBOX.md.
-
-                    One checkbox on the controls that already exist, rather than
-                    a screen of its own for a single boolean. It is last because
-                    it is the only switch here that is not about money, and the
-                    hint spells out both consequences: a beta salon can never
-                    reach Stripe live mode, and it gains three buttons that
-                    delete its own data.
-                -->
                 <section>
                     <h2 class="border-b border-b-rule pb-3 text-17">Beta sandbox</h2>
                     <form

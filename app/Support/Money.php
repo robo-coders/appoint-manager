@@ -6,11 +6,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use InvalidArgumentException;
 use JsonSerializable;
 
-/**
- * Integer pence. Never constructed from a float.
- *
- * @implements Arrayable<string, int|string>
- */
+/** @implements Arrayable<string, int|string> */
 final readonly class Money implements Arrayable, JsonSerializable
 {
     public function __construct(
@@ -34,9 +30,7 @@ final readonly class Money implements Arrayable, JsonSerializable
         };
     }
 
-    /**
-     * @return array{amount: int, formatted: string, currency: string}
-     */
+    /** @return array{amount: int, formatted: string, currency: string} */
     public function toArray(): array
     {
         return [
@@ -46,9 +40,7 @@ final readonly class Money implements Arrayable, JsonSerializable
         ];
     }
 
-    /**
-     * @return array{amount: int, formatted: string, currency: string}
-     */
+    /** @return array{amount: int, formatted: string, currency: string} */
     public function jsonSerialize(): array
     {
         return $this->toArray();

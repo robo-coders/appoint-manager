@@ -12,19 +12,11 @@ use App\Support\VerticalInterval;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
-/**
- * Who is due back, and what that is worth.
- *
- * Reads with `withoutGlobalScopes()` plus an explicit `tenant_id`. This walks
- * a tenant's whole customer base; a missing tenant predicate is a leak.
- */
 final class OverdueSubjects
 {
     public function __construct(private RebookInterval $intervals) {}
 
-    /**
-     * @return Collection<int, array<string, mixed>>
-     */
+    /** @return Collection<int, array<string, mixed>> */
     public function forTenant(Tenant $tenant, ?CarbonImmutable $today = null): Collection
     {
         $today = ($today ?? CarbonImmutable::now($tenant->timezone))->startOfDay();
@@ -97,12 +89,6 @@ final class OverdueSubjects
                     'price' => $price->formatted(),
                     'stopped' => false,
                     'snoozed_until' => $subject->rebook_snoozed_until?->toDateString(),
-                    /*
-                     * A customer who replied STOP stays on this list. Opting out
-                     * of texts is not opting out of being a customer, and the
-                     * salon can still pick up the phone — she just needs to be
-                     * told that is the only way to reach them.
-                     */
                     'opted_out' => $subject->customer?->sms_opted_out_at !== null,
                     'number_failing' => $subject->rebook_send_blocked_at !== null,
                 ];
@@ -112,9 +98,7 @@ final class OverdueSubjects
             ->values();
     }
 
-    /**
-     * @return array{count: int, value: string, amount: int, noun: string}
-     */
+    /** @return array{count: int, value: string, amount: int, noun: string} */
     public function summary(Tenant $tenant, ?CarbonImmutable $today = null): array
     {
         $rows = $this->forTenant($tenant, $today);
@@ -131,11 +115,7 @@ final class OverdueSubjects
         ];
     }
 
-    /**
-     * Stopped subjects, so the operator can start chasing again.
-     *
-     * @return Collection<int, array<string, mixed>>
-     */
+    /** @return Collection<int, array<string, mixed>> */
     public function stoppedForTenant(Tenant $tenant): Collection
     {
         return Subject::withoutGlobalScopes()
@@ -152,15 +132,7 @@ final class OverdueSubjects
             ]);
     }
 
-    /**
-     * Snoozed subjects, so the operator can see who she put off and undo it.
-     *
-     * They are off the send set on purpose — that is what snooze means — but
-     * taking them off the page with no way back is a hole: the only other
-     * lever is waiting for the date to pass.
-     *
-     * @return Collection<int, array<string, mixed>>
-     */
+    /** @return Collection<int, array<string, mixed>> */
     public function snoozedForTenant(Tenant $tenant): Collection
     {
         return Subject::withoutGlobalScopes()

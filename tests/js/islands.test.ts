@@ -4,17 +4,6 @@ import OfferIsland from '@/Pages/Public/OfferIsland.vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
-/**
- * The three public islands.
- *
- * The claim phase 5 makes is that these are one page wearing three hats: the
- * same 34px statement of one finished appointment, the same single column, the
- * same primary button. That claim is testable, and until now nothing tested it.
- *
- * The other claim is the proposal model itself — no calendar, one appointment,
- * three spread ways out, and a reason attached to each. Also testable.
- */
-
 const money = (amount: number, formatted: string) => ({ amount, formatted, currency: 'GBP' });
 
 const proposal = (over: Record<string, unknown> = {}) => ({
@@ -61,13 +50,6 @@ const bookingProps = (over: Record<string, unknown> = {}) => ({
         primary: proposal(),
         alternatives: [
             proposal({ reason: 'Tuesday, later', time: '11:30', meta: '11:30 · Ana', starts_at: '2026-03-10T11:30:00+00:00' }),
-            /*
-             * A different groomer, and the fields now agree that it is one.
-             * This row already read "09:15 · Marek" while carrying Ana's
-             * `staff_id` and `staff_name` — the fixture said two things at once,
-             * and the page could not have told the difference either way because
-             * nothing looked at the id. Something does now.
-             */
             proposal({
                 reason: 'Wednesday morning',
                 time: '09:15',
@@ -102,7 +84,6 @@ describe('BookingIsland — the proposal', () => {
         expect(heading.text()).toContain('Tuesday 10 March');
         expect(heading.text()).toContain('09:45');
 
-        // Nothing else on the page is allowed to be that size.
         expect(wrapper.findAll('.text-34')).toHaveLength(1);
     });
 
@@ -148,15 +129,9 @@ describe('BookingIsland — the proposal', () => {
             expect.stringContaining('Wednesday morning'),
             expect.stringContaining('Thursday afternoon'),
         ]);
-        // A time and a person, so the row is a whole appointment.
         expect(rows[0].text()).toContain('11:30 · Ana');
     });
 
-    /*
-     * WCAG 2.5.3, Label in Name. The alternatives once carried an `aria-label`
-     * that reworded the visible text, so a speech-input user saying "Wednesday
-     * morning" activated nothing. Lighthouse caught it; this keeps it caught.
-     */
     it('never gives an alternative an accessible name that hides its visible text', () => {
         const wrapper = mount(BookingIsland, { props: bookingProps() });
 
@@ -168,19 +143,6 @@ describe('BookingIsland — the proposal', () => {
         }
     });
 
-    /*
-     * `AppointmentSuggester` ranks appointments, and an appointment is a time
-     * *and* a person — so an alternative at a time the proposed groomer cannot
-     * work is an alternative with somebody else. The page used to say so only by
-     * putting a different first name in the muted column, three rows under a
-     * context line naming the groomer being proposed, and a customer scanning
-     * four near-identical rows had to hold "Ana" in their head and compare.
-     *
-     * That is the `resolveStaff()` silent-reassignment behaviour recorded in
-     * DECISIONS.md becoming visible in the UI. The booking behaviour is
-     * deliberately unchanged; what is tested here is that the page stops being
-     * quiet about it.
-     */
     it('says when an alternative is with a different groomer, and who', () => {
         const wrapper = mount(BookingIsland, { props: bookingProps() });
 
@@ -198,34 +160,17 @@ describe('BookingIsland — the proposal', () => {
         expect(rows[2].text()).not.toContain('instead of');
     });
 
-    /*
-     * The reason this phrase is composed in the island rather than in
-     * `ProposalPayload`, stated as a test.
-     *
-     * Accepting an alternative makes it the proposal and pushes the old proposal
-     * back into this list, so "different from what is proposed" changes meaning
-     * on a click. Built server-side, the notes would still be describing the
-     * groomer from the first render — and after accepting Marek the two Ana rows
-     * would carry no note at all, which is precisely backwards.
-     */
     it('re-points the groomer note when an alternative is accepted', async () => {
         const wrapper = mount(BookingIsland, { props: bookingProps() });
 
         const marek = wrapper.findAll('li button').find((row) => row.text().includes('Wednesday morning'));
         await marek!.trigger('click');
 
-        // Marek is the proposal now, so the rows that stayed with Ana are the
-        // ones that change the groomer.
         const rows = wrapper.findAll('li button');
         expect(rows.some((row) => row.text().includes('with Ana instead of Marek'))).toBe(true);
         expect(rows.every((row) => !row.text().includes('instead of Ana'))).toBe(true);
     });
 
-    /*
-     * The page picks a service — the customer's usual, or the salon's first —
-     * and nine were reachable only by opening the day picker and scrolling past
-     * a week grid. A customer whose dog needs a hand strip could not find that.
-     */
     it('offers a way to change service without opening the picker', async () => {
         const wrapper = mount(BookingIsland, {
             props: bookingProps({
@@ -238,8 +183,6 @@ describe('BookingIsland — the proposal', () => {
 
         const open = wrapper.findAll('button').find((b) => b.text() === 'A different service');
         expect(open).toBeDefined();
-        // A disclosure, so it says whether it is open — and it starts shut, so
-        // the proposal is the only thing competing for attention on load.
         expect(open!.attributes('aria-expanded')).toBe('false');
         expect(wrapper.text()).not.toContain('Nail clip');
 
@@ -247,12 +190,10 @@ describe('BookingIsland — the proposal', () => {
 
         expect(open!.attributes('aria-expanded')).toBe('true');
         expect(wrapper.text()).toContain('Nail clip');
-        // Still a list, not a form, and no calendar has appeared.
         expect(wrapper.find('select').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('Pick a day');
     });
 
-    /** The one service already on offer is marked, not silently dropped. */
     it('marks the service being proposed in the list of the others', async () => {
         const wrapper = mount(BookingIsland, {
             props: bookingProps({
@@ -290,11 +231,6 @@ describe('BookingIsland — the proposal', () => {
         expect(quiet!.classes()).toContain('min-h-tap');
     });
 
-    /*
-     * Nothing bookable is the one screen where the waitlist is the primary
-     * action rather than a footnote. A page that just says "no times" loses the
-     * customer; this one keeps them.
-     */
     it('offers the waitlist, not an empty picker, when there is nothing to propose', () => {
         const wrapper = mount(BookingIsland, {
             props: bookingProps({
@@ -306,12 +242,6 @@ describe('BookingIsland — the proposal', () => {
         expect(wrapper.findAll('button').some((b) => b.text().includes('Text me when something opens'))).toBe(true);
     });
 
-    /*
-     * Three states, not two. A salon that has not finished setting up is not a
-     * salon with a full diary, and the waitlist copy — "leave your number, we
-     * will text you the moment something opens up" — describes a diary that
-     * does not exist yet. See phase 16 in DECISIONS.md.
-     */
     it('says the business has not set online booking up yet, and does not offer the waitlist', () => {
         const wrapper = mount(BookingIsland, {
             props: bookingProps({
@@ -358,12 +288,6 @@ describe('BookingIsland — the proposal', () => {
         expect(wrapper.text()).toContain('Get in touch with Willow Street Grooming to book.');
     });
 
-    /*
-     * The per-service state. A customer who picked a service nobody is set up
-     * to do is not looking at an unfinished business — the note names the
-     * service, and the heading comes from the server so the sentence is built
-     * where every other customer-facing string on this page is built.
-     */
     it('names the service when nobody at the business can perform it', () => {
         const wrapper = mount(BookingIsland, {
             props: bookingProps({
@@ -498,12 +422,6 @@ describe('ManageIsland — the same page, a different hat', () => {
         expect(heading.text()).toContain('09:45');
     });
 
-    /*
-     * The consequence goes *before* the confirm. "Cancel and refund £10" and
-     * "Cancel — the £10 deposit is not refunded this close" are two different
-     * decisions, and which one is being made has to be legible on the control
-     * being pressed, not in the dialog that follows it.
-     */
     it('puts the consequence on the control, not behind it', () => {
         const wrapper = mount(ManageIsland, { props: manageProps() });
 
@@ -582,16 +500,9 @@ describe('OfferIsland — taken is a designed state', () => {
         const timer = wrapper.find('[role="timer"]');
         expect(timer.exists()).toBe(true);
         expect(timer.text()).toMatch(/^\d{2}:\d{2}$/);
-        // A number announced once a second is unusable; the expiry is stated
-        // once in prose beside it instead.
         expect(timer.attributes('aria-live')).toBe('off');
     });
 
-    /*
-     * Somebody else being faster is the mechanic working, not a fault. So the
-     * taken state is the same layout with the next appointment already
-     * proposed — never a red alert telling a customer they did something wrong.
-     */
     it('shows the next appointment in the same dominant type when the slot has gone', () => {
         const wrapper = mount(OfferIsland, {
             props: offerProps({ offer: { ...offerProps().offer, claimable: false } }),

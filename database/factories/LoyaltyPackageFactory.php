@@ -5,14 +5,10 @@ namespace Database\Factories;
 use App\Models\LoyaltyPackage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<LoyaltyPackage>
- */
+/** @extends Factory<LoyaltyPackage> */
 class LoyaltyPackageFactory extends Factory
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [

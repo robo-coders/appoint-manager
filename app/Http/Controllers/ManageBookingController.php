@@ -37,9 +37,6 @@ class ManageBookingController extends Controller
             'headerCode' => $this->salonCode($tenant),
             'props' => [
                 'booking' => BookingPayload::toArray($booking, $tz, [
-                    // The same three strings the booking page's proposal uses,
-                    // built the same way, so the two screens cannot drift into
-                    // describing one appointment two different ways.
                     'day_label' => $starts->format('l j F'),
                     'time' => $starts->format('H:i'),
                     'cost_line' => $this->costLine($booking, $tenant),
@@ -66,25 +63,11 @@ class ManageBookingController extends Controller
             ],
         ]);
 
-        /*
-         * This is the moment we know who somebody is: they opened the link from
-         * their own confirmation. Remembering it is what lets the booking page
-         * greet them next time with their own service, their own groomer and
-         * their own rhythm instead of a service picker. See ReturningCustomer
-         * for why holding the token in a cookie adds no exposure.
-         */
         return $response->withCookie(
             ReturningCustomer::remember($booking->public_token, $request->secure())
         );
     }
 
-    /**
-     * The same day grid the public page's picker draws, in the same shape.
-     *
-     * Unavailable times are included and flagged rather than filtered out —
-     * see `AvailabilityEngine::gridFor()`. The two endpoints returning different
-     * shapes is how `SlotPicker` ended up unable to be shared.
-     */
     public function availability(string $token, Request $request, AvailabilityEngine $engine): JsonResponse
     {
         $booking = $this->booking($token);
@@ -102,7 +85,6 @@ class ManageBookingController extends Controller
         $rangeFrom = CarbonImmutable::parse($from.' 00:00:00', $tenant->timezone)->utc();
         $rangeTo = CarbonImmutable::parse($to.' 00:00:00', $tenant->timezone)->addDay()->utc();
 
-        // This booking must not block the slot it is being moved within.
         $free = $engine->slotsFor($tenant, $booking->service, $rangeFrom, $rangeTo, null, $booking->id);
         $grid = $engine->gridFor($tenant, $booking->service, $rangeFrom, $rangeTo);
 
@@ -184,13 +166,6 @@ class ManageBookingController extends Controller
         ]);
     }
 
-    /**
-     * The consequence, stated as the thing that will happen to their money.
-     *
-     * This is the label on the row that opens the cancel dialog, so a customer
-     * decides *knowing* — rather than pressing "Cancel booking", reading "are
-     * you sure?", and finding out about the deposit in the confirmation email.
-     */
     private function cancelConsequence(Booking $booking, Tenant $tenant, BookingService $bookings): string
     {
         if ($booking->deposit_status !== DepositStatus::Paid || $booking->deposit_at_booking->amount === 0) {
@@ -234,7 +209,6 @@ class ManageBookingController extends Controller
             ->format('l j F');
     }
 
-    /** "Full groom for Bramble · 90 min with Ana" — the booking page's line, minus the reason. */
     private function context(Booking $booking): string
     {
         $service = $booking->service?->name ?? 'Appointment';

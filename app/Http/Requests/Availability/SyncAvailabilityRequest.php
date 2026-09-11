@@ -13,9 +13,7 @@ class SyncAvailabilityRequest extends FormRequest
         return $this->user()?->can('update', $this->route('staff')) ?? false;
     }
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
         return [

@@ -4,18 +4,9 @@ namespace App\Support;
 
 use App\Models\Vertical;
 
-/**
- * Turns a vertical's `{value, unit}` interval into days.
- *
- * Units live on the vertical's seeded services so a dentist tenant can say
- * months and a groomer can say weeks without a code change. Storage is always
- * days.
- */
 final class VerticalInterval
 {
-    /**
-     * @param  array{value?: int|string, unit?: string}|null  $interval
-     */
+    /** @param  array{value?: int|string, unit?: string}|null  $interval */
     public static function toDays(?array $interval): ?int
     {
         if ($interval === null) {

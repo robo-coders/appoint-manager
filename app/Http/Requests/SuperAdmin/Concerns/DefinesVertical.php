@@ -6,54 +6,19 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-/**
- * The rules shared by creating and editing a vertical.
- *
- * They are a trait rather than a base class because the two requests differ on
- * exactly one field — `key`, which is required on create and forbidden on edit,
- * since tenants store it as `tenants.type` and changing it would orphan every
- * tenant that had chosen it.
- *
- * **`subject_fields` and `default_services` are validated here, per element.**
- * They used to be neither validated nor read: `VerticalController::store` wrote
- * `[]` into both columns whatever was submitted, so every vertical created
- * through the console shipped with no subject fields — the public booking page
- * asked a groomer's customer nothing about the dog — and no default services,
- * which is the list onboarding pre-fills so a new salon is not staring at an
- * empty price list. The two shapes below are the shapes the consumers already
- * expect, taken from the ones the groomer row was seeded with:
- *
- *   - `subject_fields[]`: `{key, label, type, required, options?}`. Read by
- *     `StorePublicBookingRequest`, `StoreManualBookingRequest`,
- *     `Public/BookingIsland.vue` and `VerticalFigures`.
- *   - `default_services[]`: `{name, duration_minutes, price, deposit_amount,
- *     rebook_interval?: {value, unit}}`. Read by `OnboardingController` and
- *     `VerticalInterval`. Money is integer pence, as everywhere else.
- */
 trait DefinesVertical
 {
-    /** The field types `Public/BookingIsland.vue` can actually render. */
     private const FIELD_TYPES = ['text', 'textarea', 'select'];
 
-    /** The units `VerticalInterval::toDays()` understands. */
     private const INTERVAL_UNITS = ['days', 'weeks', 'months'];
 
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
+    /** @return array<string, ValidationRule|array<mixed>|string> */
     protected function definitionRules(): array
     {
         return [
             'label' => ['required', 'string', 'max:255'],
             'subject_singular' => ['required', 'string', 'max:255'],
             'subject_plural' => ['required', 'string', 'max:255'],
-            /*
-             * `sometimes`, not `required`. These two have column defaults
-             * ('client' / 'appointment') and are not on the create form's first
-             * screen, so a caller that has nothing to say about them should get
-             * the default rather than a validation error about a word it was
-             * never asked for.
-             */
             'customer_singular' => ['sometimes', 'required', 'string', 'max:255'],
             'appointment_singular' => ['sometimes', 'required', 'string', 'max:255'],
 
@@ -76,9 +41,7 @@ trait DefinesVertical
         ];
     }
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function definitionMessages(): array
     {
         return [
@@ -87,13 +50,6 @@ trait DefinesVertical
         ];
     }
 
-    /**
-     * The two rules a per-element rule cannot express: a choice field with no
-     * choices is a control a customer cannot answer, and a deposit larger than
-     * the price is a service that pays the salon to take the booking. The second
-     * mirrors `lte:price` on `StoreServiceRequest`, which cannot be written as a
-     * wildcard rule because the sibling index is not addressable from it.
-     */
     protected function validateDefinitionShape(Validator $validator): void
     {
         /** @var array<int, array<string, mixed>> $fields */
@@ -137,20 +93,6 @@ trait DefinesVertical
         }
     }
 
-    /**
-     * Drop the rows a repeater UI leaves behind.
-     *
-     * Adding a row and then thinking better of it without pressing remove
-     * submits an element with every value blank, which fails `required` on three
-     * separate keys and reports three errors about a row the person had already
-     * abandoned. An element whose identifying text is empty is not a row, so it
-     * is not sent to the validator as one.
-     *
-     * Only the identifying text counts. `required` on a subject field is a
-     * boolean and `filled(false)` is true, so testing "any value present" would
-     * find every abandoned row occupied by its own unchecked checkbox and prune
-     * nothing.
-     */
     protected function pruneBlankRows(): void
     {
         $merge = [];
