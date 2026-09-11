@@ -189,3 +189,55 @@ it('reports what it removed so the screen can say so in words', function () {
     expect($removed['customers'])->toBe(24);
     expect($removed['bookings'])->toBeGreaterThan(50);
 });
+
+it('leaves every count on the bookings page reading zero, on the reload too', function () {
+    $mine = aBetaSalon();
+    $theirs = aBetaSalon();
+
+    app(SampleData::class)->load($mine['tenant']);
+    app(SampleData::class)->load($theirs['tenant']);
+
+    app(SandboxReset::class)->run($mine['tenant']);
+
+    $zeroed = fn ($page) => $page
+        ->component('Bookings/Index')
+        ->has('bookings.data', 0)
+        ->where('counts.total', 0)
+        ->where('counts.confirmed', 0)
+        ->where('counts.pending', 0)
+        ->where('counts.cancelled', 0)
+        ->where('counts.declined', 0)
+        ->where('counts.completed', 0)
+        ->where('counts.no_show', 0);
+
+    actingAsTenant($mine['staff'])->get(route('bookings.index'))->assertOk()->assertInertia($zeroed);
+    actingAsTenant($mine['staff'])->get(route('bookings.index'))->assertOk()->assertInertia($zeroed);
+
+    expect(Booking::withoutGlobalScopes()->where('tenant_id', $theirs['tenant']->id)->count())->toBeGreaterThan(0);
+});
+
+it('leaves the other list screens counting zero too, with a full salon next door', function () {
+    $mine = aBetaSalon();
+    $theirs = aBetaSalon();
+
+    app(SampleData::class)->load($mine['tenant']);
+    app(SampleData::class)->load($theirs['tenant']);
+
+    app(SandboxReset::class)->run($mine['tenant']);
+
+    actingAsTenant($mine['staff'])->get(route('waitlist.index'))->assertOk()
+        ->assertInertia(fn ($page) => $page->has('entries', 0));
+
+    actingAsTenant($mine['staff'])->get(route('customers.index'))->assertOk()
+        ->assertInertia(fn ($page) => $page->where('customers.total', 0)->has('customers.data', 0));
+
+    actingAsTenant($mine['staff'])->get(route('overdue.index'))->assertOk()
+        ->assertInertia(fn ($page) => $page->where('summary.count', 0)->has('rows', 0));
+
+    actingAsTenant($mine['staff'])->get(route('bookings.index'))->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('navCounts.bookings', 0)
+            ->where('navCounts.customers', 0)
+            ->where('navCounts.overdue', 0)
+            ->where('navCounts.waitlist', 0));
+});

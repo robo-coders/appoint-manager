@@ -4303,3 +4303,65 @@ optional first appointment saves.
 The changes to `OnboardingController` carry no prose comments, per the standing
 instruction and the precedent in phase 14. The existing comments in the file are
 untouched, and the new test file keeps its explanatory notes.
+
+# Phase 16 — The booking status tabs counted every salon
+
+## `getQuery()` skipped the tenant scope; `toBase()` does not
+
+`BookingController::statusCounts()` built its aggregate on
+`$this->filtered(...)->getQuery()`. On an Eloquent builder that hands back the
+underlying query builder *as it stands* — global scopes have not been applied to
+it yet, and never will be, because nothing after that point goes through
+Eloquent. `TenantScope` was therefore absent from exactly one query in the app,
+and the tabs above the bookings table were counting every booking in the
+database.
+
+`toBase()` is `applyScopes()->getQuery()`. It is the same one-line shape, it
+keeps the grouped aggregate in SQL rather than pulling rows into PHP, and it is
+the difference between a count of this salon and a count of the installation.
+
+## It surfaced as a sandbox bug, and it was not one
+
+The report was that "Reset my shop" left the status tabs showing 205 while the
+table underneath read "Showing 0–0 of 0". Reset was correct — every table in
+`SandboxTables::transactional()` had been emptied inside its transaction, and
+the sidebar, which is explicitly `where('tenant_id', …)` in `navCounts()`, read
+zero. There was no cache to invalidate and nothing uncommitted. The 205 was
+other tenants' rows, which is why a reset could never clear it and a hard reload
+never helped.
+
+Worth naming plainly: this was a cross-tenant read, not a staleness bug. The
+numbers were live, correct, and about somebody else's salon.
+
+## The other list screens were checked and left alone
+
+Waitlist and Customers derive their totals from the rows already on the page —
+`waiting.length` over the collection Inertia sent, and the paginator's own
+`total` — so they cannot disagree with their table by construction. Overdue's
+summary comes from `OverdueSubjects`, which uses `withoutGlobalScopes()` with an
+explicit `tenant_id` throughout. None of the three needed a change, and the
+regression test asserts that with a fully seeded salon next door rather than
+asserting it from a reading of the code.
+
+`grep -rn 'getQuery()' app/` now returns nothing. That was the only one.
+
+## The tests fail for the right reason
+
+Both new tests need a *second* salon holding rows. A single-tenant fixture
+cannot see this bug: with one salon in the database, an unscoped count and a
+scoped count are the same number, which is why the existing tab-count tests in
+`ListFiltersTest` were green over it. `it counts only this salon, never the rows
+next door` failed 8 against 5, and the sandbox test failed 115 against 0 —
+the reported symptom exactly, empty table over a populated tab.
+
+The sandbox test requests `bookings.index` twice and asserts the same zeroes
+both times. A second identical request is the server-side equivalent of the hard
+reload in the report: it rules out anything held in the client and pins the
+claim to what the controller returns.
+
+## Comments
+
+`BookingController` carries no new prose comments, per the standing instruction.
+The existing docblock on `statusCounts()` is untouched and still accurate — the
+counts are the date window without the status filter, which is what they now
+actually are.

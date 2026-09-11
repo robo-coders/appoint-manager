@@ -120,3 +120,35 @@ it('refuses the export to somebody who cannot see the list', function () {
 
     expect($salon['tenant']->id)->not->toBe($other['tenant']->id);
 });
+
+it('counts only this salon, never the rows next door', function () {
+    [$owner] = aFilteredList();
+
+    $other = aSalon();
+    app(TenantContext::class)->set($other['tenant']);
+
+    $theirCustomer = Customer::factory()->create(['tenant_id' => $other['tenant']->id, 'name' => 'Bea Next-Door']);
+
+    foreach (['2026-03-10', '2026-03-11', '2026-03-12'] as $day) {
+        Booking::factory()->create([
+            'tenant_id' => $other['tenant']->id,
+            'staff_id' => $other['staff']->id,
+            'service_id' => $other['service']->id,
+            'customer_id' => $theirCustomer->id,
+            'starts_at' => CarbonImmutable::parse($day.' 10:00:00', 'Europe/London')->utc(),
+            'ends_at' => CarbonImmutable::parse($day.' 11:00:00', 'Europe/London')->utc(),
+            'status' => BookingStatus::Confirmed,
+            'price_at_booking' => 3500,
+        ]);
+    }
+
+    app(TenantContext::class)->clear();
+
+    actingAsTenant($owner)
+        ->get(route('bookings.index', ['from' => '2026-03-01', 'to' => '2026-03-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('counts.total', 5)
+            ->where('counts.confirmed', 2)
+            ->where('counts.pending', 1));
+});

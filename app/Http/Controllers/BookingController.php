@@ -160,7 +160,7 @@ class BookingController extends Controller
     private function statusCounts(string $timezone, string $from, string $to): array
     {
         $counts = $this->filtered($timezone, $from, $to)
-            ->getQuery()
+            ->toBase()
             ->select('status', DB::raw('count(*) as aggregate'))
             ->groupBy('status')
             ->pluck('aggregate', 'status');
