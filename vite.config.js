@@ -62,6 +62,7 @@ export default defineConfig(({ mode }) => {
                      * half is deleted, not deprecated.
                      */
                     'resources/css/marketing-editorial.css',
+                    'resources/js/marketing-demo.ts',
                     'resources/js/app.ts',
                     'resources/js/booking.ts',
                     'resources/js/manage.ts',

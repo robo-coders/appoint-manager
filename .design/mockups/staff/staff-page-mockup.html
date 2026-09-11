@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DiaryDesk — Staff</title>
+<style>
+  @font-face {
+    font-family: 'GeistFallback';
+    src: local('Inter'), local('Helvetica Neue'), local('Arial');
+  }
+  :root{
+    --paper:#FCFBF9;
+    --ink:#181714;
+    --ink-60:rgba(24,23,20,.6);
+    --ink-40:rgba(24,23,20,.4);
+    --ink-15:rgba(24,23,20,.15);
+    --ink-08:rgba(24,23,20,.08);
+    --terracotta:#A85729;
+    --terracotta-12:rgba(168,87,41,.12);
+    --green:#3F6B4A;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'GeistFallback',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14px;
+    display:flex;
+    min-height:100vh;
+  }
+  .mono{ font-family:'SF Mono','Roboto Mono',monospace; font-variant-numeric: tabular-nums; }
+
+  /* Sidebar */
+  .sidebar{
+    width:248px;
+    flex-shrink:0;
+    border-right:1px solid var(--ink-08);
+    padding:20px 16px;
+    display:flex;
+    flex-direction:column;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:4px 4px 20px 4px;
+  }
+  .brand-mark{
+    width:22px;height:22px;
+    border:1.5px solid var(--ink);
+    border-radius:3px;
+    position:relative;
+    flex-shrink:0;
+  }
+  .brand-mark::before,.brand-mark::after{
+    content:'';
+    position:absolute;
+    left:2.5px; right:2.5px;
+    height:5px;
+    border-radius:1px;
+  }
+  .brand-mark::before{ top:3px; background:rgba(24,23,20,.35); }
+  .brand-mark::after{ bottom:3px; background:var(--terracotta); }
+  .brand-name{ font-weight:600; font-size:15px; letter-spacing:-0.01em; }
+
+  .nav-section-label{
+    font-size:11px;
+    color:var(--ink-40);
+    letter-spacing:.02em;
+    margin:16px 4px 6px;
+  }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:7px 10px;
+    border-radius:var(--radius);
+    color:var(--ink-60);
+    text-decoration:none;
+    margin-bottom:1px;
+    font-size:13.5px;
+  }
+  .nav-item .count{
+    font-size:12px;
+    color:var(--ink-40);
+  }
+  .nav-item.active{
+    background:var(--ink-08);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .nav-item.active .count{ color:var(--ink-60); }
+
+  .sidebar-footer{
+    margin-top:auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 4px;
+    border-top:1px solid var(--ink-08);
+    padding-top:14px;
+  }
+  .avatar-sm{
+    width:26px;height:26px;
+    border-radius:var(--radius);
+    background:var(--ink);
+    color:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px; font-weight:600;
+  }
+
+  /* Main */
+  .main{ flex:1; min-width:0; }
+  .banner{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 28px;
+    background:var(--terracotta-12);
+    border-bottom:1px solid var(--ink-08);
+    font-size:13px;
+  }
+  .badge-sandbox{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    color:var(--terracotta);
+    border:1px solid var(--terracotta);
+    border-radius:4px;
+    padding:2px 6px;
+  }
+  .banner-text{ color:var(--ink-60); }
+  .banner-link{ color:var(--ink); text-decoration:underline; cursor:pointer; margin-left:auto; }
+
+  .confirm-strip{
+    padding:9px 28px;
+    font-size:13px;
+    color:var(--ink-60);
+    border-bottom:1px solid var(--ink-08);
+  }
+  .confirm-strip a{ color:var(--ink); }
+
+  .content{ padding:28px 28px 60px; }
+
+  .page-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:6px;
+  }
+  h1{ font-size:26px; margin:0 0 4px; letter-spacing:-0.01em; font-weight:600; }
+  .subtitle{ color:var(--ink-60); font-size:14px; margin:0; }
+  .btn-primary{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:var(--radius);
+    padding:10px 18px;
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+  }
+
+  .week-summary{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:22px 0 18px;
+    font-size:13px;
+    color:var(--ink-60);
+  }
+  .live-dot{
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--green);
+    flex-shrink:0;
+  }
+  .week-summary strong{ color:var(--ink); font-weight:600; }
+  .week-summary .divider{ color:var(--ink-15); }
+
+  .staff-table{ border-top:1px solid var(--ink-15); }
+  .staff-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:20px 4px;
+    border-bottom:1px solid var(--ink-08);
+    position:relative;
+  }
+  .avatar{
+    width:42px;height:42px;
+    border-radius:var(--radius);
+    background:var(--ink-08);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:600;
+    font-size:15px;
+    flex-shrink:0;
+  }
+  .row-main{ min-width:220px; flex-shrink:0; }
+  .row-name-line{ display:flex; align-items:center; gap:8px; }
+  .name-dot{ width:6px;height:6px;border-radius:50%; background:var(--green); }
+  .name-dot.offline{ background:var(--ink-15); }
+  .name{ font-weight:600; font-size:15px; }
+  .role-badge{
+    font-size:11px;
+    color:var(--ink-60);
+    background:var(--ink-08);
+    border-radius:4px;
+    padding:2px 7px;
+  }
+  .row-sub{ color:var(--ink-40); font-size:12.5px; margin-top:3px; }
+
+  .week-bars{ display:flex; gap:14px; flex:1; }
+  .bar-col{ text-align:center; width:34px; }
+  .bar-day{ font-size:11px; color:var(--ink-40); margin-bottom:6px; }
+  .bar-track{
+    height:34px;
+    width:100%;
+    background:var(--ink-08);
+    border-radius:3px;
+    display:flex;
+    align-items:flex-end;
+    overflow:hidden;
+  }
+  .bar-fill{
+    width:100%;
+    background:var(--terracotta);
+    border-radius:3px 3px 0 0;
+  }
+  .bar-fill.light{ background:var(--ink-15); }
+
+  .bar-col{ position:relative; }
+  .bar-tooltip{
+    position:absolute;
+    bottom:calc(100% + 6px);
+    left:50%;
+    transform:translateX(-50%) translateY(4px);
+    background:var(--ink);
+    color:var(--paper);
+    font-size:11px;
+    padding:4px 7px;
+    border-radius:4px;
+    white-space:nowrap;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .12s ease, transform .12s ease;
+    z-index:6;
+  }
+  .bar-tooltip::after{
+    content:'';
+    position:absolute;
+    top:100%; left:50%;
+    transform:translateX(-50%);
+    border:4px solid transparent;
+    border-top-color:var(--ink);
+  }
+  .bar-col:hover .bar-tooltip{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+  .bar-col:hover .bar-track{ background:var(--ink-15); }
+  .bar-col:hover .bar-fill{ filter:brightness(1.1); }
+
+  .row-hours{
+    text-align:right;
+    width:110px;
+    flex-shrink:0;
+  }
+  .row-hours .h{ font-size:17px; font-weight:600; }
+  .row-hours .h-unit{ font-size:12px; color:var(--ink-40); font-weight:400; margin-left:2px; }
+  .row-hours .booked{ font-size:12px; color:var(--ink-40); margin-top:2px; }
+
+  .row-actions{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-shrink:0;
+  }
+  .link-btn{
+    font-size:13.5px;
+    color:var(--ink);
+    text-decoration:none;
+    cursor:pointer;
+    font-weight:500;
+  }
+  .overflow-btn{
+    width:28px;height:28px;
+    border-radius:5px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-60);
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .overflow-btn.open{ border-color:var(--ink-15); background:var(--ink-08); color:var(--ink); }
+
+  .overflow-menu{
+    position:absolute;
+    right:4px;
+    top:56px;
+    background:var(--paper);
+    border:1px solid var(--ink-15);
+    border-radius:var(--radius);
+    box-shadow:0 4px 16px rgba(24,23,20,.08);
+    min-width:150px;
+    z-index:5;
+    overflow:hidden;
+  }
+  .overflow-menu .item{
+    padding:10px 14px;
+    font-size:13.5px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .overflow-menu .item:hover{ background:var(--ink-08); }
+  .overflow-menu .item.danger{ color:var(--terracotta); }
+
+  .no-hours{
+    font-size:12.5px;
+    color:var(--ink-40);
+    font-style:italic;
+  }
+
+  .invite-card{
+    margin-top:8px;
+    border:1px dashed var(--ink-15);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    cursor:pointer;
+  }
+  .invite-plus{
+    width:36px;height:36px;
+    border:1px dashed var(--ink-40);
+    border-radius:var(--radius);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-40);
+    font-size:18px;
+    flex-shrink:0;
+  }
+  .invite-title{ font-weight:600; font-size:14px; }
+  .invite-sub{ color:var(--ink-40); font-size:12.5px; margin-top:2px; }
+
+  .team-count{
+    margin-top:18px;
+    color:var(--ink-40);
+    font-size:12.5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">DiaryDesk</div>
+  </div>
+
+  <div class="nav-section-label">DAY-TO-DAY</div>
+  <a class="nav-item"><span>Diary</span></a>
+  <a class="nav-item"><span>Bookings</span><span class="count mono">124</span></a>
+  <a class="nav-item"><span>Waitlist</span><span class="count mono">8</span></a>
+  <a class="nav-item"><span>Overdue</span><span class="count mono">0</span></a>
+  <a class="nav-item"><span>Customers</span><span class="count mono">64</span></a>
+
+  <div class="nav-section-label">SETUP</div>
+  <a class="nav-item"><span>Services</span><span class="count mono">4</span></a>
+  <a class="nav-item active"><span>Staff</span><span class="count mono">2</span></a>
+  <a class="nav-item"><span>Hours</span></a>
+  <a class="nav-item"><span>Time off</span></a>
+
+  <div class="nav-section-label">ACCOUNT</div>
+  <a class="nav-item"><span>Overview</span></a>
+  <a class="nav-item"><span>Import</span></a>
+  <a class="nav-item"><span>Settings</span></a>
+
+  <div class="sidebar-footer">
+    <div class="avatar-sm">S</div>
+    <div style="font-size:13px;font-weight:500;">sad</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="banner">
+    <span class="badge-sandbox">SANDBOX</span>
+    <span class="banner-text">You are using a beta preview of DiaryDesk. Payments are test-only — no card is ever charged.</span>
+    <span class="banner-link">Sandbox tools</span>
+  </div>
+  <div class="confirm-strip">Confirm your email so clients can reach you. <a href="#">Resend the email</a></div>
+
+  <div class="content">
+    <div class="page-head">
+      <div>
+        <h1>Staff</h1>
+        <p class="subtitle">People who work in the business.</p>
+      </div>
+      <button class="btn-primary">Add staff</button>
+    </div>
+
+    <div class="week-summary">
+      <span class="live-dot"></span>
+      <strong>2 people</strong>
+      <span class="divider">·</span>
+      <span><strong>52 hours</strong> covered this week</span>
+      <span class="divider">·</span>
+      <span>26 booked</span>
+    </div>
+
+    <div class="staff-table">
+
+      <!-- Row 1: sad / Owner -->
+      <div class="staff-row">
+        <div class="avatar">S</div>
+        <div class="row-main">
+          <div class="row-name-line">
+            <span class="name-dot"></span>
+            <span class="name">sad</span>
+            <span class="role-badge">Owner</span>
+          </div>
+          <div class="row-sub">Mon–Fri · 09:00–17:00 · closed Sat &amp; Sun</div>
+        </div>
+
+        <div class="week-bars">
+          <div class="bar-col"><div class="bar-tooltip mono">6.4h</div><div class="bar-day">M</div><div class="bar-track"><div class="bar-fill" style="height:80%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">5.2h</div><div class="bar-day">T</div><div class="bar-track"><div class="bar-fill" style="height:65%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">7.2h</div><div class="bar-day">W</div><div class="bar-track"><div class="bar-fill" style="height:90%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">5.6h</div><div class="bar-day">T</div><div class="bar-track"><div class="bar-fill" style="height:70%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">4.4h</div><div class="bar-day">F</div><div class="bar-track"><div class="bar-fill" style="height:55%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">Off</div><div class="bar-day">S</div><div class="bar-track"><div class="bar-fill light" style="height:0%"></div></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">Off</div><div class="bar-day">S</div><div class="bar-track"><div class="bar-fill light" style="height:0%"></div></div></div>
+        </div>
+
+        <div class="row-hours">
+          <div class="h mono">40<span class="h-unit">h</span></div>
+          <div class="booked mono">12 booked</div>
+        </div>
+
+        <div class="row-actions">
+          <span class="link-btn">Hours</span>
+          <span class="link-btn">Edit</span>
+          <div class="overflow-btn">⋮</div>
+        </div>
+      </div>
+
+      <!-- Row 2: Carroll Fritsch / Staff, no hours + overflow open -->
+      <div class="staff-row">
+        <div class="avatar">C</div>
+        <div class="row-main">
+          <div class="row-name-line">
+            <span class="name-dot offline"></span>
+            <span class="name">Carroll Fritsch</span>
+            <span class="role-badge">Staff</span>
+          </div>
+          <div class="row-sub no-hours">No hours set — bookings may double up</div>
+        </div>
+
+        <div class="week-bars">
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">M</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">T</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">W</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">T</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">F</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">S</div><div class="bar-track"></div></div>
+          <div class="bar-col"><div class="bar-tooltip mono">No hours</div><div class="bar-day">S</div><div class="bar-track"></div></div>
+        </div>
+
+        <div class="row-hours">
+          <div class="h mono">—</div>
+          <div class="booked mono">14 booked</div>
+        </div>
+
+        <div class="row-actions">
+          <span class="link-btn">Hours</span>
+          <span class="link-btn">Edit</span>
+          <div class="overflow-btn open">⋮</div>
+        </div>
+
+        <div class="overflow-menu">
+          <div class="item">Reset hours</div>
+          <div class="item danger">Deactivate</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="invite-card">
+      <div class="invite-plus">+</div>
+      <div>
+        <div class="invite-title">Invite a team member</div>
+        <div class="invite-sub">They get their own diary, hours and time off, and become a column alongside yours.</div>
+      </div>
+    </div>
+
+    <div class="team-count">2 on the team</div>
+  </div>
+</div>
+
+</body>
+</html>

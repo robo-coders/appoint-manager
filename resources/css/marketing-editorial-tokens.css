@@ -137,6 +137,30 @@
     /* Prose measure. One column of reading, on the pages that are mostly words. */
     --measure: 68ch;
     --measure-tight: 58ch;
+
+    --demo-radius: 6px;
+    --demo-paper: #fcfbf9;
+    --demo-ink: #181714;
+    --demo-ink-82: rgb(24 23 20 / 0.82);
+    --demo-ink-72: rgb(24 23 20 / 0.72);
+    --demo-ink-60: rgb(24 23 20 / 0.6);
+    --demo-ink-50: rgb(24 23 20 / 0.5);
+    --demo-ink-45: rgb(24 23 20 / 0.45);
+    --demo-ink-40: rgb(24 23 20 / 0.4);
+    --demo-ink-32: rgb(24 23 20 / 0.32);
+    --demo-rule: rgb(24 23 20 / 0.09);
+    --demo-rule-2: rgb(24 23 20 / 0.12);
+    --demo-rule-soft: rgb(24 23 20 / 0.06);
+    --demo-fill: rgb(24 23 20 / 0.05);
+    --demo-fill-soft: rgb(24 23 20 / 0.025);
+    --demo-accent: #a85729;
+    --demo-accent-deep: #8a461f;
+    --demo-accent-05: rgb(168 87 41 / 0.05);
+    --demo-accent-10: rgb(168 87 41 / 0.1);
+    --demo-accent-13: rgb(168 87 41 / 0.13);
+    --demo-accent-15: rgb(168 87 41 / 0.15);
+    --demo-accent-32: rgb(168 87 41 / 0.32);
+    --demo-accent-40: rgb(168 87 41 / 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {

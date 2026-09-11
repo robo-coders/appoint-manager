@@ -221,6 +221,8 @@
         </div>
     </section>
 
+    @include('marketing.partials.demo-section')
+
     {{--
         The questions, from `App\Support\MarketingFaq::home()`.
 
