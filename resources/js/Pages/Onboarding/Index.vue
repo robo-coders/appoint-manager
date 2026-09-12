@@ -8,7 +8,6 @@ import QuietAction from '@/Components/ui/QuietAction.vue';
 import RadioGroup from '@/Components/ui/RadioGroup.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import ToastContainer from '@/Components/ui/ToastContainer.vue';
-import Toggle from '@/Components/ui/Toggle.vue';
 import { toast } from '@/lib/toast';
 import { penceToPoundsInput, poundsInputToPence } from '@/lib/money';
 import { weekdays } from '@/lib/weekdays';
@@ -44,7 +43,6 @@ const props = defineProps<{
         price: number;
         deposit_amount: number;
     };
-    staff: { id: number; name: string; email: string; is_owner: boolean }[];
     bookingUrl: string;
     firstBookingDefault: string;
 }>();
@@ -80,10 +78,6 @@ const form = ref({
         price: penceToPoundsInput(props.service.price),
         deposit_amount: penceToPoundsInput(props.service.deposit_amount),
     },
-
-    staffName: '',
-    staffEmail: '',
-    staffCanSeeContacts: true,
 });
 
 const index = computed(() => Math.max(0, props.onboardingSteps.indexOf(step.value)));
@@ -95,8 +89,7 @@ const isLast = computed(() => index.value === total.value - 1);
 const nextLabels: Record<string, string> = {
     basics: 'Continue to details',
     business: 'Continue to services',
-    services: 'Continue to staff',
-    staff: 'Continue to your link',
+    services: 'Continue to your link',
     link: 'Go to my diary',
 };
 
@@ -298,24 +291,6 @@ const submitService = () =>
         deposit_amount: depositInPence.value,
     });
 
-const hasStaffEntry = computed(
-    () => form.value.staffName.trim() !== '' || form.value.staffEmail.trim() !== '',
-);
-
-const submitStaff = (skip = false) =>
-    submit('patch', route('onboarding.staff'), {
-        staff:
-            skip || !hasStaffEntry.value
-                ? null
-                : {
-                      name: form.value.staffName.trim(),
-                      email: form.value.staffEmail.trim().toLowerCase(),
-                      can_see_customer_contacts: form.value.staffCanSeeContacts,
-                  },
-    });
-
-const skip = () => submitStaff(true);
-
 const liveBookingUrl = computed(() =>
     props.bookingUrl.replace(/\/[^/]*$/, `/${form.value.slug || props.basics.slug}`),
 );
@@ -413,7 +388,6 @@ const onNext = () => {
         basics: submitBasics,
         business: submitBusiness,
         services: submitService,
-        staff: () => submitStaff(),
         link: finish,
     };
 
@@ -437,7 +411,6 @@ const onNext = () => {
 
         <div class="flex items-center justify-between gap-6 px-6 pt-6 md:px-12">
             <p class="eyebrow">DiaryDesk setup · {{ label }}</p>
-            <QuietAction v-if="step === 'staff'" :disabled="saving" @click="skip">Skip for now</QuietAction>
         </div>
 
         <div class="mx-auto w-full max-w-3xl flex-1 px-6 pb-16 pt-12 md:px-12">
@@ -670,53 +643,6 @@ const onNext = () => {
                             </p>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <section v-else-if="step === 'staff'">
-                <h1 class="text-34 tracking-34">Anyone else taking appointments?</h1>
-                <p class="mt-2 max-w-measure text-14 text-ink-2">
-                    Each person gets their own hours and their own column in Bookings. Skip this if you work alone —
-                    you can add people any time.
-                </p>
-
-                <div class="mt-12 max-w-measure">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <TextInput
-                            v-model="form.staffName"
-                            label="Full name"
-                            placeholder="e.g. Erin MacKay"
-                            :error="errors['staff.name']"
-                        />
-                        <TextInput
-                            v-model="form.staffEmail"
-                            label="Work email for the invite"
-                            type="email"
-                            autocomplete="off"
-                            :error="errors['staff.email']"
-                        />
-                    </div>
-
-                    <div v-if="hasStaffEntry" class="mt-6 border-t border-rule pt-4">
-                        <Toggle
-                            v-model="form.staffCanSeeContacts"
-                            label="Can see every customer's contact details"
-                            hint="Off means they only see appointments booked to them"
-                        />
-                    </div>
-
-                    <ul v-if="staff.length > 1" class="mt-8 rule-line">
-                        <li
-                            v-for="member in staff"
-                            :key="member.id"
-                            class="flex items-baseline justify-between gap-4 border-b border-rule py-3"
-                        >
-                            <span class="text-14 text-ink">{{ member.name }}</span>
-                            <span class="font-mono text-12 text-ink-2">
-                                {{ member.is_owner ? 'You' : member.email }}
-                            </span>
-                        </li>
-                    </ul>
                 </div>
             </section>
 

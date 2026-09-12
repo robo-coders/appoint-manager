@@ -51,14 +51,14 @@ test.describe('setting up a business', () => {
         await expect(page.getByText('Setting up')).toBeVisible();
         await expect(rail.getByText('Your account')).toBeVisible();
         await expect(rail.getByText('Booking link')).toBeVisible();
-        await expect(rail.getByRole('listitem')).toHaveCount(6);
+        await expect(rail.getByRole('listitem')).toHaveCount(5);
 
         await settled(page);
         await expect(page).toHaveScreenshot('register-1280.png', { fullPage: true });
 
         await at(page, 375, 1200);
         const progress = page.getByRole('progressbar');
-        await expect(progress).toHaveAttribute('aria-valuemax', '6');
+        await expect(progress).toHaveAttribute('aria-valuemax', '5');
         await expect(progress).toHaveAttribute('aria-valuenow', '1');
 
         await settled(page);

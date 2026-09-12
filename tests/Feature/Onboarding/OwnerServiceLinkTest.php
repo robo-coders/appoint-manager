@@ -38,8 +38,7 @@ function anOnboardingWeekOpen(int ...$weekdays): array
         ->all();
 }
 
-/** @param  array{name: string, email: string}|null  $colleague */
-function runSetupSteps(User $owner, string $slug, ?array $colleague = null): void
+function runSetupSteps(User $owner, string $slug): void
 {
     actingAsTenant($owner)->patch(route('onboarding.basics'), [
         'name' => 'Paws & Whiskers Grooming',
@@ -57,10 +56,6 @@ function runSetupSteps(User $owner, string $slug, ?array $colleague = null): voi
         'duration_minutes' => 60,
         'price' => 4200,
         'deposit_amount' => 0,
-    ])->assertSessionHasNoErrors();
-
-    test()->patch(route('onboarding.staff'), [
-        'staff' => $colleague,
     ])->assertSessionHasNoErrors();
 }
 
@@ -93,21 +88,6 @@ it('links a solo owner to the service created during setup', function () {
     $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
 
     expect(serviceIdsLinkedTo($salon['owner']))->toBe([$service->id]);
-});
-
-it('links both the owner and a colleague invited on step four', function () {
-    $salon = aSalonAtStepOne();
-
-    runSetupSteps($salon['owner'], 'paws-and-whiskers', [
-        'name' => 'Erin MacKay',
-        'email' => 'erin@example.com',
-    ]);
-
-    $service = Service::withoutGlobalScopes()->where('tenant_id', $salon['tenant']->id)->sole();
-    $colleague = User::withoutGlobalScopes()->where('email', 'erin@example.com')->sole();
-
-    expect(serviceIdsLinkedTo($salon['owner']))->toBe([$service->id])
-        ->and(serviceIdsLinkedTo($colleague))->toBe([$service->id]);
 });
 
 it('offers real times on the public page the moment a solo owner finishes setup', function () {

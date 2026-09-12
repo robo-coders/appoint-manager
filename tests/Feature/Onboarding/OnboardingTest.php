@@ -45,7 +45,9 @@ it('saves each onboarding step and can resume', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Onboarding/Index')
-            ->where('step', 'basics'));
+            ->where('step', 'basics')
+            ->has('steps', 5)
+            ->has('onboardingSteps', 4));
 
     $this->patch(route('onboarding.basics'), [
         'name' => 'Paws & Whiskers Grooming',
@@ -79,17 +81,9 @@ it('saves each onboarding step and can resume', function () {
         'duration_minutes' => 90,
         'price' => 4200,
         'deposit_amount' => 1000,
-    ])->assertRedirect(route('onboarding.show', ['step' => 'staff']));
-
-    expect(Service::query()->count())->toBe(1);
-
-    $this->patch(route('onboarding.staff'), [
-        'staff' => ['name' => 'Erin MacKay', 'email' => 'erin@example.com'],
     ])->assertRedirect(route('onboarding.show', ['step' => 'link']));
 
-    expect(User::query()->where('email', 'erin@example.com')->first())
-        ->role->toBe(UserRole::Staff)
-        ->can_see_customer_contacts->toBeTrue();
+    expect(Service::query()->count())->toBe(1);
 
     $this->post(route('onboarding.complete'), ['slug' => 'paws-and-whiskers'])
         ->assertRedirect(route('diary.index'));
@@ -231,7 +225,6 @@ it('catches a slug taken between step one and the last step', function () {
         'price' => 3000,
         'deposit_amount' => 0,
     ]);
-    $this->patch(route('onboarding.staff'), ['staff' => null]);
 
     $user->tenant->forceFill(['slug' => 'paws-and-whiskers-mine'])->save();
     Tenant::factory()->create(['slug' => 'paws-and-whiskers']);
@@ -296,62 +289,6 @@ it('blocks a deposit larger than the price, and allows one of zero', function ()
     ])->assertSessionHasNoErrors();
 
     expect(Service::query()->sole()->deposit_amount->amount)->toBe(0);
-});
-
-it('names a duplicate staff email rather than silently skipping the invite', function () {
-    $user = User::factory()
-        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
-        ->create(['role' => UserRole::Owner]);
-
-    actingAsTenant($user)->patch(route('onboarding.staff'), [
-        'staff' => ['name' => 'The owner again', 'email' => $user->email],
-    ])->assertSessionHasErrors('staff.email');
-
-    expect(User::query()->count())->toBe(1)
-        ->and($user->tenant->fresh()->onboardingCompletedSteps())->not->toContain('staff');
-});
-
-it('rejects a malformed staff email', function () {
-    $user = User::factory()
-        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
-        ->create(['role' => UserRole::Owner]);
-
-    actingAsTenant($user)->patch(route('onboarding.staff'), [
-        'staff' => ['name' => 'Erin MacKay', 'email' => 'erin@'],
-    ])->assertSessionHasErrors('staff.email');
-});
-
-it('treats an empty staff row as a skip, and a half-filled one as a mistake', function () {
-    $user = User::factory()
-        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
-        ->create(['role' => UserRole::Owner]);
-
-    actingAsTenant($user)->patch(route('onboarding.staff'), [
-        'staff' => ['name' => '', 'email' => ''],
-    ])->assertRedirect(route('onboarding.show', ['step' => 'link']));
-
-    expect(User::query()->count())->toBe(1);
-
-    $this->patch(route('onboarding.staff'), [
-        'staff' => ['name' => 'Erin MacKay', 'email' => ''],
-    ])->assertSessionHasErrors('staff.email');
-});
-
-it('stores the contact-visibility answer on the invited member of staff', function () {
-    $user = User::factory()
-        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
-        ->create(['role' => UserRole::Owner]);
-
-    actingAsTenant($user)->patch(route('onboarding.staff'), [
-        'staff' => [
-            'name' => 'Erin MacKay',
-            'email' => 'erin@example.com',
-            'can_see_customer_contacts' => false,
-        ],
-    ])->assertSessionHasNoErrors();
-
-    expect(User::query()->where('email', 'erin@example.com')->sole()->can_see_customer_contacts)
-        ->toBeFalse();
 });
 
 it('prefills the first service from the vertical rather than an empty form', function () {

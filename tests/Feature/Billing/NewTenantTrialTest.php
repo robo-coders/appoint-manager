@@ -50,10 +50,6 @@ it('registers, onboards, reaches the dashboard and can write', function () {
         'duration_minutes' => 90,
         'price' => 3500,
         'deposit_amount' => 1000,
-    ])->assertRedirect(route('onboarding.show', ['step' => 'staff']));
-
-    $this->patch(route('onboarding.staff'), [
-        'staff' => ['name' => 'Jordan Blake', 'email' => 'jordan@willowstreet.example'],
     ])->assertRedirect(route('onboarding.show', ['step' => 'link']));
 
     $this->post(route('onboarding.complete'), [

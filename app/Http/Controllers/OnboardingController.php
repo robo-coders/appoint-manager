@@ -10,7 +10,6 @@ use App\Http\Requests\Onboarding\CompleteOnboardingRequest;
 use App\Http\Requests\Onboarding\UpdateBasicsRequest;
 use App\Http\Requests\Onboarding\UpdateBusinessDetailsRequest;
 use App\Http\Requests\Onboarding\UpdateServicesRequest;
-use App\Http\Requests\Onboarding\UpdateStaffRequest;
 use App\Models\AvailabilityRule;
 use App\Models\Customer;
 use App\Models\Service;
@@ -49,14 +48,13 @@ class OnboardingController extends Controller
         }
 
         $services = Service::query()->orderBy('sort_order')->orderBy('name')->get();
-        $staff = User::query()->orderBy('name')->get();
-        $owner = $staff->firstWhere('role', UserRole::Owner) ?? $request->user();
+        $owner = $this->owner($request);
         $rules = AvailabilityRule::query()->orderBy('weekday')->orderBy('start_time')->get();
 
         $completed = $tenant->onboardingCompletedSteps();
         $step = $request->string('step')->toString();
 
-        if (! in_array($step, $completed, true)) {
+        if (! in_array($step, SetupSteps::ONBOARDING, true) || ! in_array($step, $completed, true)) {
             $step = $this->firstIncompleteStep($completed);
         }
 
@@ -96,14 +94,6 @@ class OnboardingController extends Controller
             ],
 
             'service' => $this->serviceFor($services, in_array('services', $completed, true)),
-
-            'staff' => $staff->map(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'is_owner' => $user->isOwner(),
-            ])->all(),
 
             'bookingUrl' => $tenant->publicBookingUrl(),
             'firstBookingDefault' => CarbonImmutable::now($tenant->timezone)
@@ -199,30 +189,6 @@ class OnboardingController extends Controller
         StaffServices::linkAllActive($this->owner($request));
 
         current_tenant()?->markOnboardingStep('services');
-
-        return redirect()->route('onboarding.show', ['step' => 'staff']);
-    }
-
-    public function updateStaff(UpdateStaffRequest $request): RedirectResponse
-    {
-        $member = $request->validated('staff');
-
-        if ($member !== null) {
-            $created = User::query()->create([
-                'name' => $member['name'],
-                'email' => $member['email'],
-                'password' => Str::password(32),
-                'role' => UserRole::Staff,
-                'is_bookable' => true,
-                'is_active' => true,
-                'can_see_customer_contacts' => (bool) ($member['can_see_customer_contacts'] ?? true),
-                'colour' => '#0F766E',
-            ]);
-
-            StaffServices::linkAllActive($created);
-        }
-
-        current_tenant()?->markOnboardingStep('staff');
 
         return redirect()->route('onboarding.show', ['step' => 'link']);
     }

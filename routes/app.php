@@ -53,7 +53,6 @@ Route::middleware(['auth', 'tenant'])->group(function (): void {
     Route::patch('/onboarding/basics', [OnboardingController::class, 'updateBasics'])->name('onboarding.basics');
     Route::patch('/onboarding/business', [OnboardingController::class, 'updateBusiness'])->name('onboarding.business');
     Route::patch('/onboarding/services', [OnboardingController::class, 'updateServices'])->name('onboarding.services');
-    Route::patch('/onboarding/staff', [OnboardingController::class, 'updateStaff'])->name('onboarding.staff');
     Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
     Route::patch('/appearance', [AppearanceController::class, 'update'])->name('appearance.update');
 });

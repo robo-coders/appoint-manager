@@ -210,7 +210,7 @@ watch(
 <template>
     <GuestLayout
         title="Set up your business"
-        lede="Five short steps after this one, and then a diary."
+        lede="Four short steps after this one, and then a diary."
         display-title
         :steps="steps"
         current-step="account"

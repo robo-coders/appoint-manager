@@ -4,7 +4,7 @@ namespace App\Support;
 
 final class SetupSteps
 {
-    public const ONBOARDING = ['basics', 'business', 'services', 'staff', 'link'];
+    public const ONBOARDING = ['basics', 'business', 'services', 'link'];
 
     public const FINAL = 'link';
 
@@ -16,7 +16,6 @@ final class SetupSteps
             ['key' => 'basics', 'label' => 'Business basics'],
             ['key' => 'business', 'label' => 'Business details'],
             ['key' => 'services', 'label' => 'First service'],
-            ['key' => 'staff', 'label' => 'People'],
             ['key' => 'link', 'label' => 'Booking link'],
         ];
     }
