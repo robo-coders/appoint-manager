@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue';
+import { computed, ref, useId } from 'vue';
 import Field from './Field.vue';
 
 const model = defineModel<string | number>({ default: '' });
@@ -16,12 +16,19 @@ const props = defineProps<{
 
 const uid = useId();
 const inputId = computed(() => props.id ?? uid);
+
+const el = ref<HTMLSelectElement | null>(null);
+
+defineExpose({
+    focus: () => el.value?.focus(),
+});
 </script>
 
 <template>
     <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
         <select
             :id="inputId"
+            ref="el"
             v-model="model"
             :disabled="disabled"
             :required="required"

@@ -15,9 +15,10 @@ it('lists existing verticals by key and label', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('SuperAdmin/Verticals')
-            ->has('verticals', 1)
+            ->has('verticals', 2)
             ->where('verticals.0.key', 'groomer')
-            ->where('verticals.0.label', 'Dog grooming'));
+            ->where('verticals.0.label', 'Dog grooming')
+            ->where('verticals.1.key', 'garage'));
 });
 
 it('creates a vertical and lists it afterwards', function () {
@@ -42,7 +43,7 @@ it('creates a vertical and lists it afterwards', function () {
 
     $this->get(route('super-admin.verticals'))
         ->assertInertia(fn ($page) => $page
-            ->has('verticals', 2)
+            ->has('verticals', 3)
             ->where('verticals.0.key', 'barber')
             ->where('verticals.0.label', 'Barber'));
 });

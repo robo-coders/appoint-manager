@@ -6,8 +6,24 @@ import { forms, resetForms } from './setup';
 
 const businessTypes = [
     { value: 'groomer', label: 'Dog grooming', note: 'dogs · per visit' },
+    { value: 'garage', label: 'Garage', note: 'vehicles · per visit' },
     { value: 'therapist', label: 'Therapy', note: 'clients only' },
 ];
+
+const currencies = [
+    { value: 'GBP', label: 'British pound', symbol: '£' },
+    { value: 'EUR', label: 'Euro', symbol: '€' },
+    { value: 'USD', label: 'US dollar', symbol: '$' },
+];
+
+const currencyCountries = {
+    GBP: [{ value: 'GB', label: 'United Kingdom' }],
+    EUR: [
+        { value: 'IE', label: 'Ireland' },
+        { value: 'FR', label: 'France' },
+    ],
+    USD: [{ value: 'US', label: 'United States' }],
+};
 
 const mountPage = (attached = false) =>
     mount(Register, {
@@ -19,6 +35,9 @@ const mountPage = (attached = false) =>
                 { key: 'basics', label: 'Business basics' },
             ],
             businessTypes,
+            currencies,
+            currencyCountries,
+            defaultCurrency: 'GBP',
         },
         global: {
             stubs: {
@@ -247,5 +266,86 @@ describe('the price', () => {
 
         const price = page.findAll('span').find((el) => el.text() === '£29 a month');
         expect(price?.classes()).toContain('font-mono');
+    });
+});
+
+describe('the currency', () => {
+    it('starts on the platform default with its matching country', () => {
+        const page = mountPage();
+
+        expect((fieldOf(page, 'Currency').element as HTMLSelectElement).value).toBe('GBP');
+        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('GB');
+    });
+
+    it('offers every currency the server sent, symbol and all', () => {
+        const page = mountPage();
+
+        const options = fieldOf(page, 'Currency').findAll('option');
+
+        expect(options).toHaveLength(currencies.length);
+        expect(options.map((option) => option.text())).toEqual([
+            '£  British pound (GBP)',
+            '€  Euro (EUR)',
+            '$  US dollar (USD)',
+        ]);
+    });
+
+    it('narrows the country list to places that settle in the chosen currency', async () => {
+        const page = mountPage();
+
+        await fieldOf(page, 'Currency').setValue('EUR');
+        await nextTick();
+
+        const countries = fieldOf(page, 'Where the business is based').findAll('option');
+
+        expect(countries.map((option) => option.attributes('value'))).toEqual(['IE', 'FR']);
+        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('IE');
+    });
+
+    it('never leaves a country from the currency the owner moved away from', async () => {
+        const page = mountPage();
+
+        await fieldOf(page, 'Currency').setValue('EUR');
+        await nextTick();
+        await fieldOf(page, 'Where the business is based').setValue('FR');
+        await nextTick();
+        await fieldOf(page, 'Currency').setValue('USD');
+        await nextTick();
+
+        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('US');
+    });
+
+    it('tells the owner what clients will see', async () => {
+        const page = mountPage();
+
+        expect(page.text()).toContain('Clients see prices as £.');
+
+        await fieldOf(page, 'Currency').setValue('EUR');
+        await nextTick();
+
+        expect(page.text()).toContain('Clients see prices as €.');
+    });
+
+    it('carries the pair into the payload the form posts', async () => {
+        const page = mountPage();
+
+        expect(forms[0].currency).toBe('GBP');
+        expect(forms[0].country).toBe('GB');
+
+        await fieldOf(page, 'Currency').setValue('EUR');
+        await nextTick();
+
+        expect(forms[0].currency).toBe('EUR');
+        expect(forms[0].country).toBe('IE');
+    });
+});
+
+describe('a new vertical', () => {
+    it('appears on the form with no change to the form itself', () => {
+        const page = mountPage();
+
+        expect(page.text()).toContain('Garage');
+        expect(page.text()).toContain('vehicles · per visit');
+        expect(page.findAll('input[type="radio"]')).toHaveLength(businessTypes.length);
     });
 });

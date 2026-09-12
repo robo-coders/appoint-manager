@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vertical;
+use App\Support\Currencies;
 use App\Support\SetupSteps;
 use App\Support\TenantSlug;
 use Illuminate\Auth\Events\Registered;
@@ -30,6 +31,9 @@ class RegisteredUserController extends Controller
                 'tail' => ', and you can stop at any point.',
             ],
             'steps' => SetupSteps::all(),
+            'currencies' => Currencies::options(),
+            'currencyCountries' => Currencies::countryOptions(),
+            'defaultCurrency' => Currencies::default(),
             'businessTypes' => Vertical::query()
                 ->orderBy('label')
                 ->get()
@@ -56,7 +60,8 @@ class RegisteredUserController extends Controller
                 'slug' => TenantSlug::generate($request->validated('business_name')),
                 'type' => $request->validated('business_type'),
                 'timezone' => 'Europe/London',
-                'currency' => 'GBP',
+                'currency' => $request->validated('currency'),
+                'country' => $request->validated('country'),
                 'email' => $request->validated('email'),
                 'trial_ends_at' => now()->addDays((int) config('billing.trial_days')),
                 'subscription_status' => 'trial',

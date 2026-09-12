@@ -17,6 +17,7 @@ final class StripeConnectGateway implements StripeGateway
         $account = $this->client($tenant)->accounts->create([
             'type' => 'express',
             'country' => $tenant->country,
+            'default_currency' => strtolower($tenant->currency),
             'email' => $tenant->email,
             'capabilities' => [
                 'card_payments' => ['requested' => true],

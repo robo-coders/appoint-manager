@@ -399,8 +399,17 @@ describe('ManageIsland — the same page, a different hat', () => {
         const wrapper = mount(ManageIsland, { props: manageProps() });
 
         expect(wrapper.text()).toContain('HX · HX1');
-        const message = wrapper.findAll('a').find((node) => node.text() === 'Message the salon');
+        const message = wrapper.findAll('a').find((node) => node.text() === 'Message Willow Street Grooming');
         expect(message?.attributes('href')).toBe('sms:01422 000000');
+    });
+
+    it('names the business rather than calling every tenant a salon', () => {
+        const wrapper = mount(ManageIsland, {
+            props: manageProps({ tenant: { ...manageProps().tenant, name: 'Pit Lane Motors' } }),
+        });
+
+        expect(wrapper.text()).toContain('Message Pit Lane Motors');
+        expect(wrapper.text()).not.toContain('Message the salon');
     });
 
     it('offers no way to message a salon that has given no number', () => {

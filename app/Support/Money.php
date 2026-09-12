@@ -24,10 +24,9 @@ final readonly class Money implements Arrayable, JsonSerializable
         $minor = $this->amount % 100;
         $body = number_format($major, 0, '.', ',').'.'.str_pad((string) $minor, 2, '0', STR_PAD_LEFT);
 
-        return match ($this->currency) {
-            'GBP' => '£'.$body,
-            default => $this->currency.' '.$body,
-        };
+        $symbol = Currencies::symbol($this->currency);
+
+        return $symbol === null ? $this->currency.' '.$body : $symbol.$body;
     }
 
     /** @return array{amount: int, formatted: string, currency: string} */

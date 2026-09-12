@@ -4,6 +4,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Models\User;
 use App\Models\Vertical;
+use App\Support\Currencies;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -29,6 +30,18 @@ class RegisterRequest extends FormRequest
             $this->merge(['email' => Str::lower(trim((string) $this->input('email')))]);
         }
 
+        $currency = strtoupper(trim((string) $this->input('currency')));
+        $currency = $currency === '' ? Currencies::default() : $currency;
+
+        $country = strtoupper(trim((string) $this->input('country')));
+
+        $this->merge([
+            'currency' => $currency,
+            'country' => $country === '' && Currencies::supports($currency)
+                ? Currencies::defaultCountry($currency)
+                : $country,
+        ]);
+
         $this->ensureIsNotRateLimited();
     }
 
@@ -38,6 +51,8 @@ class RegisterRequest extends FormRequest
         return [
             'business_name' => ['required', 'string', 'min:2', 'max:255'],
             'business_type' => ['required', 'string', Rule::exists(Vertical::class, 'key')],
+            'currency' => ['required', 'string', Rule::in(Currencies::codes())],
+            'country' => ['required', 'string', Rule::in(Currencies::countryCodes((string) $this->input('currency')))],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', Rules\Password::defaults()],
@@ -53,6 +68,10 @@ class RegisterRequest extends FormRequest
             'business_name.min' => 'That is too short to be a business name.',
             'business_type.required' => 'Choose the kind of business this is.',
             'business_type.exists' => 'Choose the kind of business this is.',
+            'currency.required' => 'Choose the currency you charge in.',
+            'currency.in' => 'Choose the currency you charge in.',
+            'country.required' => 'Choose where the business is based.',
+            'country.in' => 'Choose a country that settles in the currency you picked.',
             'name.required' => 'Enter your name.',
             'email.required' => 'Enter your email address.',
             'email.email' => "This doesn't look like a full email address.",

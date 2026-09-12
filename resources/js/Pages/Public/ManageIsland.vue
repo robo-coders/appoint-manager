@@ -291,7 +291,7 @@ const cancel = async () => {
                 :href="messageHref"
                 class="shrink-0 text-12 text-ink-2 underline decoration-rule underline-offset-4"
             >
-                Message the salon
+                Message {{ tenant.name }}
             </a>
         </div>
 

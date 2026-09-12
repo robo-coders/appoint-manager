@@ -34,6 +34,15 @@ function actingAsTenant(User $user): TestCase
     return $case;
 }
 
+/** @return array<string, mixed> */
+function bookingProps(string $html): array
+{
+    expect($html)->toContain('id="booking-props"');
+    preg_match('/id="booking-props">(.*?)<\/script>/s', $html, $matches);
+
+    return json_decode(html_entity_decode($matches[1], ENT_QUOTES), true, 512, JSON_THROW_ON_ERROR);
+}
+
 /**
  * @param  array<string, mixed>  $overrides
  * @return array{tenant: Tenant, staff: User, service: Service}

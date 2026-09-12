@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class FakeStripeGateway implements StripeGateway
 {
-    /** @var array<string, array{charges_enabled: bool, currently_due: list<string>}> */
+    /** @var array<string, array{charges_enabled: bool, currently_due: list<string>, country?: string, default_currency?: string}> */
     public array $accounts = [];
 
     /** @var list<array{tenant_id: int, booking_id: int, amount: int, capture_method: string}> */
@@ -42,6 +42,7 @@ final class FakeStripeGateway implements StripeGateway
     public function completeAccount(string $accountId): void
     {
         $this->accounts[$accountId] = [
+            ...$this->accounts[$accountId] ?? [],
             'charges_enabled' => true,
             'currently_due' => [],
         ];
@@ -53,6 +54,8 @@ final class FakeStripeGateway implements StripeGateway
         $this->accounts[$id] = [
             'charges_enabled' => false,
             'currently_due' => ['external_account'],
+            'country' => (string) $tenant->country,
+            'default_currency' => strtolower((string) $tenant->currency),
         ];
 
         return $id;
@@ -65,9 +68,14 @@ final class FakeStripeGateway implements StripeGateway
 
     public function retrieveAccount(string $accountId): array
     {
-        return $this->accounts[$accountId] ?? [
+        $account = $this->accounts[$accountId] ?? [
             'charges_enabled' => false,
             'currently_due' => ['external_account'],
+        ];
+
+        return [
+            'charges_enabled' => $account['charges_enabled'],
+            'currently_due' => $account['currently_due'],
         ];
     }
 

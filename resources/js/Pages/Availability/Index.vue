@@ -7,8 +7,12 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import SaveState from '@/Components/ui/SaveState.vue';
 import WeeklyHoursGrid from '@/Components/WeeklyHoursGrid.vue';
 import type { AvailabilityRange } from '@/types/models';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+
+const page = usePage();
+
+const businessNoun = computed(() => page.props.vertical?.business_noun ?? 'business');
 
 const props = defineProps<{
     staff: Array<{ id: number; name: string; colour: string | null }>;
@@ -78,7 +82,7 @@ const save = () => {
         <EmptyState
             v-if="staff.length === 0"
             title="Nobody to set hours for"
-            description="Add someone who takes appointments first — hours belong to a person, not to the salon."
+            :description="`Add someone who takes appointments first — hours belong to a person, not to the ${businessNoun}.`"
             action-label="Add staff"
             @action="router.visit(route('staff.index'))"
         />

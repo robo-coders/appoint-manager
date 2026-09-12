@@ -70,7 +70,7 @@ const freedAction = (booking: DiaryBooking) => {
 
 <template>
     <div>
-        <div class="flex flex-wrap gap-2 pb-4" role="group" aria-label="Show one groomer">
+        <div class="flex flex-wrap gap-2 pb-4" role="group" aria-label="Show one person">
             <Button :variant="filterStaffId === null ? 'primary' : 'secondary'" @click="emit('filter', null)">
                 Everyone
             </Button>

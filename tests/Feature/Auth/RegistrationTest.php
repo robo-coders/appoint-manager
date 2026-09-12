@@ -252,3 +252,81 @@ test('succeeding clears the failures that led up to it', function () {
 
     expect(RateLimiter::attempts('register|maya@example.com|127.0.0.1'))->toBe(0);
 });
+
+test('registration stores the chosen currency and country against the tenant', function () {
+    $this->post('/register', [
+        'business_name' => 'Dublin Motor Works',
+        'business_type' => 'garage',
+        'currency' => 'EUR',
+        'country' => 'IE',
+        'name' => 'Niamh Byrne',
+        'email' => 'niamh@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertRedirect(route('onboarding.show', absolute: false));
+
+    $tenant = Tenant::query()->where('slug', 'dublin-motor-works')->firstOrFail();
+
+    expect($tenant->currency)->toBe('EUR')
+        ->and($tenant->country)->toBe('IE')
+        ->and($tenant->type)->toBe('garage');
+});
+
+test('registration falls back to the configured default when no currency is sent', function () {
+    $this->post('/register', [
+        'business_name' => 'Fallback Salon',
+        'business_type' => 'groomer',
+        'name' => 'Ada Price',
+        'email' => 'ada@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertRedirect(route('onboarding.show', absolute: false));
+
+    $tenant = Tenant::query()->where('slug', 'fallback-salon')->firstOrFail();
+
+    expect($tenant->currency)->toBe('GBP')
+        ->and($tenant->country)->toBe('GB');
+});
+
+test('registration refuses a country that does not settle in the chosen currency', function () {
+    $this->post('/register', [
+        'business_name' => 'Mismatched Motors',
+        'business_type' => 'garage',
+        'currency' => 'EUR',
+        'country' => 'US',
+        'name' => 'Sam Reed',
+        'email' => 'sam@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertSessionHasErrors('country');
+
+    expect(Tenant::query()->where('slug', 'mismatched-motors')->exists())->toBeFalse();
+});
+
+test('registration refuses a currency the platform does not support', function () {
+    $this->post('/register', [
+        'business_name' => 'Yen Salon',
+        'business_type' => 'groomer',
+        'currency' => 'JPY',
+        'country' => 'JP',
+        'name' => 'Kei Tanaka',
+        'email' => 'kei@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertSessionHasErrors('currency');
+
+    expect(Tenant::query()->where('slug', 'yen-salon')->exists())->toBeFalse();
+});
+
+test('the registration screen offers every configured currency and its countries', function () {
+    $this->get('/register')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Auth/Register')
+            ->where('defaultCurrency', 'GBP')
+            ->has('currencies', 3)
+            ->where('currencies.0.value', 'GBP')
+            ->where('currencies.0.symbol', '£')
+            ->has('currencyCountries.EUR')
+            ->has('currencyCountries.GBP', 1));
+});

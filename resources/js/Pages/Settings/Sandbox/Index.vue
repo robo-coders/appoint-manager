@@ -221,7 +221,7 @@ const label = (interval: string) => (interval === 'week' ? 'Skip 1 week' : 'Skip
                                     Appointments slide closer, reminders that were due go out, unpaid holds are let go, and
                                     waitlist offers that nobody claimed run out.
                                 </p>
-                                <p>It only moves your shop. The real date does not change, and no other salon is affected.</p>
+                                <p>It only moves your shop. The real date does not change, and no other business is affected.</p>
                             </LearnMore>
                             <p v-if="outcome?.panel === 'skip'" class="mt-3 text-13 text-ink">{{ outcome.message }}</p>
                             <div class="mt-4 flex flex-wrap items-end gap-2">

@@ -32,6 +32,7 @@ export interface VerticalField {
 
 export interface Vertical {
     label: string;
+    business_noun: string;
     subject_singular: string;
     subject_plural: string;
     customer_singular: string;
