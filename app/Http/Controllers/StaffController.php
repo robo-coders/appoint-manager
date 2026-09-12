@@ -65,6 +65,7 @@ class StaffController extends Controller
                 'role_label' => $this->roleLabel($user),
                 'hours' => $this->hoursSummary($rules->get($user->id) ?? collect()),
                 'weekly_hours' => $this->weeklyHours($rules->get($user->id) ?? collect()),
+                'daily_hours' => $this->dailyHours($rules->get($user->id) ?? collect()),
                 'booked_this_week' => (int) ($booked[$user->id] ?? 0),
                 'service_ids' => $user->services
                     ->where('is_active', true)
@@ -152,16 +153,35 @@ class StaffController extends Controller
             return null;
         }
 
-        $minutes = $rules->sum(function (AvailabilityRule $rule) {
-            $start = CarbonImmutable::createFromFormat('H:i:s', str_pad((string) $rule->start_time, 8, ':00'));
-            $end = CarbonImmutable::createFromFormat('H:i:s', str_pad((string) $rule->end_time, 8, ':00'));
-
-            return max(0, $end->diffInMinutes($start, true));
-        });
+        $minutes = $rules->sum(fn (AvailabilityRule $rule) => $this->ruleMinutes($rule));
 
         $hours = round($minutes / 60, 1);
 
         return (floor($hours) === $hours ? (string) (int) $hours : number_format($hours, 1)).' h';
+    }
+
+    /**
+     * @param  Collection<int, AvailabilityRule>  $rules
+     * @return list<float>
+     */
+    private function dailyHours(Collection $rules): array
+    {
+        $hours = array_fill(1, 7, 0.0);
+
+        foreach ($rules as $rule) {
+            $day = (int) ($rule->weekday instanceof Weekday ? $rule->weekday->value : $rule->weekday);
+            $hours[$day] += $this->ruleMinutes($rule) / 60;
+        }
+
+        return array_values(array_map(fn (float $value) => round($value, 1), $hours));
+    }
+
+    private function ruleMinutes(AvailabilityRule $rule): int
+    {
+        $start = CarbonImmutable::createFromFormat('H:i:s', str_pad((string) $rule->start_time, 8, ':00'));
+        $end = CarbonImmutable::createFromFormat('H:i:s', str_pad((string) $rule->end_time, 8, ':00'));
+
+        return max(0, (int) $end->diffInMinutes($start, true));
     }
 
     /** @return array<int, int> */

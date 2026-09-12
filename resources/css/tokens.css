@@ -133,6 +133,7 @@
     --pill-muted: rgb(24 23 20 / 0.045);
     --pill-accent: rgb(168 87 41 / 0.13);
     --accent-strong: #8a461f;
+    --green: #3f6b4a;
 
     /* An ink tint for the active nav item and other selected-but-not-filled
      * states. 5.5% keeps it a whisper. */
@@ -339,6 +340,7 @@
     --accent-tint: #241c16;
     --accent-rule: #3d2e22;
     --accent-strong: #e09a70;
+    --green: #5a8a64;
 
     --pill-neutral: rgb(242 238 231 / 0.1);
     --pill-muted: rgb(242 238 231 / 0.06);

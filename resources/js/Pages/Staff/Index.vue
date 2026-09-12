@@ -24,6 +24,7 @@ type StaffRow = StaffRecord & {
     weekly_hours: string | null;
     booked_this_week: number;
     service_ids: number[];
+    daily_hours: number[];
 };
 
 const props = defineProps<{
@@ -99,6 +100,66 @@ const openHours = (person: StaffRecord) => router.get(route('availability.index'
 const load = (count: number) => `${count} booked this week`;
 
 const active = computed(() => props.staff.filter((person) => person.is_active).length);
+
+const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+const WEEK_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+
+const formatHours = (hours: number): string => {
+    const rounded = Math.round(hours * 10) / 10;
+
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+};
+
+const hasSchedule = (person: StaffRow): boolean => person.weekly_hours !== null;
+
+const DAY_RUN =
+    /(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:–(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun))? · (?!closed )([^·]+)/g;
+
+const scheduleVaries = (person: StaffRow): boolean => {
+    if (!hasSchedule(person)) {
+        return false;
+    }
+
+    const times = [...person.hours.matchAll(DAY_RUN)].map((match) => match[1].trim());
+
+    return new Set(times).size > 1;
+};
+
+const daysWorked = (person: StaffRow): number => person.daily_hours.filter((hours) => hours > 0).length;
+
+const dayTip = (person: StaffRow, hours: number): string => {
+    if (!hasSchedule(person)) {
+        return 'No hours';
+    }
+
+    return hours === 0 ? 'Off' : `${formatHours(hours)}h`;
+};
+
+const DAY_SCALE = 8;
+
+const barHeight = (person: StaffRow, hours: number): string => {
+    if (hours <= 0) {
+        return '0%';
+    }
+
+    const max = Math.max(DAY_SCALE, ...person.daily_hours);
+
+    return `${Math.min(100, (hours / max) * 100)}%`;
+};
+
+const hoveredBar = ref<string | null>(null);
+
+const barKey = (id: number, index: number) => `${id}-${index}`;
+
+const canOpenMenu = (person: StaffRow) => person.is_active && person.id !== page.props.auth.user?.id;
+
+const peopleCount = computed(() => props.staff.length);
+
+const weekCoveredHours = computed(() =>
+    props.staff.reduce((total, person) => total + person.daily_hours.reduce((sum, hours) => sum + hours, 0), 0),
+);
+
+const weekBooked = computed(() => props.staff.reduce((total, person) => total + person.booked_this_week, 0));
 </script>
 
 <template>
@@ -108,6 +169,26 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
         <PageHeader title="Staff" description="People who work in the business.">
             <Button @click="openCreate">Add staff</Button>
         </PageHeader>
+
+        <p
+            v-if="staff.length > 0"
+            class="mb-4 flex flex-wrap items-center gap-2 text-13 text-ink-2"
+        >
+            <span aria-hidden="true" class="size-1.5 shrink-0 rounded bg-green"></span>
+            <span class="font-medium text-ink">
+                <span class="numeral">{{ peopleCount }}</span>
+                {{ peopleCount === 1 ? 'person' : 'people' }}
+            </span>
+            <span aria-hidden="true" class="text-ink-4">·</span>
+            <span>
+                <span class="font-medium text-ink">
+                    <span class="numeral">{{ formatHours(weekCoveredHours) }} hours</span>
+                </span>
+                covered this week
+            </span>
+            <span aria-hidden="true" class="text-ink-4">·</span>
+            <span class="numeral">{{ weekBooked }} booked</span>
+        </p>
 
         <EmptyState
             v-if="staff.length === 0"
@@ -122,7 +203,7 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                 <li
                     v-for="person in staff"
                     :key="person.id"
-                    class="flex flex-wrap items-center gap-4 border-b border-b-rule px-2 py-4 transition duration-fast ease-product hover:bg-paper-sunk"
+                    class="flex flex-wrap items-center gap-4 overflow-visible border-b border-b-rule px-2 py-4 transition duration-fast ease-product hover:bg-paper-sunk"
                     :class="person.is_active ? '' : 'opacity-60'"
                 >
                     <span
@@ -132,21 +213,71 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                         {{ person.initial }}
                     </span>
 
-                    <div class="min-w-0 flex-1">
+                    <div class="min-w-0 flex-1 sm:flex-none sm:basis-48">
                         <div class="flex flex-wrap items-center gap-2">
                             <span
                                 class="inline-block size-2 shrink-0 rounded"
-                                :style="{ backgroundColor: person.colour ?? DEFAULT_STAFF_COLOUR }"
+                                :class="person.is_active ? 'bg-green' : 'bg-ink-4'"
                                 aria-hidden="true"
                             />
                             <span class="text-14 font-medium text-ink">{{ person.name }}</span>
                             <Badge variant="solid" tone="neutral">{{ person.role_label }}</Badge>
                         </div>
-                        <p class="mt-1 text-13 text-ink-2">{{ person.hours }}</p>
+                        <p
+                            v-if="!hasSchedule(person)"
+                            class="mt-1 text-13 text-ink-2 italic"
+                        >
+                            {{ person.hours }}
+                        </p>
+                        <p
+                            v-else-if="scheduleVaries(person)"
+                            class="mt-1 flex flex-wrap items-center gap-2"
+                        >
+                            <Badge variant="solid" tone="accent">Varies daily</Badge>
+                            <span class="text-13 text-ink-2">{{ daysWorked(person) }} days/wk</span>
+                        </p>
+                        <p
+                            v-else
+                            class="mt-1 text-13 text-ink-2"
+                        >
+                            {{ person.hours }}
+                        </p>
+                    </div>
+
+                    <div class="flex w-full min-w-0 flex-1 items-end justify-between gap-2 overflow-visible sm:w-auto">
+                        <button
+                            v-for="(label, index) in WEEK_DAYS"
+                            :key="`${person.id}-${index}`"
+                            type="button"
+                            class="group relative flex min-h-tap w-8 flex-col items-center justify-end overflow-visible"
+                            :aria-label="`${WEEK_DAY_NAMES[index]}, ${dayTip(person, person.daily_hours[index] ?? 0)}`"
+                            @mouseenter="hoveredBar = barKey(person.id, index)"
+                            @mouseleave="hoveredBar = null"
+                            @focus="hoveredBar = barKey(person.id, index)"
+                            @blur="hoveredBar = null"
+                        >
+                            <span
+                                class="pointer-events-none absolute inset-x-0 bottom-full z-10 mb-1 flex justify-center transition duration-fast ease-product"
+                                :class="hoveredBar === barKey(person.id, index) ? 'opacity-100' : 'opacity-0'"
+                                aria-hidden="true"
+                            >
+                                <span class="whitespace-nowrap rounded bg-ink px-2 py-1 text-12 text-paper numeral">
+                                    {{ dayTip(person, person.daily_hours[index] ?? 0) }}
+                                </span>
+                            </span>
+                            <span class="mb-1.5 text-12 text-ink-2">{{ label }}</span>
+                            <span class="flex h-row w-full flex-col justify-end overflow-hidden rounded bg-pill-neutral transition duration-fast ease-product group-hover:bg-ink-tint">
+                                <span
+                                    v-if="(person.daily_hours[index] ?? 0) > 0"
+                                    class="block w-full rounded bg-accent"
+                                    :style="{ height: barHeight(person, person.daily_hours[index] ?? 0) }"
+                                />
+                            </span>
+                        </button>
                     </div>
 
                     <div class="shrink-0 text-right">
-                        <p class="numeral text-13 text-ink">{{ person.weekly_hours ?? '—' }}</p>
+                        <p class="numeral text-17 text-ink">{{ person.weekly_hours ?? '—' }}</p>
                         <p class="mt-0.5 text-12 text-ink-2">{{ load(person.booked_this_week) }}</p>
                     </div>
 
@@ -154,12 +285,28 @@ const active = computed(() => props.staff.filter((person) => person.is_active).l
                         <Button variant="ghost" @click="openHours(person)">Hours</Button>
                         <Button variant="ghost" @click="openEdit(person)">Edit</Button>
                         <Menu
-                            v-if="person.is_active && person.id !== page.props.auth.user?.id"
+                            v-if="canOpenMenu(person)"
                             :label="`More actions for ${person.name}`"
                         >
                             <MenuItem danger @click="deactivate(person)">Deactivate</MenuItem>
                         </Menu>
-                        <span v-else class="size-8" aria-hidden="true" />
+                        <button
+                            v-else
+                            type="button"
+                            disabled
+                            class="inline-flex h-8 w-8 items-center justify-center rounded text-ink-3"
+                            :aria-label="
+                                person.id === page.props.auth.user?.id
+                                    ? 'You cannot deactivate your own account'
+                                    : `No more actions for ${person.name}`
+                            "
+                        >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+                                <circle cx="7" cy="2.5" r="1.25" />
+                                <circle cx="7" cy="7" r="1.25" />
+                                <circle cx="7" cy="11.5" r="1.25" />
+                            </svg>
+                        </button>
                     </div>
                 </li>
             </ul>

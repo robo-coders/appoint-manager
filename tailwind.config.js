@@ -42,6 +42,7 @@ export default {
             'accent-tint': 'var(--accent-tint)',
             'accent-rule': 'var(--accent-rule)',
             'accent-strong': 'var(--accent-strong)',
+            green: 'var(--green)',
 
             'pill-neutral': 'var(--pill-neutral)',
             'pill-muted': 'var(--pill-muted)',

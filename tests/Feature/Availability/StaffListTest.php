@@ -51,7 +51,8 @@ it('collapses a run of identical days into one phrase and names the days off', f
             ->where('staff.0.initial', 'R')
             ->where('staff.0.role_label', 'Owner')
             ->where('staff.0.hours', 'Mon–Fri · 09:00–17:00 · closed Sat & Sun')
-            ->where('staff.0.weekly_hours', '40 h'));
+            ->where('staff.0.weekly_hours', '40 h')
+            ->where('staff.0.daily_hours', [8, 8, 8, 8, 8, 0, 0]));
 });
 
 it('does not flatten a week whose days are not the same', function () {
@@ -65,7 +66,8 @@ it('does not flatten a week whose days are not the same', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('staff.0.hours', 'Mon–Thu · 09:00–17:00 · Fri · 09:00–13:00 · closed Sat & Sun')
-            ->where('staff.0.weekly_hours', '36 h'));
+            ->where('staff.0.weekly_hours', '36 h')
+            ->where('staff.0.daily_hours', [8, 8, 8, 8, 4, 0, 0]));
 });
 
 it('says so plainly when nobody has set any hours', function () {
@@ -76,7 +78,8 @@ it('says so plainly when nobody has set any hours', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('staff.0.hours', 'No hours set')
-            ->where('staff.0.weekly_hours', null));
+            ->where('staff.0.weekly_hours', null)
+            ->where('staff.0.daily_hours', [0, 0, 0, 0, 0, 0, 0]));
 });
 
 it('counts the week she is looking at, and not the appointments nobody is coming to', function () {

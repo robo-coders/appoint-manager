@@ -23,6 +23,7 @@ const person = (overrides: Record<string, unknown> = {}) => ({
     weekly_hours: '40 h',
     booked_this_week: 2,
     service_ids: [1],
+    daily_hours: [8, 8, 8, 8, 8, 0, 0],
     ...overrides,
 });
 
@@ -142,5 +143,116 @@ describe('a salon with nothing to assign', () => {
         await press(page, 'Edit');
 
         expect(page.find('[data-testid="staff-services-warning"]').exists()).toBe(false);
+    });
+});
+
+describe('the week on the staff list', () => {
+    it('summarises people, covered hours and bookings', () => {
+        const page = mountPage({
+            staff: [
+                person(),
+                person({
+                    id: 2,
+                    name: 'Carroll Fritsch',
+                    hours: 'No hours set',
+                    weekly_hours: null,
+                    booked_this_week: 14,
+                    daily_hours: [0, 0, 0, 0, 0, 0, 0],
+                }),
+            ],
+        });
+
+        expect(page.text()).toContain('2 people');
+        expect(page.text()).toContain('40 hours');
+        expect(page.text()).toContain('covered this week');
+        expect(page.text()).toContain('16 booked');
+    });
+
+    it('labels a working day, a day off, and a person with no schedule', () => {
+        const page = mountPage({
+            staff: [
+                person(),
+                person({
+                    id: 2,
+                    name: 'Carroll Fritsch',
+                    hours: 'No hours set',
+                    weekly_hours: null,
+                    booked_this_week: 14,
+                    daily_hours: [0, 0, 0, 0, 0, 0, 0],
+                }),
+            ],
+        });
+
+        expect(page.find('[aria-label="Monday, 8h"]').exists()).toBe(true);
+        expect(page.find('[aria-label="Saturday, Off"]').exists()).toBe(true);
+        expect(page.find('[aria-label="Monday, No hours"]').exists()).toBe(true);
+        expect(page.text()).toContain('No hours set');
+        expect(page.text()).toContain('—');
+        expect(page.findAll('button').some((node) => node.text() === 'Hours')).toBe(true);
+        expect(page.findAll('button').some((node) => node.text() === 'Edit')).toBe(true);
+    });
+
+    it('scales a shorter day against an 8 hour day and leaves an off day empty', () => {
+        const page = mountPage({
+            staff: [person({ daily_hours: [8, 4, 8, 8, 8, 0, 0] })],
+        });
+
+        const monday = page.find('[aria-label="Monday, 8h"]');
+        const tuesday = page.find('[aria-label="Tuesday, 4h"]');
+        const saturday = page.find('[aria-label="Saturday, Off"]');
+
+        expect(monday.find('.bg-accent').attributes('style')).toContain('height: 100%');
+        expect(tuesday.find('.bg-accent').attributes('style')).toContain('height: 50%');
+        expect(saturday.find('.bg-accent').exists()).toBe(false);
+    });
+
+    it('shows that day\'s hours when a bar is hovered', async () => {
+        const page = mountPage();
+        const monday = page.find('[aria-label="Monday, 8h"]');
+
+        expect(monday.text()).toContain('8h');
+        expect(monday.find('.opacity-0').exists()).toBe(true);
+
+        await monday.trigger('mouseenter');
+
+        expect(monday.find('.opacity-100').exists()).toBe(true);
+        expect(monday.find('.opacity-100').text()).toBe('8h');
+    });
+
+    it('keeps a uniform week as a single hours phrase', () => {
+        const page = mountPage();
+
+        expect(page.text()).toContain('Mon–Fri · 09:00–17:00');
+        expect(page.text()).not.toContain('Varies daily');
+    });
+
+    it('replaces a mixed week with a badge and a day count', () => {
+        const page = mountPage({
+            staff: [
+                person({
+                    hours: 'Mon–Thu · 09:00–17:00 · Fri · 09:00–13:00 · closed Sat & Sun',
+                    weekly_hours: '36 h',
+                    daily_hours: [8, 8, 8, 8, 4, 0, 0],
+                }),
+            ],
+        });
+
+        expect(page.text()).toContain('Varies daily');
+        expect(page.text()).toContain('5 days/wk');
+        expect(page.text()).not.toContain('09:00–13:00');
+    });
+
+    it('keeps a disabled overflow control on the signed-in owner', () => {
+        setPageProps({ auth: { user: { id: 1 } } });
+
+        const page = mountPage({
+            staff: [person({ id: 1, name: 'sad', role: 'owner', role_label: 'Owner' })],
+        });
+
+        const overflow = page.find('[aria-label="You cannot deactivate your own account"]');
+
+        expect(overflow.exists()).toBe(true);
+        expect(overflow.attributes('disabled')).toBeDefined();
+        expect(page.find('[aria-label="More actions for sad"]').exists()).toBe(false);
     });
 });
