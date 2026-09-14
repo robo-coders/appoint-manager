@@ -6,6 +6,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vertical;
+use App\Support\Money;
 
 /** @return list<array{weekday: int, open: bool, start_time: string, end_time: string}> */
 function aWeek(int ...$open): array
@@ -53,12 +54,14 @@ it('saves each onboarding step and can resume', function () {
         'name' => 'Paws & Whiskers Grooming',
         'slug' => 'paws-and-whiskers',
         'type' => 'groomer',
+        'currency' => 'GBP',
         'hours' => aWeek(1, 2, 3, 4, 5),
     ])->assertRedirect(route('onboarding.show', ['step' => 'business']));
 
     expect($tenant->fresh())
         ->name->toBe('Paws & Whiskers Grooming')
         ->slug->toBe('paws-and-whiskers')
+        ->currency->toBe('GBP')
         ->and($tenant->fresh()->onboardingCompletedSteps())->toContain('basics')
         ->and(AvailabilityRule::query()->count())->toBe(5);
 
@@ -67,6 +70,7 @@ it('saves each onboarding step and can resume', function () {
         ->assertInertia(fn ($page) => $page->where('step', 'business'));
 
     $this->patch(route('onboarding.business'), [
+        'country' => 'GB',
         'timezone' => 'Europe/London',
         'phone' => '020 7946 0123',
         'address_line_1' => '12 Willow Street',
@@ -74,7 +78,9 @@ it('saves each onboarding step and can resume', function () {
         'postcode' => 'E8 3AA',
     ])->assertRedirect(route('onboarding.show', ['step' => 'services']));
 
-    expect($tenant->fresh()->phone)->toBe('020 7946 0123');
+    expect($tenant->fresh()->phone)->toBe('020 7946 0123')
+        ->and($tenant->fresh()->country)->toBe('GB')
+        ->and($tenant->fresh()->timezone)->toBe('Europe/London');
 
     $this->patch(route('onboarding.services'), [
         'name' => 'Full groom — medium coat',
@@ -310,8 +316,6 @@ it('prefills the first service from the vertical rather than an empty form', fun
 
 it('lands a new signup in onboarding, not in the app', function () {
     $this->post(route('register'), [
-        'business_name' => 'Paws & Whiskers Grooming',
-        'business_type' => 'groomer',
         'name' => 'Maya Chen',
         'email' => 'maya@example.com',
         'password' => 'correct-horse-battery',
@@ -321,7 +325,7 @@ it('lands a new signup in onboarding, not in the app', function () {
     $tenant = Tenant::query()->where('email', 'maya@example.com')->sole();
 
     expect($tenant->hasCompletedOnboarding())->toBeFalse()
-        ->and($tenant->slug)->toBe('paws-whiskers-grooming');
+        ->and($tenant->name)->toBe('');
 
     foreach (['dashboard', 'diary.index', 'bookings.index', 'customers.index'] as $name) {
         $this->get(route($name))->assertRedirect(route('onboarding.show'));
@@ -350,4 +354,117 @@ it('no longer answers on the retired hours endpoint', function () {
         ->assertNotFound();
 
     expect(AvailabilityRule::query()->count())->toBe(0);
+});
+
+it('persists the chosen currency on the tenant', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)->patch(route('onboarding.basics'), [
+        'name' => 'Dublin Motor Works',
+        'slug' => 'dublin-motor-works',
+        'type' => 'garage',
+        'currency' => 'EUR',
+        'hours' => aWeek(1),
+    ])->assertRedirect(route('onboarding.show', ['step' => 'business']));
+
+    $tenant = $user->tenant->fresh();
+
+    expect($tenant->currency)->toBe('EUR')
+        ->and((new Money(3500, $tenant->currency))->formatted())->toBe('€35.00');
+});
+
+it('persists country and timezone on the tenant', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)->patch(route('onboarding.basics'), [
+        'name' => 'Dublin Motor Works',
+        'slug' => 'dublin-motor-works',
+        'type' => 'garage',
+        'currency' => 'EUR',
+        'hours' => aWeek(1),
+    ])->assertSessionHasNoErrors();
+
+    $this->patch(route('onboarding.business'), [
+        'country' => 'IE',
+        'timezone' => 'America/New_York',
+    ])->assertRedirect(route('onboarding.show', ['step' => 'services']));
+
+    expect($user->tenant->fresh()->country)->toBe('IE')
+        ->and($user->tenant->fresh()->timezone)->toBe('America/New_York')
+        ->and($user->tenant->fresh()->currency)->toBe('EUR');
+});
+
+it('refuses a country that does not settle in the chosen currency', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete()->state(['currency' => 'EUR']), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)->patch(route('onboarding.business'), [
+        'country' => 'US',
+        'timezone' => 'America/New_York',
+    ])->assertSessionHasErrors('country');
+
+    expect($user->tenant->fresh()->country)->not->toBe('US');
+});
+
+it('refuses a currency the platform does not support', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)->patch(route('onboarding.basics'), [
+        'name' => 'Yen Salon',
+        'slug' => 'yen-salon',
+        'type' => 'groomer',
+        'currency' => 'JPY',
+        'hours' => aWeek(1),
+    ])->assertSessionHasErrors('currency');
+
+    expect($user->tenant->fresh()->currency)->not->toBe('JPY');
+});
+
+it('stores a newly created vertical as the tenant type', function () {
+    Vertical::factory()->create([
+        'key' => 'barber',
+        'label' => 'Barber',
+        'subject_singular' => 'client',
+        'subject_plural' => 'clients',
+    ]);
+
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)->patch(route('onboarding.basics'), [
+        'name' => 'Cut & Co',
+        'slug' => 'cut-and-co',
+        'type' => 'barber',
+        'currency' => 'GBP',
+        'hours' => aWeek(1),
+    ])->assertSessionHasNoErrors();
+
+    expect($user->tenant->fresh()->type)->toBe('barber');
+});
+
+it('offers every configured currency and its countries', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create(['role' => UserRole::Owner]);
+
+    actingAsTenant($user)
+        ->get(route('onboarding.show'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Onboarding/Index')
+            ->has('currencies', 3)
+            ->where('currencies.0.value', 'GBP')
+            ->where('currencies.0.symbol', '£')
+            ->has('currencyCountries.EUR')
+            ->has('currencyCountries.GBP', 1)
+            ->where('countryTimezones.IE', 'Europe/Dublin')
+            ->where('countryTimezones.US', 'America/New_York'));
 });

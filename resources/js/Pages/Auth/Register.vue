@@ -3,69 +3,32 @@ import Button from '@/Components/ui/Button.vue';
 import Callout from '@/Components/ui/Callout.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
-import RadioGroup from '@/Components/ui/RadioGroup.vue';
-import Select from '@/Components/ui/Select.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import type { Step } from '@/Components/ui/StepProgress.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 
-const props = defineProps<{
+defineProps<{
     terms: { lead: string; price: string; tail: string };
     steps: Step[];
-    businessTypes: { value: string; label: string; note: string }[];
-    currencies: { value: string; label: string; symbol: string }[];
-    currencyCountries: Record<string, { value: string; label: string }[]>;
-    defaultCurrency: string;
 }>();
 
 const form = useForm({
-    business_name: '',
-    business_type: '',
-    currency: props.defaultCurrency,
-    country: props.currencyCountries[props.defaultCurrency]?.[0]?.value ?? '',
     name: '',
     email: '',
     password: '',
     password_confirmation: '',
 });
 
-type Field =
-    | 'business_name'
-    | 'business_type'
-    | 'currency'
-    | 'country'
-    | 'name'
-    | 'email'
-    | 'password'
-    | 'password_confirmation';
+type Field = 'name' | 'email' | 'password' | 'password_confirmation';
 
-const FIELDS: Field[] = [
-    'business_name',
-    'business_type',
-    'currency',
-    'country',
-    'name',
-    'email',
-    'password',
-    'password_confirmation',
-];
+const FIELDS: Field[] = ['name', 'email', 'password', 'password_confirmation'];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_MIN = 8;
 
 const check: Record<Field, () => string> = {
-    business_name: () => {
-        const value = form.business_name.trim();
-
-        if (!value) return 'Enter the name clients will see.';
-
-        return value.length < 2 ? 'That is too short to be a business name.' : '';
-    },
-    business_type: () => (form.business_type ? '' : 'Choose the kind of business this is.'),
-    currency: () => (form.currency ? '' : 'Choose the currency you charge in.'),
-    country: () => (form.country ? '' : 'Choose where the business is based.'),
     name: () => (form.name.trim() ? '' : 'Enter your name.'),
     email: () => {
         const value = form.email.trim();
@@ -87,10 +50,6 @@ const check: Record<Field, () => string> = {
 };
 
 const touched = reactive<Record<Field, boolean>>({
-    business_name: false,
-    business_type: false,
-    currency: false,
-    country: false,
     name: false,
     email: false,
     password: false,
@@ -140,20 +99,12 @@ onMounted(() => {
     });
 });
 
-const businessNameField = ref<InstanceType<typeof TextInput> | null>(null);
-const typeField = ref<InstanceType<typeof RadioGroup> | null>(null);
-const currencyField = ref<InstanceType<typeof Select> | null>(null);
-const countryField = ref<InstanceType<typeof Select> | null>(null);
 const nameField = ref<InstanceType<typeof TextInput> | null>(null);
 const emailField = ref<InstanceType<typeof TextInput> | null>(null);
 const passwordField = ref<InstanceType<typeof TextInput> | null>(null);
 const confirmationField = ref<InstanceType<typeof TextInput> | null>(null);
 
 const focusable = (): Record<Field, { focus: () => void } | null> => ({
-    business_name: businessNameField.value,
-    business_type: typeField.value,
-    currency: currencyField.value,
-    country: countryField.value,
     name: nameField.value,
     email: emailField.value,
     password: passwordField.value,
@@ -177,34 +128,6 @@ const submit = () => {
 
     form.post(route('register'));
 };
-
-const typeOptions = computed(() =>
-    props.businessTypes.map((type) => ({ value: type.value, label: type.label, hint: type.note })),
-);
-
-const currencyOptions = computed(() =>
-    props.currencies.map((currency) => ({
-        value: currency.value,
-        label: `${currency.symbol}  ${currency.label} (${currency.value})`,
-    })),
-);
-
-const countryOptions = computed(() => props.currencyCountries[form.currency] ?? []);
-
-const currencyHint = computed(() => {
-    const symbol = props.currencies.find((currency) => currency.value === form.currency)?.symbol;
-
-    return symbol ? `Clients see prices as ${symbol}. Payouts settle in this currency.` : '';
-});
-
-watch(
-    () => form.currency,
-    () => {
-        if (!countryOptions.value.some((country) => country.value === form.country)) {
-            form.country = countryOptions.value[0]?.value ?? '';
-        }
-    },
-);
 </script>
 
 <template>
@@ -230,55 +153,13 @@ watch(
 
         <form class="space-y-4" novalidate @submit.prevent="submit">
             <TextInput
-                ref="businessNameField"
-                v-model="form.business_name"
-                label="Business name"
-                hint="Clients see this. You can change it later."
-                :error="errorFor('business_name')"
-                autocomplete="organization"
-                required
-                autofocus
-                @blur="touched.business_name = true"
-            />
-
-            <RadioGroup
-                ref="typeField"
-                v-model="form.business_type"
-                legend="What kind of business?"
-                :options="typeOptions"
-                :error="errorFor('business_type')"
-                required
-            />
-
-            <Select
-                ref="currencyField"
-                v-model="form.currency"
-                label="Currency"
-                :hint="currencyHint"
-                :options="currencyOptions"
-                :error="errorFor('currency')"
-                required
-                @blur="touched.currency = true"
-            />
-
-            <Select
-                ref="countryField"
-                v-model="form.country"
-                label="Where the business is based"
-                hint="Sets where deposits are paid out. You cannot change this later."
-                :options="countryOptions"
-                :error="errorFor('country')"
-                required
-                @blur="touched.country = true"
-            />
-
-            <TextInput
                 ref="nameField"
                 v-model="form.name"
                 label="Your name"
                 :error="errorFor('name')"
                 autocomplete="name"
                 required
+                autofocus
                 @blur="touched.name = true"
             />
 
@@ -327,7 +208,7 @@ watch(
 
             <div class="pt-2">
                 <Button type="submit" variant="accent-solid" block :loading="form.processing">
-                    {{ form.processing ? 'Creating account…' : 'Create the account' }}
+                    {{ form.processing ? 'Creating account…' : 'Continue to business basics' }}
                 </Button>
                 <p class="mt-3 text-12 text-ink-2">
                     {{ terms.lead }}

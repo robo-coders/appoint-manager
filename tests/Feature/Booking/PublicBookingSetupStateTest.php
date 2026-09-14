@@ -137,10 +137,8 @@ it('does run the availability engine once a salon is configured', function () {
         ->and($touchedTimeOff)->toBeTrue();
 });
 
-it('carries the business name typed at signup, and keeps the page dark until onboarding finishes', function () {
+it('keeps the booking page dark until onboarding finishes', function () {
     $this->post(route('register'), [
-        'business_name' => 'Bramble & Co',
-        'business_type' => 'groomer',
         'name' => 'Maya Reed',
         'email' => 'maya@example.com',
         'password' => 'correct-horse-battery',
@@ -149,17 +147,28 @@ it('carries the business name typed at signup, and keeps the page dark until onb
 
     $tenant = Tenant::query()->where('email', 'maya@example.com')->sole();
 
-    expect($tenant->name)->toBe('Bramble & Co')
-        ->and($tenant->onboarding_completed_at)->toBeNull()
-        ->and($tenant->booking_page_live)->toBeFalse();
+    $this->patch(route('onboarding.basics'), [
+        'name' => 'Bramble & Co',
+        'slug' => 'bramble-co',
+        'type' => 'groomer',
+        'currency' => 'GBP',
+        'hours' => collect(range(1, 7))->map(fn (int $day) => [
+            'weekday' => $day,
+            'open' => $day <= 5,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ])->all(),
+    ])->assertSessionHasNoErrors();
 
-    $this->get(route('public.booking.show', $tenant->slug))->assertNotFound();
+    expect($tenant->fresh()->name)->toBe('Bramble & Co')
+        ->and($tenant->fresh()->onboarding_completed_at)->toBeNull()
+        ->and($tenant->fresh()->booking_page_live)->toBeFalse();
+
+    $this->get(route('public.booking.show', $tenant->fresh()->slug))->assertNotFound();
 });
 
 it('shows the owner previewing an unfinished page the setup state, not a full diary', function () {
     $this->post(route('register'), [
-        'business_name' => 'Bramble & Co',
-        'business_type' => 'groomer',
         'name' => 'Maya Reed',
         'email' => 'maya@example.com',
         'password' => 'correct-horse-battery',
@@ -167,6 +176,21 @@ it('shows the owner previewing an unfinished page the setup state, not a full di
     ]);
 
     $tenant = Tenant::query()->where('email', 'maya@example.com')->sole();
+
+    $this->patch(route('onboarding.basics'), [
+        'name' => 'Bramble & Co',
+        'slug' => 'bramble-co',
+        'type' => 'groomer',
+        'currency' => 'GBP',
+        'hours' => collect(range(1, 7))->map(fn (int $day) => [
+            'weekday' => $day,
+            'open' => $day <= 5,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ])->all(),
+    ])->assertSessionHasNoErrors();
+
+    $tenant = $tenant->fresh();
 
     $html = $this->get(route('booking.preview', $tenant->preview_token))->assertOk()->getContent();
 

@@ -17,15 +17,12 @@ const PASSWORD = 'correct-horse-battery';
 
 const field = (page: Page, label: RegExp) => page.getByLabel(label);
 
-const BUSINESS_NAME = /^Business name/;
 const YOUR_NAME = /^Your name/;
 const EMAIL = /^Email/;
 const PASSWORD_FIELD = /^Password/;
 const CONFIRMATION = /^Confirm password/;
 
 async function fillEverything(page: Page, email: string, confirmation = PASSWORD): Promise<void> {
-    await field(page, BUSINESS_NAME).fill('Willow Street Grooming');
-    await page.getByRole('radio', { name: /Dog grooming/ }).check();
     await field(page, YOUR_NAME).fill('Maya Chen');
     await field(page, EMAIL).fill(email);
     await field(page, PASSWORD_FIELD).fill(PASSWORD);
@@ -33,8 +30,6 @@ async function fillEverything(page: Page, email: string, confirmation = PASSWORD
 }
 
 async function expectNothingLost(page: Page, email: string, confirmation = PASSWORD): Promise<void> {
-    await expect(field(page, BUSINESS_NAME)).toHaveValue('Willow Street Grooming');
-    await expect(page.getByRole('radio', { name: /Dog grooming/ })).toBeChecked();
     await expect(field(page, YOUR_NAME)).toHaveValue('Maya Chen');
     await expect(field(page, EMAIL)).toHaveValue(email);
     await expect(field(page, PASSWORD_FIELD)).toHaveValue(PASSWORD);
@@ -66,12 +61,11 @@ test.describe('setting up a business', () => {
 
         await at(page, 1280, 1100);
         await fillEverything(page, address('pair'));
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         await expect(page.getByRole('heading', { name: 'Tell us about the business' })).toBeVisible();
 
-        await expect(field(page, BUSINESS_NAME)).toHaveValue('Willow Street Grooming');
-        await expect(page.getByRole('radio', { name: /Dog grooming/ })).toBeChecked();
+        await expect(field(page, /^Business name/)).toHaveValue('');
 
         await settled(page);
         await expect(page).toHaveScreenshot('register-2-basics-1280.png', { fullPage: true });
@@ -86,7 +80,7 @@ test.describe('setting up a business', () => {
 
         await expect(page.getByText('Those two passwords do not match.')).toBeVisible();
 
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         await expect(page).toHaveURL(/\/register$/);
         await expect(page.getByRole('heading', { name: 'Set up your business' })).toBeVisible();
@@ -105,13 +99,13 @@ test.describe('setting up a business', () => {
         await at(page, 1280, 1100);
         await page.goto('/register');
         await fillEverything(page, email);
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
         await expect(page.getByRole('heading', { name: 'Tell us about the business' })).toBeVisible();
 
         await page.context().clearCookies();
         await page.goto('/register');
         await fillEverything(page, email);
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         const message = page.getByText('An account with this email already exists');
         await expect(message).toBeVisible();
@@ -141,7 +135,7 @@ test.describe('setting up a business', () => {
 
         await page.route('**/register', (route) => route.abort('failed'));
 
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         await expect(page.getByText('Not sent')).toBeVisible();
         await expect(page.getByText('Everything you typed is still here')).toBeVisible();
@@ -149,7 +143,7 @@ test.describe('setting up a business', () => {
         await expect(page.getByRole('heading', { name: 'Set up your business' })).toBeVisible();
         await expectNothingLost(page, email);
 
-        const button = page.getByRole('button', { name: 'Create the account' });
+        const button = page.getByRole('button', { name: 'Continue to business basics' });
         await expect(button).toBeEnabled();
 
         await settled(page);
@@ -159,7 +153,7 @@ test.describe('setting up a business', () => {
         await expect(page.getByText('Not sent')).toBeHidden();
 
         await page.unroute('**/register');
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
         await expect(page.getByRole('heading', { name: 'Tell us about the business' })).toBeVisible();
     });
 
@@ -169,7 +163,7 @@ test.describe('setting up a business', () => {
         await at(page, 1280, 1100);
         await page.goto('/register');
         await fillEverything(page, email);
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
         await expect(page.getByRole('heading', { name: 'Tell us about the business' })).toBeVisible();
 
         await page.context().clearCookies();
@@ -177,11 +171,11 @@ test.describe('setting up a business', () => {
         for (let attempt = 0; attempt < 10; attempt++) {
             await page.goto('/register');
             await fillEverything(page, email);
-            await page.getByRole('button', { name: 'Create the account' }).click();
+            await page.getByRole('button', { name: 'Continue to business basics' }).click();
             await expect(page.getByText('An account with this email already exists')).toBeVisible();
         }
 
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         await expect(page.getByText(/^Too many attempts\. Try again in \d+ (seconds|minutes)\.$/)).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Set up your business' })).toBeVisible();

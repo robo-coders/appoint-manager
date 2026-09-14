@@ -17,6 +17,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vertical;
 use App\Services\Booking\BookingService;
+use App\Support\Currencies;
 use App\Support\SetupSteps;
 use App\Support\StaffServices;
 use App\Support\TenantSlug;
@@ -64,11 +65,15 @@ class OnboardingController extends Controller
             'steps' => SetupSteps::all(),
             'onboardingSteps' => SetupSteps::ONBOARDING,
             'timezones' => Timezones::identifiers(),
+            'currencies' => Currencies::options(),
+            'currencyCountries' => Currencies::countryOptions(),
+            'countryTimezones' => Timezones::countryDefaults(),
 
             'basics' => [
                 'name' => $tenant->name,
                 'slug' => $tenant->slug,
                 'type' => $tenant->type,
+                'currency' => $tenant->currency,
                 'hours' => $this->weekFor($owner, $rules, in_array('basics', $completed, true)),
             ],
             'verticals' => Vertical::query()
@@ -83,6 +88,7 @@ class OnboardingController extends Controller
                 ->all(),
 
             'business' => [
+                'country' => $tenant->country,
                 'timezone' => $tenant->timezone,
                 'phone' => $tenant->phone,
                 'address_line_1' => $tenant->address_line_1,
@@ -129,11 +135,19 @@ class OnboardingController extends Controller
         $owner = $this->owner($request);
 
         DB::transaction(function () use ($request, $tenant, $owner): void {
-            $tenant->update([
+            $currency = $request->validated('currency');
+            $payload = [
                 'name' => $request->validated('name'),
                 'slug' => $request->validated('slug'),
                 'type' => $request->validated('type'),
-            ]);
+                'currency' => $currency,
+            ];
+
+            if (! Currencies::supportsCountry($currency, $tenant->country)) {
+                $payload['country'] = Currencies::defaultCountry($currency);
+            }
+
+            $tenant->update($payload);
 
             AvailabilityRule::query()->where('user_id', $owner->id)->delete();
 

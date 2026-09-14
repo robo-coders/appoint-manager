@@ -8,8 +8,6 @@ use Database\Seeders\DemoTenantSeeder;
 
 it('registers, onboards, reaches the dashboard and can write', function () {
     $this->post(route('register'), [
-        'business_name' => 'Willow Street Grooming',
-        'business_type' => 'groomer',
         'name' => 'Maya Chen',
         'email' => 'maya@willowstreet.example',
         'password' => 'correct-horse-battery',
@@ -74,8 +72,6 @@ it('registers, onboards, reaches the dashboard and can write', function () {
 
 it('does not show a new salon the read-only billing banner', function () {
     $this->post(route('register'), [
-        'business_name' => 'Willow Street Grooming',
-        'business_type' => 'groomer',
         'name' => 'Maya Chen',
         'email' => 'maya@willowstreet.example',
         'password' => 'correct-horse-battery',
@@ -117,8 +113,6 @@ it('uses the configured trial length wherever the tenant was created', function 
     config(['billing.trial_days' => 45]);
 
     $this->post(route('register'), [
-        'business_name' => 'Willow Street Grooming',
-        'business_type' => 'groomer',
         'name' => 'Maya Chen',
         'email' => 'maya@willowstreet.example',
         'password' => 'correct-horse-battery',

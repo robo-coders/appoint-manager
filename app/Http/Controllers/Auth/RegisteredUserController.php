@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Vertical;
 use App\Support\Currencies;
 use App\Support\SetupSteps;
 use App\Support\TenantSlug;
+use App\Support\Timezones;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -31,19 +31,6 @@ class RegisteredUserController extends Controller
                 'tail' => ', and you can stop at any point.',
             ],
             'steps' => SetupSteps::all(),
-            'currencies' => Currencies::options(),
-            'currencyCountries' => Currencies::countryOptions(),
-            'defaultCurrency' => Currencies::default(),
-            'businessTypes' => Vertical::query()
-                ->orderBy('label')
-                ->get()
-                ->map(fn (Vertical $vertical) => [
-                    'value' => $vertical->key,
-                    'label' => $vertical->label,
-                    'note' => $vertical->note(),
-                ])
-                ->values()
-                ->all(),
         ]);
     }
 
@@ -55,13 +42,16 @@ class RegisteredUserController extends Controller
     public function store(RegisterRequest $request): RedirectResponse
     {
         $user = DB::transaction(function () use ($request) {
+            $currency = Currencies::default();
+            $country = Currencies::defaultCountry($currency);
+
             $tenant = Tenant::query()->create([
-                'name' => $request->validated('business_name'),
-                'slug' => TenantSlug::generate($request->validated('business_name')),
-                'type' => $request->validated('business_type'),
-                'timezone' => 'Europe/London',
-                'currency' => $request->validated('currency'),
-                'country' => $request->validated('country'),
+                'name' => '',
+                'slug' => TenantSlug::generate(''),
+                'type' => '',
+                'timezone' => Timezones::forCountry($country),
+                'currency' => $currency,
+                'country' => $country,
                 'email' => $request->validated('email'),
                 'trial_ends_at' => now()->addDays((int) config('billing.trial_days')),
                 'subscription_status' => 'trial',

@@ -68,6 +68,24 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'Europe/London'));
 });
 
+it('builds slots in the tenant timezone rather than a hardcoded zone', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-03-01 08:00:00', 'America/New_York'));
+
+    ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = salon([
+        'tenant' => ['timezone' => 'America/New_York'],
+    ]);
+    openHours($staff, Weekday::Tuesday);
+
+    [$from, $to] = dayRange('2026-03-10', 'America/New_York');
+    $slots = app(AvailabilityEngine::class)->slotsFor($tenant, $service, $from, $to);
+    $tz = $tenant->timezone;
+
+    expect($tz)->toBe('America/New_York')
+        ->and($slots)->toHaveCount(29)
+        ->and($slots->first()?->startsAt->timezone($tz)->format('H:i'))->toBe('09:00')
+        ->and($slots->last()?->startsAt->timezone($tz)->format('H:i'))->toBe('16:00');
+});
+
 it('returns the correct count and first/last slot for a simple day', function () {
     ['tenant' => $tenant, 'staff' => $staff, 'service' => $service] = salon();
     openHours($staff, Weekday::Tuesday);

@@ -91,20 +91,25 @@ it('keeps the console closed to a non-super-admin', function () {
     $this->actingAs($user)->get(route('super-admin.verticals'))->assertForbidden();
 });
 
-it('puts database verticals on the register form in label order', function () {
+it('puts database verticals on the onboarding form in label order', function () {
     Vertical::factory()->create([
         'key' => 'barber',
         'label' => 'Barber',
     ]);
 
-    $this->get(route('register'))
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create();
+
+    actingAsTenant($user)
+        ->get(route('onboarding.show'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Auth/Register')
-            ->where('businessTypes.0.value', 'barber')
-            ->where('businessTypes.0.label', 'Barber')
-            ->where('businessTypes.1.value', 'groomer')
-            ->where('businessTypes.1.label', 'Dog grooming'));
+            ->component('Onboarding/Index')
+            ->where('verticals.0.value', 'barber')
+            ->where('verticals.0.label', 'Barber')
+            ->where('verticals.1.value', 'groomer')
+            ->where('verticals.1.label', 'Dog grooming'));
 });
 
 it('falls back to the groomer row when a tenant type has no matching vertical', function () {

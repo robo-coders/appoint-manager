@@ -6,6 +6,7 @@ import Combobox from '@/Components/ui/Combobox.vue';
 import FieldError from '@/Components/ui/FieldError.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
 import RadioGroup from '@/Components/ui/RadioGroup.vue';
+import Select from '@/Components/ui/Select.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import ToastContainer from '@/Components/ui/ToastContainer.vue';
 import { toast } from '@/lib/toast';
@@ -24,9 +25,13 @@ const props = defineProps<{
     steps: { key: string; label: string }[];
     onboardingSteps: string[];
     timezones: string[];
-    basics: { name: string; slug: string; type: string; hours: Hour[] };
+    currencies: { value: string; label: string; symbol: string }[];
+    currencyCountries: Record<string, { value: string; label: string }[]>;
+    countryTimezones: Record<string, string>;
+    basics: { name: string; slug: string; type: string; currency: string; hours: Hour[] };
     verticals: { value: string; label: string; note: string }[];
     business: {
+        country: string | null;
         timezone: string;
         phone: string | null;
         address_line_1: string | null;
@@ -60,8 +65,10 @@ const form = ref({
     name: props.basics.name,
     slug: props.basics.slug,
     type: props.basics.type,
+    currency: props.basics.currency,
     hours: props.basics.hours.map((hour) => ({ ...hour })),
 
+    country: props.business.country ?? '',
     timezone: props.business.timezone,
     phone: props.business.phone ?? '',
     address_line_1: props.business.address_line_1 ?? '',
@@ -223,6 +230,35 @@ const verticalOptions = computed(() =>
     })),
 );
 
+const currencyOptions = computed(() =>
+    props.currencies.map((currency) => ({
+        value: currency.value,
+        label: `${currency.symbol}  ${currency.label} (${currency.value})`,
+    })),
+);
+
+const countryOptions = computed(() => props.currencyCountries[form.value.currency] ?? []);
+
+watch(
+    () => form.value.currency,
+    () => {
+        if (!countryOptions.value.some((country) => country.value === form.value.country)) {
+            form.value.country = countryOptions.value[0]?.value ?? '';
+        }
+    },
+);
+
+watch(
+    () => form.value.country,
+    (country) => {
+        const zone = props.countryTimezones[country];
+
+        if (zone) {
+            form.value.timezone = zone;
+        }
+    },
+);
+
 const dayName = (weekday: number) => weekdays.find((day) => day.value === weekday)?.label ?? '';
 
 const openDays = computed(() => form.value.hours.filter((hour) => hour.open).length);
@@ -236,11 +272,13 @@ const submitBasics = () =>
         name: form.value.name,
         slug: form.value.slug,
         type: form.value.type,
+        currency: form.value.currency,
         hours: form.value.hours,
     });
 
 const submitBusiness = () =>
     submit('patch', route('onboarding.business'), {
+        country: form.value.country,
         timezone: form.value.timezone,
         phone: form.value.phone,
         address_line_1: form.value.address_line_1,
@@ -476,6 +514,17 @@ const onNext = () => {
                     />
                 </div>
 
+                <div class="mt-4 max-w-measure">
+                    <Select
+                        v-model="form.currency"
+                        label="Currency"
+                        hint="Clients see prices in this currency. Payouts settle in this currency."
+                        :options="currencyOptions"
+                        :error="errors.currency"
+                        required
+                    />
+                </div>
+
                 <fieldset class="mt-12">
                     <legend class="text-13 font-medium text-ink">Opening hours</legend>
                     <FieldError :message="errors.hours" />
@@ -533,6 +582,14 @@ const onNext = () => {
                 </p>
 
                 <div class="mt-12 max-w-measure space-y-4">
+                    <Select
+                        v-model="form.country"
+                        label="Where the business is based"
+                        hint="Sets where deposits are paid out. You cannot change this later."
+                        :options="countryOptions"
+                        :error="errors.country"
+                        required
+                    />
                     <Combobox
                         v-model="form.timezone"
                         label="Timezone"

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Onboarding;
 
 use App\Models\Tenant;
 use App\Models\Vertical;
+use App\Support\Currencies;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -30,6 +31,7 @@ class UpdateBasicsRequest extends FormRequest
                 Rule::unique(Tenant::class, 'slug')->ignore(current_tenant_id()),
             ],
             'type' => ['required', 'string', Rule::exists(Vertical::class, 'key')],
+            'currency' => ['required', 'string', Rule::in(Currencies::codes())],
 
             'hours' => ['present', 'array', 'size:7'],
             'hours.*.weekday' => ['required', 'integer', 'min:1', 'max:7'],
@@ -45,15 +47,22 @@ class UpdateBasicsRequest extends FormRequest
             'slug.unique' => 'That address is already taken. Try another.',
             'slug.regex' => 'Use lowercase letters, numbers and hyphens only.',
             'hours.size' => 'Every day of the week needs an answer.',
+            'currency.required' => 'Choose the currency you charge in.',
+            'currency.in' => 'Choose the currency you charge in.',
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $slug = $this->input('slug');
+        $currency = strtoupper(trim((string) $this->input('currency')));
+        $currency = $currency === ''
+            ? (current_tenant()?->currency ?: Currencies::default())
+            : $currency;
 
         $this->merge([
             'slug' => is_string($slug) ? strtolower(trim($slug)) : $slug,
+            'currency' => $currency,
             'hours' => collect($this->input('hours', []))->map(function ($day) {
                 if (is_array($day) && array_key_exists('open', $day)) {
                     $day['open'] = filter_var($day['open'], FILTER_VALIDATE_BOOLEAN);

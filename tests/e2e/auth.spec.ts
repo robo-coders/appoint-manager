@@ -111,13 +111,11 @@ test.describe('setting up a business at 375', () => {
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '6');
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
 
-        await page.getByLabel(/^Business name/).fill('Willow Street Grooming');
-        await page.getByRole('radio', { name: /Dog grooming/ }).check();
         await page.getByLabel(/^Your name/).fill('Maya Chen');
         await page.getByLabel(/^Email/).fill(SIGNUP_EMAIL);
         await page.getByLabel(/^Password/).fill('correct-horse-battery');
         await page.getByLabel(/^Confirm password/).fill('correct-horse-battery');
-        await page.getByRole('button', { name: 'Create the account' }).click();
+        await page.getByRole('button', { name: 'Continue to business basics' }).click();
 
         await expect(page.getByRole('heading', { name: 'Where you are' })).toBeVisible();
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2');

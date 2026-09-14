@@ -52,11 +52,16 @@ it('describes a garage by what it services, not by the trade name', function () 
         ->and($garage->note())->toBe('vehicles · per visit');
 });
 
-it('offers garage on the signup form without a change to the form itself', function () {
-    $this->get('/register')
+it('offers garage on onboarding without a change to the form itself', function () {
+    $user = User::factory()
+        ->for(Tenant::factory()->onboardingIncomplete(), 'tenant')
+        ->create();
+
+    actingAsTenant($user)
+        ->get(route('onboarding.show'))
         ->assertOk()
         ->assertInertia(function ($page) {
-            $types = collect($page->toArray()['props']['businessTypes']);
+            $types = collect($page->toArray()['props']['verticals']);
             $garage = $types->firstWhere('value', 'garage');
 
             expect($garage)->not->toBeNull()

@@ -4,27 +4,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
 import { forms, resetForms } from './setup';
 
-const businessTypes = [
-    { value: 'groomer', label: 'Dog grooming', note: 'dogs · per visit' },
-    { value: 'garage', label: 'Garage', note: 'vehicles · per visit' },
-    { value: 'therapist', label: 'Therapy', note: 'clients only' },
-];
-
-const currencies = [
-    { value: 'GBP', label: 'British pound', symbol: '£' },
-    { value: 'EUR', label: 'Euro', symbol: '€' },
-    { value: 'USD', label: 'US dollar', symbol: '$' },
-];
-
-const currencyCountries = {
-    GBP: [{ value: 'GB', label: 'United Kingdom' }],
-    EUR: [
-        { value: 'IE', label: 'Ireland' },
-        { value: 'FR', label: 'France' },
-    ],
-    USD: [{ value: 'US', label: 'United States' }],
-};
-
 const mountPage = (attached = false) =>
     mount(Register, {
         attachTo: attached ? document.body : undefined,
@@ -34,10 +13,6 @@ const mountPage = (attached = false) =>
                 { key: 'account', label: 'Your account' },
                 { key: 'basics', label: 'Business basics' },
             ],
-            businessTypes,
-            currencies,
-            currencyCountries,
-            defaultCurrency: 'GBP',
         },
         global: {
             stubs: {
@@ -58,8 +33,6 @@ const fieldOf = (page: ReturnType<typeof mountPage>, label: string) => {
 };
 
 const fillEverything = async (page: ReturnType<typeof mountPage>, confirmation = 'correct-horse-battery') => {
-    await fieldOf(page, 'Business name').setValue('Willow Street Grooming');
-    await page.find('input[type="radio"][value="groomer"]').setValue(true);
     await fieldOf(page, 'Your name').setValue('Maya Chen');
     await fieldOf(page, 'Email').setValue('maya@willowstreet.example');
     await fieldOf(page, 'Password').setValue('correct-horse-battery');
@@ -120,12 +93,10 @@ describe('the passwords not matching', () => {
 
         expect(forms[0].post).not.toHaveBeenCalled();
 
-        expect((fieldOf(page, 'Business name').element as HTMLInputElement).value).toBe('Willow Street Grooming');
         expect((fieldOf(page, 'Your name').element as HTMLInputElement).value).toBe('Maya Chen');
         expect((fieldOf(page, 'Email').element as HTMLInputElement).value).toBe('maya@willowstreet.example');
         expect((fieldOf(page, 'Password').element as HTMLInputElement).value).toBe('correct-horse-battery');
         expect((fieldOf(page, 'Confirm password').element as HTMLInputElement).value).toBe('correct-horse-batery');
-        expect((page.find('input[type="radio"][value="groomer"]').element as HTMLInputElement).checked).toBe(true);
     });
 });
 
@@ -140,11 +111,9 @@ describe('a submit the server rejects', () => {
         forms[0].setError('email', 'An account with this email already exists.');
         await nextTick();
 
-        expect((fieldOf(page, 'Business name').element as HTMLInputElement).value).toBe('Willow Street Grooming');
         expect((fieldOf(page, 'Your name').element as HTMLInputElement).value).toBe('Maya Chen');
         expect((fieldOf(page, 'Password').element as HTMLInputElement).value).toBe('correct-horse-battery');
         expect((fieldOf(page, 'Confirm password').element as HTMLInputElement).value).toBe('correct-horse-battery');
-        expect((page.find('input[type="radio"][value="groomer"]').element as HTMLInputElement).checked).toBe(true);
     });
 
     it('answers an already-registered email with a real link to the door', async () => {
@@ -192,7 +161,7 @@ describe('the state of the button', () => {
         const page = mountPage();
 
         const button = page.find('button[type="submit"]');
-        expect(button.text()).toBe('Create the account');
+        expect(button.text()).toBe('Continue to business basics');
 
         forms[0].processing = true;
         await nextTick();
@@ -223,43 +192,6 @@ describe('the password requirement', () => {
     });
 });
 
-describe('the trade', () => {
-    it('is the same control the next step confirms it with, notes and all', () => {
-        const page = mountPage();
-
-        const radios = page.findAll('input[type="radio"]');
-        expect(radios).toHaveLength(businessTypes.length);
-        expect(page.text()).toContain('Dog grooming');
-        expect(page.text()).toContain('dogs · per visit');
-        expect(page.text()).not.toContain('Choose one');
-    });
-
-    it('takes the caret when it is the thing that was skipped', async () => {
-        const page = mountPage(true);
-
-        await fieldOf(page, 'Business name').setValue('Willow Street Grooming');
-        await page.find('form').trigger('submit');
-
-        expect(document.activeElement).toBe(page.find('input[type="radio"]').element);
-
-        page.unmount();
-    });
-
-    it('is asked for by name when it is skipped', async () => {
-        const page = mountPage();
-
-        await fieldOf(page, 'Business name').setValue('Willow Street Grooming');
-        await fieldOf(page, 'Your name').setValue('Maya Chen');
-        await fieldOf(page, 'Email').setValue('maya@willowstreet.example');
-        await fieldOf(page, 'Password').setValue('correct-horse-battery');
-        await fieldOf(page, 'Confirm password').setValue('correct-horse-battery');
-        await page.find('form').trigger('submit');
-
-        expect(forms[0].post).not.toHaveBeenCalled();
-        expect(page.text()).toContain('Choose the kind of business this is.');
-    });
-});
-
 describe('the price', () => {
     it('is set in mono, like every other figure in the product', () => {
         const page = mountPage();
@@ -269,83 +201,14 @@ describe('the price', () => {
     });
 });
 
-describe('the currency', () => {
-    it('starts on the platform default with its matching country', () => {
+describe('account creation only', () => {
+    it('does not ask for the business on this page', () => {
         const page = mountPage();
 
-        expect((fieldOf(page, 'Currency').element as HTMLSelectElement).value).toBe('GBP');
-        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('GB');
-    });
-
-    it('offers every currency the server sent, symbol and all', () => {
-        const page = mountPage();
-
-        const options = fieldOf(page, 'Currency').findAll('option');
-
-        expect(options).toHaveLength(currencies.length);
-        expect(options.map((option) => option.text())).toEqual([
-            '£  British pound (GBP)',
-            '€  Euro (EUR)',
-            '$  US dollar (USD)',
-        ]);
-    });
-
-    it('narrows the country list to places that settle in the chosen currency', async () => {
-        const page = mountPage();
-
-        await fieldOf(page, 'Currency').setValue('EUR');
-        await nextTick();
-
-        const countries = fieldOf(page, 'Where the business is based').findAll('option');
-
-        expect(countries.map((option) => option.attributes('value'))).toEqual(['IE', 'FR']);
-        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('IE');
-    });
-
-    it('never leaves a country from the currency the owner moved away from', async () => {
-        const page = mountPage();
-
-        await fieldOf(page, 'Currency').setValue('EUR');
-        await nextTick();
-        await fieldOf(page, 'Where the business is based').setValue('FR');
-        await nextTick();
-        await fieldOf(page, 'Currency').setValue('USD');
-        await nextTick();
-
-        expect((fieldOf(page, 'Where the business is based').element as HTMLSelectElement).value).toBe('US');
-    });
-
-    it('tells the owner what clients will see', async () => {
-        const page = mountPage();
-
-        expect(page.text()).toContain('Clients see prices as £.');
-
-        await fieldOf(page, 'Currency').setValue('EUR');
-        await nextTick();
-
-        expect(page.text()).toContain('Clients see prices as €.');
-    });
-
-    it('carries the pair into the payload the form posts', async () => {
-        const page = mountPage();
-
-        expect(forms[0].currency).toBe('GBP');
-        expect(forms[0].country).toBe('GB');
-
-        await fieldOf(page, 'Currency').setValue('EUR');
-        await nextTick();
-
-        expect(forms[0].currency).toBe('EUR');
-        expect(forms[0].country).toBe('IE');
-    });
-});
-
-describe('a new vertical', () => {
-    it('appears on the form with no change to the form itself', () => {
-        const page = mountPage();
-
-        expect(page.text()).toContain('Garage');
-        expect(page.text()).toContain('vehicles · per visit');
-        expect(page.findAll('input[type="radio"]')).toHaveLength(businessTypes.length);
+        expect(page.text()).not.toContain('Business name');
+        expect(page.text()).not.toContain('What kind of business');
+        expect(page.text()).not.toContain('Currency');
+        expect(page.text()).not.toContain('Where the business is based');
+        expect(page.text()).not.toContain('Opening hours');
     });
 });
