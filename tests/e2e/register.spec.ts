@@ -42,19 +42,19 @@ test.describe('setting up a business', () => {
         await page.goto('/register');
         await expect(page.getByRole('heading', { name: 'Set up your business' })).toBeVisible();
 
-        const rail = page.getByRole('list');
-        await expect(page.getByText('Setting up')).toBeVisible();
-        await expect(rail.getByText('Your account')).toBeVisible();
-        await expect(rail.getByText('Booking link')).toBeVisible();
-        await expect(rail.getByRole('listitem')).toHaveCount(5);
+        await expect(page.getByText('DiaryDesk setup · Your account')).toBeVisible();
+        await expect(page.getByText('STEP 1 OF 5').first()).toBeVisible();
+        await expect(page.getByText('Already set up?')).toBeVisible();
 
         await settled(page);
         await expect(page).toHaveScreenshot('register-1280.png', { fullPage: true });
 
         await at(page, 375, 1200);
         const progress = page.getByRole('progressbar');
+        await expect(progress).toHaveAttribute('aria-valuemin', '1');
         await expect(progress).toHaveAttribute('aria-valuemax', '5');
         await expect(progress).toHaveAttribute('aria-valuenow', '1');
+        await expect(progress).toHaveAttribute('aria-valuetext', 'Step 1 of 5, Your account');
 
         await settled(page);
         await expect(page).toHaveScreenshot('register-375.png', { fullPage: true });

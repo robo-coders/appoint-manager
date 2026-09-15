@@ -16,7 +16,10 @@ const mountPage = (attached = false) =>
         },
         global: {
             stubs: {
-                GuestLayout: { template: '<div><slot /><slot name="foot" /></div>' },
+                OnboardingGuestLayout: {
+                    template:
+                        '<div><slot name="notice" /><slot /><slot name="footer-start" /><slot name="footer-end" /></div>',
+                },
                 Head: true,
             },
         },
@@ -173,6 +176,16 @@ describe('the state of the button', () => {
         await fillEverything(page);
         await page.find('form').trigger('submit');
         expect(forms[0].post).not.toHaveBeenCalled();
+    });
+
+    it('stays wired to the form it submits, now that it sits in the footer bar', () => {
+        const page = mountPage();
+
+        const button = page.find('button[type="submit"]');
+        const form = page.find('form');
+
+        expect(form.attributes('id')).toBeTruthy();
+        expect(button.attributes('form')).toBe(form.attributes('id'));
     });
 });
 

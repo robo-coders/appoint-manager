@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-09007c8a-e0d4-41aa-9ce0-5c14a1cd3ab6/styles.css">
+<script src="_ds/nocturne-09007c8a-e0d4-41aa-9ce0-5c14a1cd3ab6/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;background:#efece7;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#1c1a19}
+a{color:#a8552a}a:hover{color:#8c4420}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px 'DM Mono',ui-monospace,monospace;padding:3px 7px;background:#1c1a19;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 'Hanken Grotesk',sans-serif;color:#1c1a19}
+.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px 'DM Mono',ui-monospace,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1c1a19;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 'Hanken Grotesk',sans-serif;color:rgba(0,0,0,.55)}
+.dv-opt:target .dv-oid{background:#a8552a;color:#fff}
+.dv-next{margin:26px 0 0;font:12.5px/1.6 'Hanken Grotesk',sans-serif;color:rgba(0,0,0,.5)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Registration flow — the diagnosis, then two ways to make five screens one flow</span></div>
+<p style="max-width:760px;margin:0 0 26px;font-size:13px;line-height:1.65;color:rgba(0,0,0,.55)">Read the review card first, then compare <a class="dv-oid" href="#1a">1a</a> (everything on the wizard chrome of screens 2–5) against <a class="dv-oid" href="#1b">1b</a> (everything on the two-pane chrome of screen 1). Colour, type and components are taken from your live screens — nothing is restyled here, only made consistent.</p>
+
+<div style="width:1000px;background:#fff;border:1px solid #e3ded7;border-radius:10px;padding:30px 34px;margin:0 0 34px">
+  <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#a8552a;margin-bottom:16px">UI REVIEW · WHY SCREEN 1 READS AS A DIFFERENT PRODUCT</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px 40px">
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">1. Two layout systems</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Screen 1 is a 50/50 split with a stepper rail. Screens 2–5 are a centred column with a top progress bar and a breadcrumb. Nothing carries over between them, so step 1 → 2 feels like leaving the app.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">2. The step count disagrees with itself</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Screen 1 lists five steps and marks itself as 1. Screen 2 then says “Step 1 of 4”. The user completes a step and the counter goes backwards. Pick one denominator — five — and keep it.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">3. Navigation moves</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Screen 1's primary action is full-width inside the form; 2–5 park it in a fixed bottom bar on the right. The commit target jumps ~500px between the first two screens.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">4. Type scale and weight jump</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">“Set up your business” is light and roughly 44px; “Tell us about the business” is bold and roughly 56px. Same level in the hierarchy, two different treatments.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">5. Measure is uncontrolled</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Inputs are ~640px on screen 1 and ~1060px on 2–5. A postcode field a metre wide tells the user nothing about the answer expected. Cap fields at ~520px and size short ones to content.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">6. Brand disappears after step 1</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">The wordmark shows only on screen 1; afterwards it is an uppercase text breadcrumb. Keep the mark in the flow chrome — this is the sign-up, the highest-anxiety moment in the product.</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">7. Half the viewport does no work</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Screen 1's right pane holds a five-item list in ~1200px of space, with a full-height divider. Either the rail earns its width on every screen (<a class="dv-oid" href="#1b">1b</a>) or it goes (<a class="dv-oid" href="#1a">1a</a>).</p>
+    </div>
+    <div>
+      <div style="font:600 14px/1.3 'Hanken Grotesk';margin-bottom:6px">8. Unthemed controls and copy bugs</div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#5f5b57">Screen 2's checkbox is the native control with the browser's blue focus ring. Screen 1's billing line switches into mono mid-sentence (“£29  a  month”). Screen 4's helper cites a 90 minute slot while the field says 60.</p>
+    </div>
+  </div>
+  <div style="margin-top:26px;padding-top:20px;border-top:1px solid #ece7e0;display:flex;gap:12px;align-items:flex-start">
+    <div style="font:500 10.5px/1.5 'DM Mono',monospace;letter-spacing:.1em;color:#a8552a;flex:none">RECOMMENDED</div>
+    <p style="margin:0;font-size:13.5px;line-height:1.6;color:#3a3734;max-width:820px"><strong style="font-weight:600">Move screen 1 onto the wizard chrome (<a class="dv-oid" href="#1a">1a</a>).</strong> Progress, back-navigation and the commit bar are already right on four of five screens, and account creation is genuinely step 1 of 5 — not a preamble. The two-pane rail in <a class="dv-oid" href="#1b">1b</a> is the better answer only if you want persistent context (the stepper, a live preview) visible on every step, and are willing to rebuild four screens to get it.</p>
+  </div>
+</div>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Unified wizard — screen 1 adopts the chrome of 2–5. Five segments, persistent wordmark, one commit bar, measure capped at 520px.</div>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+
+<div style="width:1000px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden">
+  <div style="display:flex;gap:4px;height:4px"><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-bottom:1px solid #ece7e0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:26px;height:26px;border:2px solid #a8552a;border-radius:7px;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:2px;background:#a8552a"></div></div>
+      <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#6b6763">DIARYDESK SETUP · YOUR ACCOUNT</div>
+    </div>
+    <div style="font:500 11px/1 'DM Mono',monospace;letter-spacing:.08em;color:#9a948e">STEP 1 OF 5</div>
+  </div>
+  <div style="padding:52px 34px 40px;display:flex;justify-content:center">
+    <div style="width:760px">
+      <h1 style="margin:0 0 10px;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.08">Set up your business</h1>
+      <p style="margin:0 0 38px;font-size:15.5px;line-height:1.55;color:#6b6763;max-width:520px">Four short steps after this one, and then a diary.</p>
+      <div style="display:grid;gap:20px;width:520px">
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Your name<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Trycia Murazik</div></div>
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Email<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">trycia@adamshyatt.co.uk</div></div>
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Password<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;letter-spacing:.12em">••••••••••••</div><div style="margin-top:7px;font-size:12.5px;color:#6b6763">✓ At least eight characters.</div></div>
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Confirm password<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;letter-spacing:.12em">••••••••••••</div></div>
+      </div>
+      <p style="margin:30px 0 0;font-size:13px;line-height:1.6;color:#6b6763;max-width:520px">No card. 30 days free, then £29 a month, and you can stop at any point.</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-top:1px solid #ece7e0;background:#faf9f7">
+    <div style="font-size:13.5px;color:#6b6763">Already set up? <span style="color:#a8552a;border-bottom:1px solid #d9b9a4">Sign in</span></div>
+    <div style="display:flex;align-items:center;gap:20px"><div style="font:500 11px 'DM Mono',monospace;letter-spacing:.06em;color:#9a948e">STEP 1 OF 5</div><div style="background:#a8552a;color:#fff;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600">Continue to business basics</div></div>
+  </div>
+</div>
+
+<div style="width:1000px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden">
+  <div style="display:flex;gap:4px;height:4px"><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-bottom:1px solid #ece7e0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:26px;height:26px;border:2px solid #a8552a;border-radius:7px;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:2px;background:#a8552a"></div></div>
+      <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#6b6763">DIARYDESK SETUP · BUSINESS BASICS</div>
+    </div>
+    <div style="font:500 11px/1 'DM Mono',monospace;letter-spacing:.08em;color:#9a948e">STEP 2 OF 5</div>
+  </div>
+  <div style="padding:52px 34px 40px;display:flex;justify-content:center">
+    <div style="width:760px">
+      <h1 style="margin:0 0 10px;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.08">Tell us about the business</h1>
+      <p style="margin:0 0 38px;font-size:15.5px;line-height:1.55;color:#6b6763;max-width:520px">This sets your booking page name and the default working week. You can change both later in Settings.</p>
+      <div style="display:grid;gap:20px;width:520px">
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Business name<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Adams - Hyatt</div></div>
+        <div>
+          <div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Booking page address<span style="color:#a8552a">*</span></div>
+          <div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;font:15px 'DM Mono',monospace;overflow:hidden"><span style="padding:0 0 0 14px;color:#9a948e">diarydesk.com/book/</span><span style="color:#1c1a19">adams-hyatt</span></div>
+          <div style="margin-top:7px;font-size:12.5px;color:#2f6b4f">✓ That address is free.</div>
+        </div>
+      </div>
+      <div style="width:520px;margin-top:34px">
+        <div style="font-size:13.5px;color:#6b6763;margin-bottom:10px">What kind of appointments do you take?</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid #a8552a;background:#f7efe9;border-radius:10px">
+            <div style="width:18px;height:18px;border-radius:5px;background:#a8552a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex:none;margin-top:1px">✓</div>
+            <div><div style="font-size:15px;font-weight:500">Dog grooming</div><div style="font:12.5px 'DM Mono',monospace;color:#6b6763;margin-top:3px">dogs · per visit</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid #e3ded7;background:#fff;border-radius:10px">
+            <div style="width:18px;height:18px;border-radius:5px;border:1px solid #c9c2b8;background:#fdfcfa;flex:none;margin-top:1px"></div>
+            <div><div style="font-size:15px;font-weight:500">Garage</div><div style="font:12.5px 'DM Mono',monospace;color:#6b6763;margin-top:3px">vehicles · per visit</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="width:280px;margin-top:28px">
+        <div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Currency<span style="color:#a8552a">*</span></div>
+        <div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>£ British pound (GBP)</span><span style="color:#9a948e;font-size:12px">▾</span></div>
+        <div style="margin-top:7px;font-size:12.5px;line-height:1.5;color:#6b6763;width:520px">Clients see prices in this currency. Payouts settle in this currency.</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-top:1px solid #ece7e0;background:#faf9f7">
+    <div style="background:#fff;border:1px solid #ddd7cf;border-radius:8px;padding:12px 20px;font-size:14.5px;font-weight:500">Back</div>
+    <div style="display:flex;align-items:center;gap:20px"><div style="font:500 11px 'DM Mono',monospace;letter-spacing:.06em;color:#9a948e">STEP 2 OF 5</div><div style="background:#a8552a;color:#fff;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600">Continue to details</div></div>
+  </div>
+</div>
+
+<div style="width:1000px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden">
+  <div style="display:flex;gap:4px;height:4px"><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#e6e0d8"></div><div style="flex:1;background:#e6e0d8"></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-bottom:1px solid #ece7e0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:26px;height:26px;border:2px solid #a8552a;border-radius:7px;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:2px;background:#a8552a"></div></div>
+      <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#6b6763">DIARYDESK SETUP · BUSINESS DETAILS</div>
+    </div>
+    <div style="font:500 11px/1 'DM Mono',monospace;letter-spacing:.08em;color:#9a948e">STEP 3 OF 5</div>
+  </div>
+  <div style="padding:52px 34px 40px;display:flex;justify-content:center">
+    <div style="width:760px">
+      <h1 style="margin:0 0 10px;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.08">Where and when you trade</h1>
+      <p style="margin:0 0 38px;font-size:15.5px;line-height:1.55;color:#6b6763;max-width:520px">The timezone decides what time a booking is in. The rest appears on confirmations and on your booking page.</p>
+      <div style="display:grid;gap:20px;width:520px">
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Where the business is based<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>United Kingdom</span><span style="color:#9a948e;font-size:12px">▾</span></div><div style="margin-top:7px;font-size:12.5px;color:#6b6763">Sets where deposits are paid out. You cannot change this later.</div></div>
+        <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Timezone<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>Europe/London</span><span style="color:#9a948e;font-size:12px">▾</span></div></div>
+        <div style="display:flex;gap:14px"><div style="width:240px"><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Phone</div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font:15px 'DM Mono',monospace">779-399-4938</div></div></div>
+      </div>
+      <div style="width:520px;margin-top:34px;padding-top:26px;border-top:1px solid #ece7e0">
+        <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:16px">TRADING ADDRESS · OPTIONAL</div>
+        <div style="display:grid;gap:16px">
+          <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Address</div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff"></div></div>
+          <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Address line 2</div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff"></div></div>
+          <div style="display:flex;gap:14px">
+            <div style="flex:1"><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Town or city</div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff"></div></div>
+            <div style="width:150px"><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Postcode</div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff"></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="width:520px;margin-top:30px">
+        <div style="font-size:13.5px;color:#6b6763;margin-bottom:10px">How do you want to accept bookings?</div>
+        <div style="display:flex;border:1px solid #d8d2c9;border-radius:10px;overflow:hidden;background:#fff">
+          <div style="flex:1;padding:12px 14px;font-size:14.5px;font-weight:500;background:#f7efe9;color:#a8552a;border-right:1px solid #e3ded7">Anyone can book</div>
+          <div style="flex:1;padding:12px 14px;font-size:14.5px;color:#6b6763">I confirm each one</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-top:1px solid #ece7e0;background:#faf9f7">
+    <div style="background:#fff;border:1px solid #ddd7cf;border-radius:8px;padding:12px 20px;font-size:14.5px;font-weight:500">Back</div>
+    <div style="display:flex;align-items:center;gap:20px"><div style="font:500 11px 'DM Mono',monospace;letter-spacing:.06em;color:#9a948e">STEP 3 OF 5</div><div style="background:#a8552a;color:#fff;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600">Continue to services</div></div>
+  </div>
+</div>
+
+<div style="width:1000px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden">
+  <div style="display:flex;gap:4px;height:4px"><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#e6e0d8"></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-bottom:1px solid #ece7e0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:26px;height:26px;border:2px solid #a8552a;border-radius:7px;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:2px;background:#a8552a"></div></div>
+      <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#6b6763">DIARYDESK SETUP · FIRST SERVICE</div>
+    </div>
+    <div style="font:500 11px/1 'DM Mono',monospace;letter-spacing:.08em;color:#9a948e">STEP 4 OF 5</div>
+  </div>
+  <div style="padding:52px 34px 40px;display:flex;justify-content:center">
+    <div style="width:760px">
+      <h1 style="margin:0 0 10px;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.08">Add your first service</h1>
+      <p style="margin:0 0 38px;font-size:15.5px;line-height:1.55;color:#6b6763;max-width:520px">The deposit is taken when the customer books and comes off the balance on the day.</p>
+      <div style="display:flex;gap:40px;align-items:flex-start">
+        <div style="width:520px;display:grid;gap:20px">
+          <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Service name<span style="color:#a8552a">*</span></div><div style="height:46px;border:1.5px solid #a8552a;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;box-shadow:0 0 0 3px rgba(168,85,42,.12)">Full groom — small dog</div></div>
+          <div style="display:flex;gap:14px">
+            <div style="width:160px"><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Duration<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>60</span><span style="font:12.5px 'DM Mono',monospace;color:#9a948e">min</span></div></div>
+            <div style="width:160px"><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Price<span style="color:#a8552a">*</span></div><div style="height:46px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:15px"><span style="color:#9a948e">£</span><span>35.00</span></div></div>
+          </div>
+          <div><div style="font-size:13.5px;color:#6b6763;margin-bottom:7px">Deposit taken at booking</div><div style="height:46px;width:160px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:15px"><span style="color:#9a948e">£</span><span>10.00</span></div><div style="margin-top:8px;font-size:12.5px;line-height:1.55;color:#6b6763">Deposits are the single biggest lever on no-shows. £10 is a common starting point for a 60 minute slot. Use 0 if you would rather not take one.</div></div>
+        </div>
+        <div style="width:200px">
+          <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:12px">WHAT THE CUSTOMER SEES</div>
+          <div style="background:#fff;border:1px solid #e3ded7;border-radius:10px;padding:18px">
+            <div style="font-size:16px;font-weight:600;line-height:1.25">Full groom — small dog</div>
+            <div style="font:12.5px 'DM Mono',monospace;color:#6b6763;margin-top:5px">60 min</div>
+            <div style="height:1px;background:#ece7e0;margin:14px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:13.5px"><span>Total</span><span style="font:500 13.5px 'DM Mono',monospace">£35.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-top:7px;color:#6b6763"><span>Pay now to hold</span><span style="font:500 13.5px 'DM Mono',monospace;color:#a8552a">£10.00</span></div>
+            <div style="margin-top:14px;text-align:center;background:#f4f1ec;border-radius:8px;padding:11px;font-size:14px;font-weight:600">Choose a time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-top:1px solid #ece7e0;background:#faf9f7">
+    <div style="background:#fff;border:1px solid #ddd7cf;border-radius:8px;padding:12px 20px;font-size:14.5px;font-weight:500">Back</div>
+    <div style="display:flex;align-items:center;gap:20px"><div style="font:500 11px 'DM Mono',monospace;letter-spacing:.06em;color:#9a948e">STEP 4 OF 5</div><div style="background:#a8552a;color:#fff;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600">Continue to your link</div></div>
+  </div>
+</div>
+
+<div style="width:1000px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden">
+  <div style="display:flex;gap:4px;height:4px"><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div><div style="flex:1;background:#a8552a"></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-bottom:1px solid #ece7e0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:26px;height:26px;border:2px solid #a8552a;border-radius:7px;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:2px;background:#a8552a"></div></div>
+      <div style="font:500 10.5px/1 'DM Mono',monospace;letter-spacing:.12em;color:#6b6763">DIARYDESK SETUP · BOOKING LINK</div>
+    </div>
+    <div style="font:500 11px/1 'DM Mono',monospace;letter-spacing:.08em;color:#9a948e">STEP 5 OF 5</div>
+  </div>
+  <div style="padding:52px 34px 40px;display:flex;justify-content:center">
+    <div style="width:760px">
+      <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#a8552a;margin-bottom:14px">● LIVE NOW</div>
+      <h1 style="margin:0 0 10px;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.08">Share your booking link</h1>
+      <p style="margin:0 0 38px;font-size:15.5px;line-height:1.55;color:#6b6763;max-width:520px">Put this in your Instagram bio and reply to enquiries with it. Every booking made through it takes the deposit and appears in your diary straight away.</p>
+      <div style="display:flex;gap:32px;align-items:flex-start">
+        <div style="width:520px">
+          <div style="display:flex;border:1px solid #d8d2c9;border-radius:10px;background:#fff;overflow:hidden;align-items:stretch">
+            <div style="flex:1;display:flex;align-items:center;padding:0 14px;font:15px 'DM Mono',monospace">diarydesk.com/book/adams-hyatt</div>
+            <div style="background:#a8552a;color:#fff;padding:14px 20px;font-size:14.5px;font-weight:600">Copy</div>
+          </div>
+          <div style="margin-top:14px;font-size:13px;line-height:1.6;color:#6b6763">Next: your first customer books, you get a text, and the slot is held. Nothing else to switch on.</div>
+        </div>
+        <div style="width:160px;text-align:center">
+          <div style="width:160px;height:160px;border:1px dashed #c9c2b8;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font:11px 'DM Mono',monospace;color:#9a948e;letter-spacing:.1em">QR CODE</div>
+          <div style="margin-top:9px;font-size:12.5px;color:#6b6763">Print for the shop window</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 34px;border-top:1px solid #ece7e0;background:#faf9f7">
+    <div style="background:#fff;border:1px solid #ddd7cf;border-radius:8px;padding:12px 20px;font-size:14.5px;font-weight:500">Back</div>
+    <div style="display:flex;align-items:center;gap:20px"><div style="font:500 11px 'DM Mono',monospace;letter-spacing:.06em;color:#9a948e">STEP 5 OF 5</div><div style="background:#a8552a;color:#fff;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600">Go to my diary</div></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Unified two-pane — screens 2–5 adopt screen 1's split. The rail carries the stepper plus per-step context, so it stops being empty.</div>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+
+<div style="width:1000px;min-height:600px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden;display:flex">
+  <div style="width:600px;padding:30px 40px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+      <div style="width:30px;height:30px;border:2px solid #a8552a;border-radius:8px;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:2.5px;background:#a8552a"></div></div>
+      <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+    <h1 style="margin:0 0 8px;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1">Set up your business</h1>
+    <p style="margin:0 0 30px;font-size:15px;line-height:1.5;color:#6b6763">Four short steps after this one, and then a diary.</p>
+    <div style="display:grid;gap:16px;width:460px">
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Your name<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Trycia Murazik</div></div>
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Email<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">trycia@adamshyatt.co.uk</div></div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Password<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;letter-spacing:.12em">••••••••</div></div>
+        <div style="flex:1"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Confirm<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;letter-spacing:.12em">••••••••</div></div>
+      </div>
+      <div style="font-size:12.5px;color:#6b6763;margin-top:-6px">✓ At least eight characters.</div>
+    </div>
+    <div style="margin-top:26px;width:460px;background:#a8552a;color:#fff;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:600">Continue to business basics</div>
+    <div style="margin-top:12px;width:460px;font-size:12.5px;line-height:1.55;color:#6b6763">No card. 30 days free, then £29 a month, and you can stop at any point.</div>
+    <div style="margin-top:auto;font-size:13px;color:#6b6763">Already set up? <span style="color:#a8552a;border-bottom:1px solid #d9b9a4">Sign in</span></div>
+  </div>
+  <div style="width:400px;background:#f4f1ec;border-left:1px solid #e6e0d8;padding:30px 34px;display:flex;flex-direction:column">
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#9a948e;margin-bottom:18px">SETTING UP · 1 OF 5</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">01</span><span style="font-size:15px;font-weight:600">Your account</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">02</span><span style="font-size:15px;color:#6b6763">Business basics</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">03</span><span style="font-size:15px;color:#6b6763">Business details</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">04</span><span style="font-size:15px;color:#6b6763">First service</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">05</span><span style="font-size:15px;color:#6b6763">Booking link</span></div>
+    </div>
+    <div style="margin-top:auto;border-top:1px solid #e6e0d8;padding-top:20px">
+      <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:8px">WHAT YOU GET</div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#5f5b57">A booking page, deposits taken up front, and a diary that texts you when a slot is filled. Most people are live in under ten minutes.</p>
+    </div>
+  </div>
+</div>
+
+<div style="width:1000px;min-height:600px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden;display:flex">
+  <div style="width:600px;padding:30px 40px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+      <div style="width:30px;height:30px;border:2px solid #a8552a;border-radius:8px;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:2.5px;background:#a8552a"></div></div>
+      <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+    <h1 style="margin:0 0 8px;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1">Tell us about the business</h1>
+    <p style="margin:0 0 30px;font-size:15px;line-height:1.5;color:#6b6763;max-width:460px">This sets your booking page name and the default working week. You can change both later in Settings.</p>
+    <div style="display:grid;gap:16px;width:460px">
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Business name<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Adams - Hyatt</div></div>
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Booking page address<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;font:15px 'DM Mono',monospace"><span style="padding-left:14px;color:#9a948e">/book/</span>adams-hyatt</div><div style="margin-top:6px;font-size:12.5px;color:#2f6b4f">✓ That address is free.</div></div>
+      <div>
+        <div style="font-size:13px;color:#6b6763;margin-bottom:8px">What kind of appointments do you take?</div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;padding:12px;border:1px solid #a8552a;background:#f7efe9;border-radius:10px"><div style="font-size:14.5px;font-weight:600">Dog grooming</div><div style="font:12px 'DM Mono',monospace;color:#6b6763;margin-top:3px">dogs · per visit</div></div>
+          <div style="flex:1;padding:12px;border:1px solid #e3ded7;background:#fff;border-radius:10px"><div style="font-size:14.5px;font-weight:500">Garage</div><div style="font:12px 'DM Mono',monospace;color:#6b6763;margin-top:3px">vehicles · per visit</div></div>
+        </div>
+      </div>
+      <div style="width:250px"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Currency<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>£ British pound (GBP)</span><span style="color:#9a948e;font-size:12px">▾</span></div></div>
+    </div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:18px;width:460px">
+      <span style="font-size:14px;color:#6b6763;border-bottom:1px solid #ddd7cf">Back</span>
+      <div style="flex:1;background:#a8552a;color:#fff;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:600">Continue to details</div>
+    </div>
+  </div>
+  <div style="width:400px;background:#f4f1ec;border-left:1px solid #e6e0d8;padding:30px 34px;display:flex;flex-direction:column">
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#9a948e;margin-bottom:18px">SETTING UP · 2 OF 5</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:15px;color:#6b6763">Your account</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">02</span><span style="font-size:15px;font-weight:600">Business basics</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">03</span><span style="font-size:15px;color:#6b6763">Business details</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">04</span><span style="font-size:15px;color:#6b6763">First service</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">05</span><span style="font-size:15px;color:#6b6763">Booking link</span></div>
+    </div>
+    <div style="margin-top:26px;background:#fff;border:1px solid #e6e0d8;border-radius:10px;padding:16px">
+      <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:10px">YOUR BOOKING PAGE</div>
+      <div style="font:13px 'DM Mono',monospace;color:#a8552a;word-break:break-all">diarydesk.com/book/adams-hyatt</div>
+      <div style="height:1px;background:#ece7e0;margin:12px 0"></div>
+      <div style="font-size:16px;font-weight:600">Adams - Hyatt</div>
+      <div style="font-size:13px;color:#6b6763;margin-top:3px">Dog grooming · prices in £</div>
+    </div>
+  </div>
+</div>
+
+<div style="width:1000px;min-height:600px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden;display:flex">
+  <div style="width:600px;padding:30px 40px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+      <div style="width:30px;height:30px;border:2px solid #a8552a;border-radius:8px;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:2.5px;background:#a8552a"></div></div>
+      <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+    <h1 style="margin:0 0 8px;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1">Where and when you trade</h1>
+    <p style="margin:0 0 26px;font-size:15px;line-height:1.5;color:#6b6763;max-width:460px">The timezone decides what time a booking is in. The rest appears on confirmations and on your booking page.</p>
+    <div style="display:grid;gap:14px;width:460px">
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Where the business is based<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>United Kingdom</span><span style="color:#9a948e;font-size:12px">▾</span></div><div style="margin-top:6px;font-size:12.5px;color:#6b6763">Sets where deposits are paid out. You cannot change this later.</div></div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Timezone<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Europe/London</div></div>
+        <div style="width:180px"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Phone</div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font:14px 'DM Mono',monospace">779-399-4938</div></div>
+      </div>
+      <div style="padding-top:14px;border-top:1px solid #ece7e0">
+        <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:12px">TRADING ADDRESS · OPTIONAL</div>
+        <div style="display:grid;gap:12px">
+          <div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:14.5px;color:#b3aca4">Address</div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:14.5px;color:#b3aca4">Town or city</div>
+            <div style="width:150px;height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:14.5px;color:#b3aca4">Postcode</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:18px;width:460px">
+      <span style="font-size:14px;color:#6b6763;border-bottom:1px solid #ddd7cf">Back</span>
+      <div style="flex:1;background:#a8552a;color:#fff;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:600">Continue to services</div>
+    </div>
+  </div>
+  <div style="width:400px;background:#f4f1ec;border-left:1px solid #e6e0d8;padding:30px 34px;display:flex;flex-direction:column">
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#9a948e;margin-bottom:18px">SETTING UP · 3 OF 5</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:15px;color:#6b6763">Your account</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:15px;color:#6b6763">Business basics</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">03</span><span style="font-size:15px;font-weight:600">Business details</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">04</span><span style="font-size:15px;color:#6b6763">First service</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:11px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">05</span><span style="font-size:15px;color:#6b6763">Booking link</span></div>
+    </div>
+    <div style="margin-top:26px;background:#fff;border:1px solid #e6e0d8;border-radius:10px;padding:16px">
+      <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:10px">WHY WE ASK</div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#5f5b57">The country sets your payout account and cannot be changed later. Address and phone are optional and only appear on confirmations.</p>
+    </div>
+  </div>
+</div>
+
+<div style="width:1000px;min-height:600px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden;display:flex">
+  <div style="width:600px;padding:30px 40px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+      <div style="width:30px;height:30px;border:2px solid #a8552a;border-radius:8px;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:2.5px;background:#a8552a"></div></div>
+      <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+    <h1 style="margin:0 0 8px;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1">Add your first service</h1>
+    <p style="margin:0 0 30px;font-size:15px;line-height:1.5;color:#6b6763;max-width:460px">The deposit is taken when the customer books and comes off the balance on the day.</p>
+    <div style="display:grid;gap:16px;width:460px">
+      <div><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Service name<span style="color:#a8552a">*</span></div><div style="height:44px;border:1.5px solid #a8552a;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;box-shadow:0 0 0 3px rgba(168,85,42,.12)">Full groom — small dog</div></div>
+      <div style="display:flex;gap:12px">
+        <div style="width:140px"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Duration<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>60</span><span style="font:12px 'DM Mono',monospace;color:#9a948e">min</span></div></div>
+        <div style="width:140px"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Price<span style="color:#a8552a">*</span></div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:15px"><span style="color:#9a948e">£</span>35.00</div></div>
+        <div style="width:140px"><div style="font-size:13px;color:#6b6763;margin-bottom:6px">Deposit</div><div style="height:44px;border:1px solid #d8d2c9;border-radius:10px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:15px"><span style="color:#9a948e">£</span>10.00</div></div>
+      </div>
+      <div style="font-size:12.5px;line-height:1.55;color:#6b6763">Deposits are the single biggest lever on no-shows. £10 is a common starting point for a 60 minute slot. Use 0 if you would rather not take one.</div>
+    </div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:18px;width:460px">
+      <span style="font-size:14px;color:#6b6763;border-bottom:1px solid #ddd7cf">Back</span>
+      <div style="flex:1;background:#a8552a;color:#fff;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:600">Continue to your link</div>
+    </div>
+  </div>
+  <div style="width:400px;background:#f4f1ec;border-left:1px solid #e6e0d8;padding:30px 34px;display:flex;flex-direction:column">
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#9a948e;margin-bottom:18px">SETTING UP · 4 OF 5</div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:26px">
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Your account</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Business basics</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Business details</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">04</span><span style="font-size:14.5px;font-weight:600">First service</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#b3aca4">05</span><span style="font-size:14.5px;color:#6b6763">Booking link</span></div>
+    </div>
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.12em;color:#9a948e;margin-bottom:10px">WHAT THE CUSTOMER SEES</div>
+    <div style="background:#fff;border:1px solid #e6e0d8;border-radius:10px;padding:18px">
+      <div style="font-size:17px;font-weight:600;line-height:1.25">Full groom — small dog</div>
+      <div style="font:12.5px 'DM Mono',monospace;color:#6b6763;margin-top:5px">60 min</div>
+      <div style="height:1px;background:#ece7e0;margin:14px 0"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13.5px"><span>Total</span><span style="font:500 13.5px 'DM Mono',monospace">£35.00</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-top:7px;color:#6b6763"><span>Pay now to hold the slot</span><span style="font:500 13.5px 'DM Mono',monospace;color:#a8552a">£10.00</span></div>
+      <div style="margin-top:14px;text-align:center;background:#f4f1ec;border-radius:8px;padding:11px;font-size:14px;font-weight:600">Choose a time</div>
+    </div>
+  </div>
+</div>
+
+<div style="width:1000px;min-height:600px;background:#faf9f7;border:1px solid #e3ded7;border-radius:8px;overflow:hidden;display:flex">
+  <div style="width:600px;padding:30px 40px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+      <div style="width:30px;height:30px;border:2px solid #a8552a;border-radius:8px;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:2.5px;background:#a8552a"></div></div>
+      <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#a8552a;margin-bottom:12px">● LIVE NOW</div>
+    <h1 style="margin:0 0 8px;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1">Share your booking link</h1>
+    <p style="margin:0 0 26px;font-size:15px;line-height:1.5;color:#6b6763;max-width:460px">Put this in your Instagram bio and reply to enquiries with it. Every booking made through it takes the deposit and appears in your diary straight away.</p>
+    <div style="width:460px;display:flex;border:1px solid #d8d2c9;border-radius:10px;background:#fff;overflow:hidden;align-items:stretch">
+      <div style="flex:1;display:flex;align-items:center;padding:0 14px;font:14.5px 'DM Mono',monospace">diarydesk.com/book/adams-hyatt</div>
+      <div style="background:#a8552a;color:#fff;padding:13px 20px;font-size:14.5px;font-weight:600">Copy</div>
+    </div>
+    <div style="margin-top:14px;width:460px;font-size:13px;line-height:1.6;color:#6b6763">Next: your first customer books, you get a text, and the slot is held. Nothing else to switch on.</div>
+    <div style="margin-top:auto;width:460px;background:#a8552a;color:#fff;border-radius:8px;padding:14px;text-align:center;font-size:15px;font-weight:600">Go to my diary</div>
+  </div>
+  <div style="width:400px;background:#f4f1ec;border-left:1px solid #e6e0d8;padding:30px 34px;display:flex;flex-direction:column;align-items:flex-start">
+    <div style="font:500 10.5px 'DM Mono',monospace;letter-spacing:.14em;color:#9a948e;margin-bottom:18px">SETTING UP · COMPLETE</div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:28px;align-self:stretch">
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Your account</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Business basics</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Business details</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">First service</span></div>
+      <div style="display:flex;gap:14px;align-items:center;padding:9px 14px"><span style="font:500 12px 'DM Mono',monospace;color:#a8552a">✓</span><span style="font-size:14.5px;color:#6b6763">Booking link</span></div>
+    </div>
+    <div style="width:180px;height:180px;border:1px dashed #c9c2b8;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font:11px 'DM Mono',monospace;color:#9a948e;letter-spacing:.1em">QR CODE</div>
+    <div style="margin-top:10px;font-size:12.5px;color:#6b6763">Print for the shop window</div>
+  </div>
+</div>
+
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “go with <a class="dv-oid" href="#1a">1a</a> and show me the error and loading states” · “in <a class="dv-oid" href="#1b">1b</a>, drop the rail on step 5 and make it a full-width success screen” · “show the mobile widths”</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>

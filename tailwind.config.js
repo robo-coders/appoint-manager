@@ -132,6 +132,7 @@ export default {
                 record: 'var(--record)',
                 // The auth surface. See tokens.css.
                 'auth-form': 'var(--auth-form)',
+                'auth-col': 'var(--auth-col)',
                 // A name that truncates caps at its column rather than filling it.
                 'col-when': 'var(--col-when)',
                 'col-staff': 'var(--col-staff)',

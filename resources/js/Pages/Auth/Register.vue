@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import Button from '@/Components/ui/Button.vue';
 import Callout from '@/Components/ui/Callout.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
+import OnboardingGuestLayout from '@/Layouts/OnboardingGuestLayout.vue';
 import QuietAction from '@/Components/ui/QuietAction.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
-import type { Step } from '@/Components/ui/StepProgress.vue';
+import type { SetupStep } from '@/Components/SetupChrome.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 
 defineProps<{
     terms: { lead: string; price: string; tail: string };
-    steps: Step[];
+    steps: SetupStep[];
 }>();
 
 const form = useForm({
@@ -131,27 +131,27 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout
+    <OnboardingGuestLayout
         title="Set up your business"
         lede="Four short steps after this one, and then a diary."
-        display-title
         :steps="steps"
         current-step="account"
-        :completed-steps="[]"
     >
         <Head title="Set up your business" />
 
-        <Callout v-if="lockedOut" tone="accent" class="mb-6">
-            {{ lockedOut }}
-        </Callout>
-        <Callout v-else-if="transportError" tone="neutral" title="Not sent" class="mb-6">
-            {{ transportError }}
-            <template #action>
-                <QuietAction @click="transportError = ''">Dismiss</QuietAction>
-            </template>
-        </Callout>
+        <template #notice>
+            <Callout v-if="lockedOut" tone="accent" class="mb-8">
+                {{ lockedOut }}
+            </Callout>
+            <Callout v-else-if="transportError" tone="neutral" title="Not sent" class="mb-8">
+                {{ transportError }}
+                <template #action>
+                    <QuietAction @click="transportError = ''">Dismiss</QuietAction>
+                </template>
+            </Callout>
+        </template>
 
-        <form class="space-y-4" novalidate @submit.prevent="submit">
+        <form id="register" class="space-y-4" novalidate @submit.prevent="submit">
             <TextInput
                 ref="nameField"
                 v-model="form.name"
@@ -205,19 +205,14 @@ const submit = () => {
                 required
                 @blur="touched.password_confirmation = true"
             />
-
-            <div class="pt-2">
-                <Button type="submit" variant="accent-solid" block :loading="form.processing">
-                    {{ form.processing ? 'Creating account…' : 'Continue to business basics' }}
-                </Button>
-                <p class="mt-3 text-12 text-ink-2">
-                    {{ terms.lead }}
-                    <span class="font-mono tabular-nums">{{ terms.price }}</span>{{ terms.tail }}
-                </p>
-            </div>
         </form>
 
-        <template #foot>
+        <p class="mt-8 max-w-auth-col text-13 leading-body text-ink-2">
+            {{ terms.lead }}
+            <span class="font-mono tabular-nums">{{ terms.price }}</span>{{ terms.tail }}
+        </p>
+
+        <template #footer-start>
             <p class="text-13 text-ink-2">
                 Already set up?
                 <Link
@@ -228,5 +223,11 @@ const submit = () => {
                 >.
             </p>
         </template>
-    </GuestLayout>
+
+        <template #footer-end>
+            <Button type="submit" form="register" variant="accent-solid" :loading="form.processing">
+                {{ form.processing ? 'Creating account…' : 'Continue to business basics' }}
+            </Button>
+        </template>
+    </OnboardingGuestLayout>
 </template>
