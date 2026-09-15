@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ABC Garage — Tenant detail</title>
+<style>
+  :root{
+    --paper:#F7F4EE;
+    --paper-raised:#FFFFFF;
+    --ink:#1C1A17;
+    --ink-soft:#6B655C;
+    --line:#E4DFD3;
+    --terracotta:#C05A38;
+    --terracotta-soft:#F0DCD2;
+    --green:#4B6E52;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Iowan Old Style","Georgia",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{
+    max-width:920px;
+    margin:0 auto;
+    padding:56px 32px 96px;
+  }
+  .crumb{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:28px;
+    letter-spacing:0.01em;
+  }
+  .crumb a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--line);}
+  .crumb span{color:var(--ink);}
+
+  .header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--line);
+    padding-bottom:24px;
+    margin-bottom:36px;
+  }
+  .header h1{
+    font-size:34px;
+    font-weight:500;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .header .meta{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .status-pill{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:5px 12px;
+    color:var(--ink-soft);
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .status-pill::before{
+    content:"";
+    width:6px;height:6px;border-radius:50%;
+    background:var(--terracotta);
+  }
+
+  .tabs{
+    display:flex;
+    gap:28px;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14px;
+    color:var(--ink-soft);
+    border-bottom:1px solid var(--line);
+    margin-bottom:40px;
+  }
+  .tabs a{color:inherit;text-decoration:none;padding-bottom:14px;display:inline-block;}
+  .tabs a.active{color:var(--ink);border-bottom:2px solid var(--terracotta);margin-bottom:-1px;}
+
+  section{margin-bottom:48px;}
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .section-head h2{
+    font-size:20px;
+    font-weight:500;
+    margin:0;
+  }
+  .section-note{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 20px;
+    max-width:60ch;
+    line-height:1.5;
+  }
+
+  .feature-panel{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:var(--paper-raised);
+    overflow:hidden;
+  }
+  .feature-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .feature-row:last-child{border-bottom:none;}
+  .feature-name{
+    font-size:16px;
+  }
+  .feature-desc{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  .switch{
+    position:relative;
+    width:40px;
+    height:22px;
+    border-radius:11px;
+    border:1px solid var(--line);
+    background:#EDE9E0;
+    flex-shrink:0;
+    cursor:pointer;
+  }
+  .switch::after{
+    content:"";
+    position:absolute;
+    top:2px;left:2px;
+    width:16px;height:16px;
+    border-radius:50%;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    transition:left .15s ease;
+  }
+  .switch.on{
+    background:var(--terracotta);
+    border-color:var(--terracotta);
+  }
+  .switch.on::after{
+    left:20px;
+    border-color:var(--terracotta);
+  }
+
+  .locked-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px;
+    border-bottom:1px solid var(--line);
+    opacity:0.55;
+  }
+  .locked-row:last-child{border-bottom:none;}
+  .locked-tag{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:3px 8px;
+  }
+
+  .always-on-box{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    margin-top:14px;
+  }
+
+  .footnote{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:14px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="crumb"><a href="#">Platform</a> &nbsp;›&nbsp; <a href="#">Tenants</a> &nbsp;›&nbsp; <span>ABC Garage</span></div>
+
+  <div class="header">
+    <div>
+      <h1>ABC Garage</h1>
+      <div class="meta">localhost:8000/book/abc-garage &nbsp;·&nbsp; trial plan &nbsp;·&nbsp; last seen 3d ago</div>
+    </div>
+    <div class="status-pill">Trial</div>
+  </div>
+
+  <div class="tabs">
+    <a href="#">Overview</a>
+    <a href="#">Bookings</a>
+    <a href="#">Billing</a>
+    <a href="#" class="active">Features</a>
+    <a href="#">Activity</a>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>Feature access</h2>
+    </div>
+    <p class="section-note">Turn a feature off to remove it from this tenant's sidebar and block the page directly, even by a saved link. New tenants get everything on by default.</p>
+
+    <div class="feature-panel">
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Waitlist</div>
+          <div class="feature-desc">Customers can join a list when no slots are open.</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Overdue</div>
+          <div class="feature-desc">Flags bookings that have gone past their appointment time.</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Customers</div>
+          <div class="feature-desc">Saved client records and booking history.</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Services</div>
+          <div class="feature-desc">The list of bookable appointment types and pricing.</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Staff</div>
+          <div class="feature-desc">Team members who can be assigned to bookings.</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Time off</div>
+          <div class="feature-desc">Blocks out staff holidays and unavailable hours.</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+      <div class="feature-row">
+        <div>
+          <div class="feature-name">Import</div>
+          <div class="feature-desc">Bulk-load customers or bookings from a spreadsheet.</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Always on</h2>
+    </div>
+    <p class="section-note">Every tenant keeps access to these, so no one gets locked out of their own account.</p>
+    <div class="always-on-box">
+      <div class="locked-row">
+        <div class="feature-name">Diary</div>
+        <span class="locked-tag">Required</span>
+      </div>
+      <div class="locked-row">
+        <div class="feature-name">Bookings</div>
+        <span class="locked-tag">Required</span>
+      </div>
+      <div class="locked-row">
+        <div class="feature-name">Settings</div>
+        <span class="locked-tag">Required</span>
+      </div>
+    </div>
+    <p class="footnote">Changes here are written to the audit log, same as everywhere else on this screen.</p>
+  </section>
+
+</div>
+</body>
+</html>

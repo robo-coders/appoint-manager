@@ -135,7 +135,7 @@ export default defineConfig({
         {
             name: 'console',
             dependencies: ['console-setup'],
-            testMatch: /console\.spec\.ts/,
+            testMatch: /(console|console-account)\.spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: CONSOLE_STATE },
         },
     ],
@@ -190,6 +190,7 @@ export default defineConfig({
              * same thing about `composer dev`.
              */
             APP_URL: BASE_URL,
+            ADMIN_RATE_LIMIT_PER_MINUTE: '1000',
             DB_CONNECTION: 'mysql',
             DB_HOST: '127.0.0.1',
             DB_PORT: '3306',

@@ -164,6 +164,18 @@ it('puts every route on its surface group, and the group carries the limits', fu
     ['public.booking.show', 'surface.book', []],
 ]);
 
+it('limits the console to the number of requests a minute the config names', function () {
+    withSubdomains();
+    config(['admin.rate_limit_per_minute' => 2]);
+    $admin = User::factory()->create(['tenant_id' => null, 'is_super_admin' => true]);
+
+    $this->actingAs($admin);
+
+    $this->get('http://admin.appoint-manager.test/')->assertOk();
+    $this->get('http://admin.appoint-manager.test/')->assertOk();
+    $this->get('http://admin.appoint-manager.test/')->assertStatus(429);
+});
+
 it('blocks the console from an IP outside the allowlist, with a 404', function () {
     withSubdomains();
     config(['app.admin_ip_allowlist' => ['203.0.113.4']]);

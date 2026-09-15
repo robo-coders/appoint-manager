@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { bootTheme } from '@/composables/useTheme';
+import Badge from '@/Components/ui/Badge.vue';
 import Banner from '@/Components/ui/Banner.vue';
 import BetaSandboxBanner from '@/Components/BetaSandbox/Banner.vue';
 import CommandPalette from '@/Components/ui/CommandPalette.vue';
@@ -8,6 +9,7 @@ import NavRail from '@/Components/ui/NavRail.vue';
 import ToastContainer from '@/Components/ui/ToastContainer.vue';
 import { configureToasts } from '@/lib/toast';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import ChevronRight from 'lucide-vue-next/dist/esm/icons/chevron-right';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const page = usePage();
@@ -29,16 +31,18 @@ const counts = computed(() => (page.props.navCounts as Record<string, number> | 
 const logoutHref = computed(() => (page.props.tenant ? route('logout') : route('admin.logout')));
 
 const links = computed<NavLink[]>(() => {
+    const n = counts.value;
+
     if (!page.props.tenant) {
+        const platform = 'Platform';
+
         return [
-            { href: route('super-admin.index'), label: 'Tenants', glyph: 'Te', hint: '' },
-            { href: route('super-admin.messages'), label: 'Send log', glyph: 'Sl', hint: '' },
-            { href: route('super-admin.failures'), label: 'Failures', glyph: 'Fa', hint: '' },
-            { href: route('super-admin.verticals'), label: 'Verticals', glyph: 'Ve', hint: '' },
+            { href: route('super-admin.index'), label: 'Tenants', glyph: 'Te', hint: '', group: platform, count: n?.tenants },
+            { href: route('super-admin.messages'), label: 'Send log', glyph: 'Sl', hint: '', group: platform },
+            { href: route('super-admin.failures'), label: 'Failures', glyph: 'Fa', hint: '', group: platform, count: n?.failures },
+            { href: route('super-admin.verticals'), label: 'Verticals', glyph: 'Ve', hint: '', group: platform },
         ];
     }
-
-    const n = counts.value;
 
     const dayToDay = 'Day-to-day';
     const setup = 'Setup';
@@ -68,14 +72,50 @@ const pathOf = (url: string) => {
     }
 };
 
-const isCurrent = (href: string) => {
-    const path = pathOf(href);
+const currentHref = computed(() => {
     const here = pathOf(page.url);
 
-    return here === path || here.startsWith(`${path}/`);
-};
+    return (
+        links.value
+            .filter((link) => {
+                const path = pathOf(link.href);
+
+                return here === path || here.startsWith(`${path}/`);
+            })
+            .sort((a, b) => pathOf(b.href).length - pathOf(a.href).length)[0]?.href ?? null
+    );
+});
+
+const isCurrent = (href: string) => currentHref.value === href;
 
 const onDiary = computed(() => page.url.startsWith('/diary'));
+
+const isConsole = computed(() => !page.props.tenant);
+
+const crumb = computed(() => {
+    const current = links.value.find((link) => isCurrent(link.href));
+
+    return current ? { group: current.group ?? null, label: current.label } : null;
+});
+
+const environment = computed(() => (page.props.environment as string | undefined) ?? '');
+
+const appVersion = computed(() => (page.props.appVersion as string | undefined) ?? '');
+
+const dismissedNotices = computed(() => (page.props.dismissedNotices as string[] | undefined) ?? []);
+
+const emailNoticeHrefs = computed(() =>
+    page.props.tenant
+        ? { resend: route('verification.send'), dismiss: null }
+        : { resend: route('admin.verification.send'), dismiss: route('admin.notices.dismiss', 'email-verification') },
+);
+
+const showEmailNotice = computed(
+    () =>
+        Boolean(page.props.auth.user)
+        && !page.props.auth.user?.email_verified_at
+        && !dismissedNotices.value.includes('email-verification'),
+);
 
 const diaryQuery = computed(() => {
     const query = page.url.includes('?') ? page.url.slice(page.url.indexOf('?') + 1) : '';
@@ -197,6 +237,11 @@ onUnmounted(() => {
                 :profile-href="route('profile.edit')"
                 :billing-href="page.props.tenant ? route('settings.billing') : undefined"
                 :logout-href="logoutHref"
+                :admin="isConsole"
+                :user-email="page.props.auth.user?.email ?? ''"
+                :user-role="page.props.auth.user?.role ?? null"
+                :login-href="route('admin.login')"
+                :version="appVersion"
                 :collapsed="collapsed"
                 :drawer-open="false"
                 :impersonating="page.props.impersonating"
@@ -210,14 +255,28 @@ onUnmounted(() => {
             class="transition-[padding] duration ease-product"
             :class="collapsed ? 'md:pl-rail-collapsed' : 'md:pl-rail'"
         >
+            <div
+                v-if="isConsole && crumb"
+                class="flex items-center gap-2 border-b border-b-rule px-4 py-2 text-13 text-ink-2 md:px-8"
+                data-testid="console-breadcrumb"
+            >
+                <template v-if="crumb.group">
+                    <span>{{ crumb.group }}</span>
+                    <ChevronRight :size="13" :stroke-width="1.8" class="shrink-0 text-ink-3" aria-hidden="true" />
+                </template>
+                <span class="text-ink">{{ crumb.label }}</span>
+                <Badge v-if="environment" tone="neutral" class="ml-2">{{ environment }}</Badge>
+            </div>
+
             <BetaSandboxBanner />
 
             <Banner
-                v-if="page.props.auth.user && !page.props.auth.user.email_verified_at"
+                v-if="showEmailNotice"
                 message="Confirm your email so clients can reach you."
                 action-label="Resend the email"
-                :action-href="route('verification.send')"
+                :action-href="emailNoticeHrefs.resend"
                 action-method="post"
+                :dismiss-href="emailNoticeHrefs.dismiss"
             />
 
             <Banner

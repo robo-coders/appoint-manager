@@ -4,6 +4,7 @@ import Clock from 'lucide-vue-next/dist/esm/icons/clock';
 import Hourglass from 'lucide-vue-next/dist/esm/icons/hourglass';
 import IdCard from 'lucide-vue-next/dist/esm/icons/id-card';
 import LayoutDashboard from 'lucide-vue-next/dist/esm/icons/layout-dashboard';
+import LayoutGrid from 'lucide-vue-next/dist/esm/icons/layout-grid';
 import List from 'lucide-vue-next/dist/esm/icons/list';
 import Menu from 'lucide-vue-next/dist/esm/icons/menu';
 import Plane from 'lucide-vue-next/dist/esm/icons/plane';
@@ -35,6 +36,7 @@ export const NAV_ICONS: Record<string, Component> = {
     tenants: Building2,
     'send-log': Send,
     failures: TriangleAlert,
+    verticals: LayoutGrid,
 };
 
 export const iconKeyFor = (label: string): string => label.trim().toLowerCase().replace(/\s+/g, '-');

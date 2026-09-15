@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Enums\BookingStatus;
+use App\Enums\MessageChannel;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ImpersonationController;
 use App\Models\AuditLog;
@@ -14,6 +16,7 @@ use App\Services\Billing\SmsAllowance;
 use App\Services\Onboarding\TenantCloner;
 use App\Support\BillingPrice;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,7 +77,42 @@ class SuperAdminController extends Controller
 
         return Inertia::render('SuperAdmin/Index', [
             'tenants' => $tenants,
+            'stats' => $this->platformStats($monthStart),
         ]);
+    }
+
+    /**
+     * The four numbers above the tenants table.
+     *
+     * Counted here rather than summed from the row list above. The rows are a
+     * view of the tenants — sorted, and filtered client-side once the toolbar
+     * is used — and these are statements about the platform; deriving one from
+     * the other is how a stat strip starts disagreeing with itself the moment
+     * somebody types in the search box.
+     *
+     * "Today" is the platform's day, not each salon's. Tenants carry their own
+     * timezone and a per-tenant day boundary would make this number a sum of
+     * twenty-four different days, which is not a number anybody can act on.
+     *
+     * Send failures is the sum of both lists the Failures screen shows, so the
+     * card and the screen it sits above cannot disagree.
+     *
+     * @return array{live_tenants: int, bookings_today: int, sms_this_month: int, send_failures: int}
+     */
+    private function platformStats(CarbonInterface $monthStart): array
+    {
+        return [
+            'live_tenants' => Tenant::query()->where('booking_page_live', true)->count(),
+            'bookings_today' => Booking::withoutGlobalScopes()
+                ->whereBetween('starts_at', [now()->startOfDay(), now()->endOfDay()])
+                ->whereNotIn('status', BookingStatus::vacatingValues())
+                ->count(),
+            'sms_this_month' => Message::withoutGlobalScopes()
+                ->where('channel', MessageChannel::Sms->value)
+                ->where('created_at', '>=', $monthStart)
+                ->count(),
+            'send_failures' => DB::table('failed_jobs')->count() + WebhookFailure::query()->count(),
+        ];
     }
 
     private function state(Tenant $tenant): string

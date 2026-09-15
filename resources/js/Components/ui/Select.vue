@@ -7,6 +7,7 @@ const model = defineModel<string | number>({ default: '' });
 const props = defineProps<{
     id?: string;
     label: string;
+    labelHidden?: boolean;
     error?: string;
     hint?: string;
     disabled?: boolean;
@@ -25,7 +26,7 @@ defineExpose({
 </script>
 
 <template>
-    <Field :input-id="inputId" :label="label" :error="error" :hint="hint" :required="required">
+    <Field :input-id="inputId" :label="label" :label-hidden="labelHidden" :error="error" :hint="hint" :required="required">
         <select
             :id="inputId"
             ref="el"

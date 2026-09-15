@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-09007c8a-e0d4-41aa-9ce0-5c14a1cd3ab6/styles.css">
+<script src="_ds/nocturne-09007c8a-e0d4-41aa-9ce0-5c14a1cd3ab6/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+html{background:#161826}
+html,body{min-height:100%}
+body{margin:0;background:#161826;color:#e9e9ed;font-family:Inter,system-ui,sans-serif}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(233,233,237,.10);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#e9e9ed;color:#161826;border-radius:4px;text-decoration:none}
+.dv-tname{font:500 13px/1.2 Inter,system-ui,sans-serif;color:#e9e9ed}
+.dv-opts{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(233,233,237,.12);color:#e9e9ed;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 Inter,system-ui,sans-serif;color:rgba(233,233,237,.55)}
+.dv-card{background:#161826;border-radius:8px;box-shadow:0 0 0 1px #3f424d,0 16px 40px rgba(0,0,0,.5);overflow:hidden}
+.dv-opt:target .dv-oid{background:#9184d9;color:#161826}
+.dv-notes{margin:2px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;max-width:520px;font:400 11.5px/1.45 Inter,system-ui,sans-serif;color:rgba(233,233,237,.5)}
+.dv-next{margin:26px 0 0;font:12px/1.6 Inter,system-ui,sans-serif;color:rgba(233,233,237,.45)}
+a{color:#9184d9}
+a:hover{color:#b5abfc}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">DiaryDesk admin — premium pass</span></div>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Account menu — replaces the floating Profile / Log out card</div>
+<div class="dv-card" style="width:360px;padding:0;background:#1b1d2b">
+<div style="display:flex;flex-direction:column;min-height:500px;justify-content:flex-end;padding:14px;gap:10px;background:linear-gradient(180deg,#161826,#1b1d2b)">
+<div style="display:flex;flex-direction:column;gap:2px;opacity:.35;margin-bottom:auto">
+<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:13.5px;border-radius:8px"><i class="ph ph-buildings" style="font-size:15px"></i>Tenants</div>
+<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:13.5px;border-radius:8px"><i class="ph ph-paper-plane-tilt" style="font-size:15px"></i>Send log</div>
+<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:13.5px;border-radius:8px"><i class="ph ph-warning-circle" style="font-size:15px"></i>Failures</div>
+</div>
+
+<div style="flex:none;width:288px;background:#232532;border-radius:14px;box-shadow:0 0 0 1px #595d6c,0 18px 44px rgba(0,0,0,.6);overflow:hidden">
+  <div style="display:flex;align-items:center;gap:10px;padding:13px 13px 12px">
+    <div style="width:34px;height:34px;flex:none;border-radius:8px;background:#423a6a;color:#d2cefd;display:grid;place-items:center;font-size:14px;font-weight:500">A</div>
+    <div style="min-width:0;flex:1">
+      <div style="font-size:13.5px;font-weight:500;line-height:1.25">Alex Barron</div>
+      <div style="font-size:11px;color:rgba(233,233,237,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">alex@diarydesk.app</div>
+    </div>
+    <span class="tag tag-outline" style="flex:none">Owner</span>
+  </div>
+  <div style="height:1px;background:rgba(233,233,237,.12)"></div>
+  <div style="padding:6px">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:8px;font-size:13px;cursor:pointer;background:rgba(145,132,217,.10);color:#d2cefd"><i class="ph ph-user-circle" style="font-size:16px"></i>Profile</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:8px;font-size:13px;cursor:pointer" style-hover="background:rgba(233,233,237,.07)"><i class="ph ph-sliders-horizontal" style="font-size:16px"></i>Platform settings</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:8px;font-size:13px;cursor:pointer" style-hover="background:rgba(233,233,237,.07)"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>Search<span style="margin-left:auto;font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.35)">⌘K</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:8px;font-size:13px;cursor:pointer" style-hover="background:rgba(233,233,237,.07)"><i class="ph ph-book-open-text" style="font-size:16px"></i>Docs<i class="ph ph-arrow-up-right" style="margin-left:auto;font-size:12px;opacity:.4"></i></div>
+  </div>
+  <div style="height:1px;background:rgba(233,233,237,.12)"></div>
+  <div style="padding:6px">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:8px;font-size:13px;cursor:pointer;color:#cfd3e5" style-hover="background:rgba(233,233,237,.09)"><i class="ph ph-sign-out" style="font-size:16px"></i>Log out</div>
+  </div>
+  <div style="padding:9px 15px 11px;background:rgba(22,24,38,.55);font:11px/1.3 ui-monospace,Menlo,monospace;color:rgba(233,233,237,.35);display:flex;justify-content:space-between">
+    <span>v2.14.0</span><span>production</span>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:rgba(233,233,237,.06);box-shadow:inset 0 0 0 1px rgba(233,233,237,.10)">
+  <div style="width:26px;height:26px;flex:none;border-radius:7px;background:#423a6a;color:#d2cefd;display:grid;place-items:center;font-size:12px">A</div>
+  <div style="font-size:13px;flex:1">Admin</div>
+  <i class="ph ph-caret-up-down" style="font-size:13px;opacity:.45"></i>
+</div>
+</div>
+</div>
+<ul class="dv-notes">
+<li>One anchored popover instead of two stacked cards — identity, shortcuts and log out in a single surface.</li>
+<li>Log out stops shouting: it sits in its own group with an icon rather than a red outlined button.</li>
+<li>Build/environment footer is a cheap premium signal on an internal tool.</li>
+</ul>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Log out confirmation</div>
+<div class="dv-card" style="width:360px;padding:0">
+<div style="min-height:500px;display:grid;place-items:center;padding:16px;background:radial-gradient(120% 80% at 50% 0%,#232532,#13141f)">
+  <div style="width:300px;display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;background:#232532;box-shadow:0 0 0 1px #9397ab,0 16px 40px rgba(0,0,0,.65)">
+    <div style="width:36px;height:36px;border-radius:9px;background:#2b2741;color:#b5abfc;display:grid;place-items:center"><i class="ph ph-sign-out" style="font-size:18px"></i></div>
+    <div style="font-size:19px;font-weight:500;letter-spacing:-.015em;line-height:1.15">Log out of DiaryDesk?</div>
+    <div style="font-size:13px;color:rgba(233,233,237,.7);line-height:1.5">You are signed in as <span style="color:#e9e9ed">alex@diarydesk.app</span>. Unsaved edits on this screen are kept for 24 hours.</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+      <button class="btn btn-secondary" type="button">Stay</button>
+      <button class="btn btn-primary" type="button"><i class="ph ph-sign-out" style="font-size:14px"></i>Log out</button>
+    </div>
+  </div>
+</div>
+</div>
+<ul class="dv-notes">
+<li>Optional: only worth it because admin sessions are audited — one misclick logs out a privileged session.</li>
+</ul>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Tenants table — populated, with toolbar and footer</div>
+<div class="dv-card" style="width:900px;padding:22px 0 0">
+  <div style="display:flex;align-items:flex-end;gap:16px;padding:0 22px 18px">
+    <div style="flex:1">
+      <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9184d9;margin-bottom:4px">Platform</div>
+      <div style="font-size:28px;font-weight:500;letter-spacing:-.02em;line-height:1.1">Tenants</div>
+      <div style="font-size:13px;color:rgba(233,233,237,.55);margin-top:5px">128 on the platform. Every write on this screen is audited.</div>
+    </div>
+    <button class="btn btn-primary" type="button"><i class="ph ph-copy" style="font-size:14px"></i>Copy a setup</button>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;padding:0 22px 14px">
+    <div style="position:relative;flex:1;max-width:280px">
+      <i class="ph ph-magnifying-glass" style="position:absolute;left:10px;top:10px;font-size:15px;color:rgba(233,233,237,.4)"></i>
+      <input class="input" type="text" placeholder="Search salons, owners, domains" style="padding-left:32px">
+    </div>
+    <div class="seg">
+      <label class="seg-opt"><input type="radio" name="tf" checked>All</label>
+      <label class="seg-opt"><input type="radio" name="tf">Live</label>
+      <label class="seg-opt"><input type="radio" name="tf">Trial</label>
+      <label class="seg-opt"><input type="radio" name="tf">Suspended</label>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="btn btn-secondary btn-icon" type="button" title="Density"><i class="ph ph-rows" style="font-size:16px"></i></button>
+      <button class="btn btn-secondary btn-icon" type="button" title="Export"><i class="ph ph-download-simple" style="font-size:16px"></i></button>
+    </div>
+  </div>
+
+  <div style="padding:0 6px">
+  <table class="table" style="font-variant-numeric:tabular-nums">
+    <thead>
+      <tr>
+        <th style="width:34px;padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.35"></i></th>
+        <th>Salon</th>
+        <th>State</th>
+        <th>Plan</th>
+        <th>Page</th>
+        <th style="text-align:right">Bookings</th>
+        <th style="text-align:right">SMS</th>
+        <th style="text-align:right">Last seen</th>
+        <th style="width:40px;padding-right:16px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.3"></i></td>
+        <td style="padding:11px 8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11.5px">WW</div><div><div style="font-size:13.5px">Willow &amp; Wolf</div><div style="font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.4)">willowwolf.diarydesk.app</div></div></div></td>
+        <td><span class="tag tag-accent">Live</span></td>
+        <td style="font-size:13px">Pro</td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+        <td style="text-align:right;font-size:13.5px">412</td>
+        <td style="text-align:right;font-size:13.5px">1,208</td>
+        <td style="text-align:right;font-size:12.5px;color:rgba(233,233,237,.55)">2m ago</td>
+        <td style="padding-right:16px;text-align:right"><i class="ph ph-dots-three-vertical" style="font-size:15px;opacity:.45"></i></td>
+      </tr>
+      <tr>
+        <td style="padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.3"></i></td>
+        <td style="padding:11px 8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11.5px">CJ</div><div><div style="font-size:13.5px">Clip Joint</div><div style="font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.4)">clipjoint.co.uk</div></div></div></td>
+        <td><span class="tag tag-accent">Live</span></td>
+        <td style="font-size:13px">Pro</td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+        <td style="text-align:right;font-size:13.5px">318</td>
+        <td style="text-align:right;font-size:13.5px">940</td>
+        <td style="text-align:right;font-size:12.5px;color:rgba(233,233,237,.55)">14m ago</td>
+        <td style="padding-right:16px;text-align:right"><i class="ph ph-dots-three-vertical" style="font-size:15px;opacity:.45"></i></td>
+      </tr>
+      <tr>
+        <td style="padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.3"></i></td>
+        <td style="padding:11px 8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11.5px">MP</div><div><div style="font-size:13.5px">Muddy Paws Grooming</div><div style="font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.4)">muddypaws.diarydesk.app</div></div></div></td>
+        <td><span class="tag tag-outline">Trial · 6d</span></td>
+        <td style="font-size:13px">Starter</td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Draft</td>
+        <td style="text-align:right;font-size:13.5px">24</td>
+        <td style="text-align:right;font-size:13.5px">61</td>
+        <td style="text-align:right;font-size:12.5px;color:rgba(233,233,237,.55)">1h ago</td>
+        <td style="padding-right:16px;text-align:right"><i class="ph ph-dots-three-vertical" style="font-size:15px;opacity:.45"></i></td>
+      </tr>
+      <tr>
+        <td style="padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.3"></i></td>
+        <td style="padding:11px 8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11.5px">NG</div><div><div style="font-size:13.5px">Northgate Garage</div><div style="font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.4)">northgate.diarydesk.app</div></div></div></td>
+        <td><span class="tag tag-accent">Live</span></td>
+        <td style="font-size:13px">Starter</td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+        <td style="text-align:right;font-size:13.5px">96</td>
+        <td style="text-align:right;font-size:13.5px">210</td>
+        <td style="text-align:right;font-size:12.5px;color:rgba(233,233,237,.55)">3h ago</td>
+        <td style="padding-right:16px;text-align:right"><i class="ph ph-dots-three-vertical" style="font-size:15px;opacity:.45"></i></td>
+      </tr>
+      <tr>
+        <td style="padding-left:16px"><i class="ph ph-square" style="font-size:14px;opacity:.3"></i></td>
+        <td style="padding:11px 8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;flex:none;border-radius:7px;background:#3f424d;color:rgba(228,231,245,.5);display:grid;place-items:center;font-size:11.5px">SS</div><div><div style="font-size:13.5px;color:rgba(233,233,237,.65)">Sable &amp; Shear</div><div style="font:11px ui-monospace,Menlo,monospace;color:rgba(233,233,237,.4)">sableshear.diarydesk.app</div></div></div></td>
+        <td><span class="tag tag-neutral">Suspended</span></td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Pro</td>
+        <td style="font-size:13px;color:rgba(233,233,237,.6)">Offline</td>
+        <td style="text-align:right;font-size:13.5px;color:rgba(233,233,237,.45)">0</td>
+        <td style="text-align:right;font-size:13.5px;color:rgba(233,233,237,.45)">0</td>
+        <td style="text-align:right;font-size:12.5px;color:rgba(233,233,237,.55)">6d ago</td>
+        <td style="padding-right:16px;text-align:right"><i class="ph ph-dots-three-vertical" style="font-size:15px;opacity:.45"></i></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 22px 18px">
+    <div style="font-size:12px;color:rgba(233,233,237,.5)">1–5 of 128</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <button class="btn btn-secondary btn-icon" type="button"><i class="ph ph-caret-left" style="font-size:14px"></i></button>
+      <div style="font-size:12px;color:rgba(233,233,237,.6);padding:0 4px">Page 1 of 26</div>
+      <button class="btn btn-secondary btn-icon" type="button"><i class="ph ph-caret-right" style="font-size:14px"></i></button>
+    </div>
+  </div>
+</div>
+<ul class="dv-notes">
+<li>Identity column does the work: initial chip + salon + its booking domain, so the row is scannable without opening it.</li>
+<li>Counts right-aligned with tabular figures; dates relative. Numbers stop wandering between rows.</li>
+<li>State becomes a tinted pill with the detail baked in (<span style="color:rgba(233,233,237,.7)">Trial · 6d</span>), not a bare word.</li>
+<li>Header row is a filter bar, not just a title: search, state segments, density and export.</li>
+</ul>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Empty state — earns its space</div>
+<div class="dv-card" style="width:430px">
+<div style="padding:26px 22px 24px">
+  <div style="font-size:22px;font-weight:500;letter-spacing:-.02em;margin-bottom:4px">Tenants</div>
+  <div style="font-size:13px;color:rgba(233,233,237,.55);margin-bottom:18px">0 on the platform.</div>
+  <div style="border-radius:12px;padding:26px 22px;background:linear-gradient(180deg,#232532,#1b1d2b);box-shadow:inset 0 0 0 1px rgba(233,233,237,.09);display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+    <div style="display:flex;gap:5px;align-items:flex-end;height:34px;opacity:.6">
+      <div style="width:7px;height:12px;border-radius:2px;background:#423a6a"></div>
+      <div style="width:7px;height:22px;border-radius:2px;background:#5d5294"></div>
+      <div style="width:7px;height:34px;border-radius:2px;background:#9184d9"></div>
+      <div style="width:7px;height:18px;border-radius:2px;background:#5d5294"></div>
+      <div style="width:7px;height:9px;border-radius:2px;background:#423a6a"></div>
+    </div>
+    <div style="font-size:17px;font-weight:500">No tenants yet</div>
+    <div style="font-size:13px;color:rgba(233,233,237,.6);line-height:1.5;max-width:300px">The first salon to sign up appears here with its plan, page status and booking volume.</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary" type="button"><i class="ph ph-copy" style="font-size:14px"></i>Copy a setup</button>
+      <button class="btn btn-ghost" type="button">Open register form<i class="ph ph-arrow-up-right" style="font-size:12px"></i></button>
+    </div>
+  </div>
+</div>
+</div>
+<ul class="dv-notes">
+<li>Current version is a 350px-tall empty box inside another empty box. One inset panel, sized to its content, with the next action in it.</li>
+</ul>
+</div>
+
+<div class="dv-opt" id="1e">
+<div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Whole shell together — sidebar, notice, stat strip, table</div>
+<div class="dv-card" style="width:1180px;padding:0">
+<div style="display:flex;height:720px;background:#13141f">
+
+  <div style="width:226px;flex:none;display:flex;flex-direction:column;padding:14px 12px;gap:14px;background:#181a28;box-shadow:inset -1px 0 0 rgba(233,233,237,.07)">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 6px">
+      <div style="width:30px;height:30px;border-radius:8px;background:#423a6a;display:grid;place-items:center"><div style="width:14px;height:3px;border-radius:2px;background:#d2cefd;box-shadow:0 5px 0 #9184d9"></div></div>
+      <div style="font-size:15.5px;font-weight:500;letter-spacing:-.01em">DiaryDesk</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="font:500 10px/1 Inter,system-ui,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:rgba(233,233,237,.35);padding:8px 8px 6px">Platform</div>
+      <div style="position:relative;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;color:#d2cefd;background:rgba(145,132,217,.12)">
+        <div style="position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:#9184d9"></div>
+        <i class="ph-fill ph-buildings" style="font-size:16px"></i>Tenants
+        <span style="margin-left:auto;font:11px ui-monospace,Menlo,monospace;color:rgba(210,206,253,.6)">128</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;color:rgba(233,233,237,.78)" style-hover="background:rgba(233,233,237,.06)"><i class="ph ph-paper-plane-tilt" style="font-size:16px"></i>Send log</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;color:rgba(233,233,237,.78)" style-hover="background:rgba(233,233,237,.06)"><i class="ph ph-warning-circle" style="font-size:16px"></i>Failures<span style="margin-left:auto;font:11px ui-monospace,Menlo,monospace;color:#b5abfc">3</span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;color:rgba(233,233,237,.78)" style-hover="background:rgba(233,233,237,.06)"><i class="ph ph-squares-four" style="font-size:16px"></i>Verticals</div>
+    </div>
+
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;font-size:12.5px;color:rgba(233,233,237,.55);box-shadow:inset 0 0 0 1px rgba(233,233,237,.10)">
+        <i class="ph ph-magnifying-glass" style="font-size:14px"></i>Search
+        <span style="margin-left:auto;font:11px ui-monospace,Menlo,monospace;opacity:.7">⌘K</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:10px;background:rgba(233,233,237,.05)">
+        <div style="width:27px;height:27px;flex:none;border-radius:7px;background:#423a6a;color:#d2cefd;display:grid;place-items:center;font-size:12px">A</div>
+        <div style="min-width:0;flex:1"><div style="font-size:12.5px;line-height:1.2">Alex Barron</div><div style="font-size:10.5px;color:rgba(233,233,237,.45)">Owner</div></div>
+        <i class="ph ph-caret-up-down" style="font-size:13px;opacity:.45"></i>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#161826">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;box-shadow:inset 0 -1px 0 rgba(233,233,237,.07)">
+      <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(233,233,237,.5)">Platform<i class="ph ph-caret-right" style="font-size:11px;opacity:.6"></i><span style="color:#e9e9ed">Tenants</span></div>
+      <span class="tag tag-neutral" style="margin-left:6px">production</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-secondary btn-icon" type="button" style="border-color:transparent"><i class="ph ph-bell" style="font-size:16px"></i></button>
+        <button class="btn btn-secondary btn-icon" type="button" style="border-color:transparent"><i class="ph ph-question" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <div style="padding:16px 24px 0">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;background:#2b2741;box-shadow:inset 0 0 0 1px rgba(145,132,217,.35)">
+        <i class="ph ph-envelope-simple" style="font-size:17px;color:#b5abfc"></i>
+        <div style="font-size:13px;color:#e7e5fe">Confirm your email so clients can reach you.</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <button class="btn btn-ghost" type="button">Resend the email</button>
+          <button class="btn btn-secondary btn-icon" type="button" style="border-color:transparent;width:28px;height:28px"><i class="ph ph-x" style="font-size:13px"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;gap:16px;padding:20px 24px 16px">
+      <div style="flex:1">
+        <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1.1">Tenants</div>
+        <div style="font-size:13px;color:rgba(233,233,237,.55);margin-top:5px">128 on the platform. Every write on this screen is audited.</div>
+      </div>
+      <button class="btn btn-secondary" type="button"><i class="ph ph-download-simple" style="font-size:14px"></i>Export</button>
+      <button class="btn btn-primary" type="button"><i class="ph ph-copy" style="font-size:14px"></i>Copy a setup</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 24px 18px">
+      <div style="padding:12px 14px;border-radius:10px;background:#1d1f2e;box-shadow:inset 0 0 0 1px rgba(233,233,237,.07)">
+        <div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.45)">Live tenants</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:6px"><div style="font-size:25px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em">104</div><div style="font-size:11.5px;color:#b5abfc">+6 wk</div></div>
+      </div>
+      <div style="padding:12px 14px;border-radius:10px;background:#1d1f2e;box-shadow:inset 0 0 0 1px rgba(233,233,237,.07)">
+        <div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.45)">Bookings today</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:6px"><div style="font-size:25px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em">2,314</div></div>
+      </div>
+      <div style="padding:12px 14px;border-radius:10px;background:#1d1f2e;box-shadow:inset 0 0 0 1px rgba(233,233,237,.07)">
+        <div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.45)">SMS this month</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:6px"><div style="font-size:25px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em">48,902</div></div>
+      </div>
+      <div style="padding:12px 14px;border-radius:10px;background:#1d1f2e;box-shadow:inset 0 0 0 1px rgba(145,132,217,.22)">
+        <div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.45)">Send failures</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:6px"><div style="font-size:25px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em">3</div><div style="font-size:11.5px;color:#b5abfc">needs review</div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:0 24px 12px">
+      <div style="position:relative;flex:1;max-width:260px">
+        <i class="ph ph-magnifying-glass" style="position:absolute;left:10px;top:10px;font-size:15px;color:rgba(233,233,237,.4)"></i>
+        <input class="input" type="text" placeholder="Search salons, owners, domains" style="padding-left:32px">
+      </div>
+      <div class="seg">
+        <label class="seg-opt"><input type="radio" name="tf2" checked>All</label>
+        <label class="seg-opt"><input type="radio" name="tf2">Live</label>
+        <label class="seg-opt"><input type="radio" name="tf2">Trial</label>
+        <label class="seg-opt"><input type="radio" name="tf2">Suspended</label>
+      </div>
+      <button class="btn btn-secondary" type="button" style="margin-left:auto"><i class="ph ph-funnel" style="font-size:14px"></i>Plan</button>
+      <button class="btn btn-secondary btn-icon" type="button"><i class="ph ph-rows" style="font-size:16px"></i></button>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow:hidden;padding:0 10px">
+      <table class="table" style="font-variant-numeric:tabular-nums">
+        <thead>
+          <tr>
+            <th style="padding-left:14px">Salon</th>
+            <th>State</th>
+            <th>Plan</th>
+            <th>Page</th>
+            <th style="text-align:right">Bookings</th>
+            <th style="text-align:right">SMS</th>
+            <th style="text-align:right;padding-right:14px">Last seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:10px 8px 10px 14px"><div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11px">WW</div><span style="font-size:13.5px">Willow &amp; Wolf</span></div></td>
+            <td><span class="tag tag-accent">Live</span></td><td style="font-size:13px">Pro</td><td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+            <td style="text-align:right;font-size:13.5px">412</td><td style="text-align:right;font-size:13.5px">1,208</td><td style="text-align:right;padding-right:14px;font-size:12.5px;color:rgba(233,233,237,.55)">2m ago</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px 10px 14px"><div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11px">CJ</div><span style="font-size:13.5px">Clip Joint</span></div></td>
+            <td><span class="tag tag-accent">Live</span></td><td style="font-size:13px">Pro</td><td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+            <td style="text-align:right;font-size:13.5px">318</td><td style="text-align:right;font-size:13.5px">940</td><td style="text-align:right;padding-right:14px;font-size:12.5px;color:rgba(233,233,237,.55)">14m ago</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px 10px 14px"><div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11px">MP</div><span style="font-size:13.5px">Muddy Paws Grooming</span></div></td>
+            <td><span class="tag tag-outline">Trial · 6d</span></td><td style="font-size:13px">Starter</td><td style="font-size:13px;color:rgba(233,233,237,.6)">Draft</td>
+            <td style="text-align:right;font-size:13.5px">24</td><td style="text-align:right;font-size:13.5px">61</td><td style="text-align:right;padding-right:14px;font-size:12.5px;color:rgba(233,233,237,.55)">1h ago</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px 10px 14px"><div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;flex:none;border-radius:7px;background:#3f424d;color:#e4e7f5;display:grid;place-items:center;font-size:11px">NG</div><span style="font-size:13.5px">Northgate Garage</span></div></td>
+            <td><span class="tag tag-accent">Live</span></td><td style="font-size:13px">Starter</td><td style="font-size:13px;color:rgba(233,233,237,.6)">Published</td>
+            <td style="text-align:right;font-size:13.5px">96</td><td style="text-align:right;font-size:13.5px">210</td><td style="text-align:right;padding-right:14px;font-size:12.5px;color:rgba(233,233,237,.55)">3h ago</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px 10px 14px"><div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;flex:none;border-radius:7px;background:#3f424d;color:rgba(228,231,245,.5);display:grid;place-items:center;font-size:11px">SS</div><span style="font-size:13.5px;color:rgba(233,233,237,.65)">Sable &amp; Shear</span></div></td>
+            <td><span class="tag tag-neutral">Suspended</span></td><td style="font-size:13px;color:rgba(233,233,237,.6)">Pro</td><td style="font-size:13px;color:rgba(233,233,237,.6)">Offline</td>
+            <td style="text-align:right;font-size:13.5px;color:rgba(233,233,237,.45)">0</td><td style="text-align:right;font-size:13.5px;color:rgba(233,233,237,.45)">0</td><td style="text-align:right;padding-right:14px;font-size:12.5px;color:rgba(233,233,237,.55)">6d ago</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+<ul class="dv-notes">
+<li>The stray notice line becomes a contained banner with an action and a dismiss, inside the content column instead of floating above it.</li>
+<li>Sidebar gains section labels, icons and counts; the active item is marked by an accent rule, not a filled block.</li>
+<li>A four-stat strip answers "is the platform healthy" before the table is read.</li>
+<li>Search moves out of the footer into the sidebar rail with its shortcut visible.</li>
+</ul>
+</div>
+
+</div>
+<p class="dv-next">Try next: "take <a class="dv-oid" href="#1e">1e</a> but light, in the current cream palette" · "add the row detail drawer for <a class="dv-oid" href="#1c">1c</a>" · "mock the Verticals screen the same way"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+
+</script>
+</body>
+</html>

@@ -11,10 +11,12 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vertical;
 use App\Models\WaitlistEntry;
+use App\Models\WebhookFailure;
 use App\Services\Billing\SmsAllowance;
 use App\Services\Rebooking\OverdueSubjects;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -70,7 +72,14 @@ class HandleInertiaRequests extends Middleware
                 'trial_days_remaining' => $tenant->trialDaysRemaining(),
                 'show_trial_banner' => $tenant->onTrial() && $tenant->trialDaysRemaining() <= 7,
             ] : null,
-            'navCounts' => fn () => $tenant ? $this->navCounts($tenant) : null,
+            'navCounts' => fn () => match (true) {
+                $tenant !== null => $this->navCounts($tenant),
+                (bool) $user?->is_super_admin => $this->adminNavCounts(),
+                default => null,
+            },
+            'environment' => app()->environment(),
+            'appVersion' => config('product.version'),
+            'dismissedNotices' => $request->session()->get('dismissed_notices', []),
             'ui' => [
                 'mobile_breakpoint' => (int) config('ui.mobile_breakpoint'),
                 'rail_collapsed_ceiling' => (int) config('ui.rail_collapsed_ceiling'),
@@ -85,6 +94,23 @@ class HandleInertiaRequests extends Middleware
             'toast' => fn () => $request->session()->get('toast'),
             'createdBooking' => fn () => $request->session()->get('created_booking'),
             'sms' => fn () => $tenant ? app(SmsAllowance::class)->snapshot($tenant) : null,
+        ];
+    }
+
+    /**
+     * The two counts the console's rail carries.
+     *
+     * Failures is the sum of both lists the Failures screen shows — queued jobs
+     * that gave up and webhooks that arrived broken. A badge that counted one of
+     * them would disagree with the screen it links to.
+     *
+     * @return array<string, int>
+     */
+    private function adminNavCounts(): array
+    {
+        return [
+            'tenants' => Tenant::query()->count(),
+            'failures' => DB::table('failed_jobs')->count() + WebhookFailure::query()->count(),
         ];
     }
 

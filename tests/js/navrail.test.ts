@@ -50,13 +50,13 @@ describe('the icon set', () => {
     });
 
     it('covers the console as well as the operator app', () => {
-        for (const label of ['Tenants', 'Send log', 'Failures']) {
+        for (const label of ['Tenants', 'Send log', 'Failures', 'Verticals']) {
             expect(navIconFor(label)).not.toBeNull();
         }
     });
 
     it('is small and fixed, because every entry is a deep import somebody wrote', () => {
-        expect(Object.keys(NAV_ICONS)).toHaveLength(16);
+        expect(Object.keys(NAV_ICONS)).toHaveLength(17);
     });
 });
 
@@ -70,11 +70,30 @@ describe('at 148px', () => {
         expect(wrapper.findAll('nav svg')).toHaveLength(0);
     });
 
+    /*
+     * The console is the one rail that carries icons beside its words. The
+     * operator app's rail is twelve items in three groups and stays a list of
+     * words — the reference this came from is the admin console's, and putting
+     * twelve icons down the operator's rail would restyle a surface nobody
+     * asked about.
+     */
+    it('leads every console item with its icon, and keeps the words', () => {
+        const wrapper = rail({ admin: true });
+
+        expect(wrapper.text()).toContain('Diary');
+        expect(wrapper.findAll('nav a svg')).toHaveLength(links.length);
+
+        for (const icon of wrapper.findAll('nav a svg')) {
+            expect(icon.attributes('aria-hidden')).toBe('true');
+        }
+    });
+
     it('right-aligns the counts in mono, and omits them where a number means nothing', () => {
         const wrapper = rail();
         const counts = wrapper.findAll('nav .numeral');
 
         expect(counts.map((c) => c.text())).toEqual(['12', '348', '3', '4', '9', '4']);
+        for (const count of counts) expect(count.classes()).toContain('ml-auto');
     });
 
     it('marks the current page for assistive tech, not just with a tint', () => {

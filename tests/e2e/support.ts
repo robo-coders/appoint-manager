@@ -27,6 +27,7 @@ export const AUTH_STATE = 'tests/e2e/.auth/owner.json';
 export const CONSOLE_STATE = 'tests/e2e/.auth/console.json';
 
 export const CONSOLE = {
+    name: 'Super Admin',
     email: 'admin@gmail.com',
     password: 'admin@1234',
 } as const;

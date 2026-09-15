@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccountMenu from '@/Components/ui/AccountMenu.vue';
 import AppLogo from '@/Components/AppLogo.vue';
 import KeyHint from '@/Components/ui/KeyHint.vue';
 import RailUserMenu from '@/Components/ui/RailUserMenu.vue';
@@ -24,13 +25,27 @@ const props = withDefaults(
         profileHref: string;
         billingHref?: string;
         logoutHref: string;
+        admin?: boolean;
+        userEmail?: string;
+        userRole?: string | null;
+        loginHref?: string;
+        version?: string;
         collapsed?: boolean;
         drawerOpen?: boolean;
         impersonating?: boolean;
         impersonatedTenant?: string | null;
         stopImpersonatingHref?: string;
     }>(),
-    { collapsed: false, drawerOpen: false, impersonating: false },
+    {
+        collapsed: false,
+        drawerOpen: false,
+        impersonating: false,
+        admin: false,
+        userEmail: '',
+        userRole: null,
+        loginHref: '',
+        version: '',
+    },
 );
 
 const emit = defineEmits<{ navigate: []; search: [] }>();
@@ -91,8 +106,11 @@ const groups = computed(() => {
                     <li v-for="link in group.items" :key="link.href">
                         <Link
                             :href="link.href"
-                            class="relative flex min-h-row items-center justify-between gap-2 rounded px-2 text-13 transition duration-fast ease-product hover:bg-ink-tint hover:text-ink"
-                            :class="isCurrent(link.href) ? 'bg-accent-tint font-medium text-ink' : 'text-ink-2'"
+                            class="relative flex min-h-row items-center gap-2 rounded px-2 text-13 transition duration-fast ease-product hover:bg-ink-tint hover:text-ink"
+                            :class="[
+                                isCurrent(link.href) ? 'bg-accent-tint font-medium text-ink' : 'text-ink-2',
+                                collapsed && !drawerOpen ? 'md:justify-center' : '',
+                            ]"
                             :aria-current="isCurrent(link.href) ? 'page' : undefined"
                             :title="collapsed && !drawerOpen ? link.label : undefined"
                             :aria-label="collapsed && !drawerOpen ? link.label : undefined"
@@ -103,18 +121,27 @@ const groups = computed(() => {
                                 aria-hidden="true"
                                 class="absolute -left-2 bottom-1 top-1 w-0.5 rounded bg-accent"
                             ></span>
-                            <span :class="collapsed && !drawerOpen ? 'md:hidden' : ''">{{ link.label }}</span>
-                            <span
-                                v-if="collapsed && !drawerOpen"
-                                class="hidden w-full justify-center font-medium md:flex"
+                            <component
+                                :is="iconFor(link)"
+                                v-if="iconFor(link) && (admin || (collapsed && !drawerOpen))"
+                                :size="16"
+                                :stroke-width="1.75"
+                                class="shrink-0"
+                                :class="admin && !(collapsed && !drawerOpen) ? '' : 'hidden md:block'"
                                 aria-hidden="true"
+                            />
+                            <span
+                                v-else-if="collapsed && !drawerOpen"
+                                class="hidden shrink-0 font-medium md:block"
+                                aria-hidden="true"
+                                >{{ glyphFor(link) }}</span
                             >
-                                <component :is="iconFor(link)" v-if="iconFor(link)" :size="18" :stroke-width="1.75" />
-                                <template v-else>{{ glyphFor(link) }}</template>
-                            </span>
+                            <span class="truncate" :class="collapsed && !drawerOpen ? 'md:hidden' : ''">{{
+                                link.label
+                            }}</span>
                             <span
                                 v-if="link.count !== undefined && link.count !== null"
-                                class="numeral shrink-0 text-12 text-ink-2"
+                                class="numeral ml-auto shrink-0 text-12 text-ink-2"
                                 :class="collapsed && !drawerOpen ? 'md:hidden' : ''"
                                 >{{ link.count }}</span
                             >
@@ -127,19 +154,38 @@ const groups = computed(() => {
         <div class="border-t border-t-rule p-2">
             <button
                 type="button"
-                class="flex min-h-row w-full items-center justify-between gap-2 rounded px-2 text-13 text-ink-2 transition duration-fast ease-product hover:bg-ink-tint hover:text-ink"
+                class="flex min-h-row w-full items-center gap-2 rounded px-2 text-13 text-ink-2 transition duration-fast ease-product hover:bg-ink-tint hover:text-ink"
                 :class="collapsed && !drawerOpen ? 'md:justify-center' : ''"
                 :aria-label="collapsed && !drawerOpen ? 'Search' : undefined"
                 @click="emit('search')"
             >
+                <Search
+                    v-if="admin || (collapsed && !drawerOpen)"
+                    :size="16"
+                    :stroke-width="1.75"
+                    class="shrink-0"
+                    :class="admin && !(collapsed && !drawerOpen) ? '' : 'hidden md:block'"
+                    aria-hidden="true"
+                />
                 <span :class="collapsed && !drawerOpen ? 'md:hidden' : ''">Search</span>
-                <span v-if="collapsed && !drawerOpen" class="hidden w-full justify-center md:flex" aria-hidden="true">
-                    <Search :size="18" :stroke-width="1.75" />
-                </span>
-                <KeyHint :keys="['⌘K']" :class="collapsed && !drawerOpen ? 'md:hidden' : ''" />
+                <KeyHint :keys="['⌘K']" class="ml-auto" :class="collapsed && !drawerOpen ? 'md:hidden' : ''" />
             </button>
 
+            <AccountMenu
+                v-if="admin"
+                :name="userName"
+                :email="userEmail"
+                :role="userRole"
+                :profile-href="profileHref"
+                :logout-href="logoutHref"
+                :login-href="loginHref"
+                :version="version"
+                :collapsed="collapsed && !drawerOpen"
+                @search="emit('search')"
+            />
+
             <RailUserMenu
+                v-else
                 :name="userName"
                 :profile-href="profileHref"
                 :billing-href="billingHref"
